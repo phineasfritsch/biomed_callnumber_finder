@@ -1,0 +1,264 @@
+# Biomed Library Shelf-Mapping — Handoff Instructions
+
+You are helping build a **call-number → shelf locator** for a biomedical library. The user
+photographs the range labels on the ends of physical shelves; you transcribe them, validate
+them, and accumulate them into a JSON dataset. This document tells you (a) how the dataset is
+structured, (b) how to sort the call numbers, and (c) how the shelves physically work so you can
+assign each label to the right slot.
+
+Read this whole file before doing anything. The single most important rule: **never guess a
+label or fill a gap from memory.** If something is ambiguous, hold it and ask one specific
+question.
+
+---
+
+## 1. The JSON dataset
+
+There is one master file, `biomed-shelf-ranges.json`. It is a flat object. Each **key**
+identifies one shelf *face*; each **value** is the call-number range living on that face.
+
+### Key format
+
+```
+level|shelf-id|side
+```
+
+- `level` — the stack-level number as a string: `5`, `6`, `7`, `8`, `11`, …
+- `shelf-id` — `top-N` or `bot-N`, where `N` is the column index (an integer).
+  - `top-0` is a special half-shelf that exists on some floors only (see §3).
+  - top columns run `1`–`16`; bottom columns are a subset (see §3).
+- `side` — `left`, `right`, or `single`.
+  - A **full** shelf has two faces → two keys: `…|left` and `…|right`.
+  - A **half** shelf has one face → one key: `…|single`.
+
+### Value format
+
+```json
+{ "start": "W1 AM477", "end": "W1 AM482" }
+```
+
+`start` ≤ `end` always (verify with the comparator in §2). Store the call numbers exactly as
+printed on the label, including any trailing suffix letter (e.g. `AM489H`, `D299a`) and any
+internal decimal (e.g. `WL 102.8 N398`). Strip a leading `*` if present (see §3, start-of-floor
+marker) but note that the shelf it marks is the floor's first face.
+
+### Examples of real entries
+
+```json
+{
+  "7|top-9|left":  { "start": "W1 AM4986", "end": "W1 AM511" },
+  "7|top-9|right": { "start": "W1 AM511",  "end": "W1 AM511" },   // zero-width serial run — real, keep it
+  "7|bot-14|single": { "start": "W1 AN819", "end": "W1 AO671" },  // half shelf, one face
+  "8|top-2|left":  { "start": "WM 33 AA1", "end": "WM 100 D299a" }
+}
+```
+
+### Working procedure for every edit
+
+1. Load the JSON in Python.
+2. Add/modify keys.
+3. **Validate before saving** (run the seam + ordering checks in §2/§3).
+4. Save with `json.dump(d, open(path,'w'), indent=2)`.
+5. Call `present_files` on the JSON path so the user can re-download it.
+6. Keep replies short: list the label assignments + a one-line validation note. No prose essays.
+
+> The locator app (`biomed-shelf-locator.html`) bakes the dataset in as a constant, so it does
+> **not** auto-update when the JSON changes. It must be regenerated to refresh. Only do that when
+> the user asks.
+
+---
+
+## 2. Sorting the call numbers (the comparator)
+
+Call numbers here are **not** sorted like plain text. The number after a letter group is a
+**decimal fraction**, so `AM4733` = .4733 is *less than* `AM477` = .477. Getting this wrong is the
+most common error — do not "fix" a range that looks backwards until you've checked it under
+decimal sorting.
+
+Two label schemes appear, and **one parser handles both**:
+
+- **W1 scheme** (seen on levels 5, 6, 7): `W1 AM477`, `W1 AN7852`. Fixed `W1` prefix, then one or
+  more Cutters.
+- **NLM scheme** (seen on level 8): `WM 13 D5537`, `WL 102.8 N398`, `Z 675 H7 D628`. A two-/one-
+  letter class, a class **number** (which may be a decimal like `102.8` or `450.5`), then Cutters.
+
+### How a call number parses
+
+A call number is a sequence of components, compared left to right (a shorter prefix sorts first):
+
+1. **Class letters** — sort alphabetically (`WJ` < `WK` < `WL`; `Z` < `ZQV` < `ZWZ`).
+2. **Class number** — sort as a real number, NOT a decimal fraction (`WM 13` < `WM 33` < `WM 100`;
+   `WL 102` < `WL 102.8`; `450.5` < `460.5`). In the `W1` scheme the "number" is just `1` for
+   everything, so it never affects within-floor order.
+3. **Cutter(s)** — each is letters + digits + an optional trailing suffix letter. The **digits are
+   a decimal fraction** (`AM477` → .477; `AN7852` → .7852, so .7852 < .786 = `AN786`). A bare
+   number sorts before the same number with a suffix (`AR423` < `AR423H`). Extra Cutters are
+   compared in order, so `Z 675 H7` sorts before `Z 675 H7 D628`.
+
+### Drop-in Python (tested against all confirmed orderings)
+
+```python
+import re, functools
+
+def parse(cn):
+    """Parse an LC-style 'W1 ...' or NLM '<class> <num> <cutters>' call number."""
+    toks = cn.upper().replace('*', '').split()
+    m0 = re.match(r'^([A-Z]+)(\d*\.?\d*)$', toks[0])
+    class_alpha = m0.group(1)
+    rest = toks[1:]
+    if m0.group(2):                                    # digits attached, e.g. W1
+        class_num = float(m0.group(2))
+    elif rest and re.match(r'^\d+\.?\d*$', rest[0]):   # separate numeric token, e.g. WM 13 / WL 102.8
+        class_num = float(rest[0]); rest = rest[1:]
+    else:
+        class_num = 0.0
+    comp = [('A', class_alpha), ('N', class_num)]
+    for t in rest:                                     # Cutters: letters + DECIMAL digits + optional suffix
+        mm = re.match(r'^([A-Z]+)(\d*)([A-Z]*)$', t)
+        if mm:
+            a, d, sfx = mm.groups()
+            comp.append(('C', a, float('0.' + d) if d else 0.0, sfx))
+        else:
+            comp.append(('C', t, 0.0, ''))
+    return comp
+
+def cmp(x, y):
+    a, b = parse(x), parse(y)
+    for i in range(max(len(a), len(b))):
+        if i >= len(a): return -1
+        if i >= len(b): return 1
+        if a[i] != b[i]: return -1 if a[i] < b[i] else 1
+    return 0
+
+# To sort a list of call-number strings:
+# items.sort(key=functools.cmp_to_key(cmp))
+```
+
+This parser is verified to produce, among others: `AN7852 < AN786`, `AM4733 < AM477 < AM482`,
+`AM489H` handled, `WM 13 < WM 100`, `WL 102 < WL 102.8`, `450.5 < 460.5`, and
+`Z 675 H7 < Z 675 H7 D628`.
+
+---
+
+## 3. How the shelves physically work
+
+### Faces
+
+Most shelves are **double-sided** (a "full" shelf): the **left** face holds the lower half of
+that shelf's range, the **right** face holds the upper half, contiguous within the shelf. Some
+shelves are **half** shelves with a single face (`side: "single"`).
+
+### Floor layout (template — verify per floor)
+
+The floors photographed so far (levels 6 and 7) share this grid, but **shelf counts and which
+positions exist can differ by floor, so confirm with the user for any new floor:**
+
+- **Top row:** index `0` is an orange **half** shelf (single face) that exists on **level 7 only**.
+  Indices `1`–`16` are full shelves (left + right). On the mapped floors the green full shelves
+  exist on every level *except* level 9.
+- **Bottom row:** full shelves at indices `1, 2, 3, 10, 11, 12, 15, 16`, plus a **half** shelf at
+  index `14`. (The bottom black shelves appear on all levels.)
+
+Do not assume a new floor matches this exactly. NLM floors (e.g. level 8) and others may have a
+different number of shelves or different occupied positions. Ask if unsure.
+
+### The "snake" reading order (the key structural invariant)
+
+The collection runs as **one continuous, ascending sequence** across the whole floor. It weaves
+between the top and bottom rows column by column. Within a single column index, the reading order
+is:
+
+```
+Top-Left face  →  Bottom shelf face(s) in that column  →  Top-Right face
+```
+
+…and columns proceed `1 → 2 → … → 16`. In other words, each bottom-row shelf fills the call-number
+gap between its column's top-left and top-right faces. (On level 7 the orange `top-0` half-shelf
+sits at the very *start* of the floor's sequence; that is what a leading `*` on a label refers to.)
+
+### Seams — your main validation tool
+
+- **Within a full shelf:** the left face's `end` equals the right face's `start` **exactly**
+  (or the right `start` is the next call number). Same for the column weave: a bottom face's `end`
+  often equals the next top face's `start` exactly.
+- **Between adjacent shelves:** there is usually a small **gap** (end of one shelf < start of the
+  next), which is normal and expected. A gap is *not* an error.
+- **Overlaps or "backwards" pairs are the warning sign.** If face A's range extends past where the
+  next face begins, either one label is misread, or the two faces belong to different rows (the
+  weave) and you've ordered them wrong. Investigate before committing.
+
+Use exact seams to **auto-confirm** uncertain OCR reads: if a neighbor's seam matches a value you
+were unsure about, that value is confirmed.
+
+### Special cases that are real (not errors)
+
+- **Zero-width ranges** (`start == end`): a serial run where many volumes share one call number.
+  Keep it. The locator returns *all* matching shelves, so the user checks the spine for the volume.
+- **Suffix letters** (`AM489H`, `AR423H`, `D299a`): part of the call number; preserve them.
+- **Blank / empty shelves:** some shelves have no books and no label. Skip them; record nothing.
+
+---
+
+## 4. Validation snippet (run before every commit)
+
+```python
+import json, functools
+# assume parse() and cmp() from §2 are defined
+
+d = json.load(open('biomed-shelf-ranges.json'))
+
+# 1) every face: start <= end
+for k, v in d.items():
+    assert cmp(v['start'], v['end']) <= 0, f"REVERSED: {k} {v}"
+
+# 2) within a full shelf, left.end should seam to right.start (exact or small gap, never overlap)
+#    build pairs by stripping the side:
+from collections import defaultdict
+shelf = defaultdict(dict)
+for k, v in d.items():
+    lvl, sid, side = k.split('|')
+    shelf[(lvl, sid)][side] = v
+for (lvl, sid), faces in shelf.items():
+    if 'left' in faces and 'right' in faces:
+        if cmp(faces['left']['end'], faces['right']['start']) > 0:
+            print(f"OVERLAP within {lvl}|{sid}: left.end {faces['left']['end']} > right.start {faces['right']['start']}")
+```
+
+For a fuller check, sort all of a floor's faces by `start` with `cmp` and print the seam
+(`=EXACT=`, `gap`, or `OVERLAP/BACK`) between each consecutive pair, then eyeball that it reads as
+one ascending sequence.
+
+---
+
+## 5. Workflow conventions (follow these)
+
+1. The user sends a photo (or several) of shelf-end label(s), usually with a short caption giving
+   the floor, the row (`top`/`bot`), the column indices, and the face (`left`/`right`), e.g.
+   `L7 t 7 8 9 left`. Indices in the caption are usually listed closest → furthest.
+2. Read each label by vision. Assign it to a column/face. **When a photo shows labels across an
+   aisle or out of simple closest-furthest order, assign by which range seams to the known
+   neighbor faces, not by position in the photo.** This happens often.
+3. Run the validation snippet **before** committing. Commit to JSON via Python; then
+   `present_files` on the JSON.
+4. Keep responses short: label → slot assignments plus a one-line validation note. Use a list, not
+   paragraphs.
+5. If a reading can't be confidently placed (ambiguous index, or a seam mismatch you can't
+   resolve), **hold it — do not commit — and ask one specific question.** Do not re-ask for
+   information the user already gave in a caption.
+6. Flag genuinely uncertain OCR (tiny/distant labels, unusual suffixes, long Cutters) for a
+   spot-check; it usually gets auto-confirmed by the next opposite-face photo's seam.
+7. Trust decimal sorting over your eyeball. Before calling any range "backwards," run it through
+   `cmp()`.
+
+---
+
+## 6. Quick start for a new floor
+
+1. Ask the user: which **level**, and does the floor's layout match the standard grid in §3
+   (same occupied top/bottom positions)? Note the call-number **scheme** (W1 vs NLM) — the parser
+   handles both, but it tells you what to expect.
+2. As photos arrive, transcribe labels and assign by caption + seam-matching.
+3. Validate each batch; commit; present the JSON.
+4. Watch for the start-of-floor marker (`*` / half shelf) and for the row-weave when ranges seem
+   to overlap.
+5. When the user asks, regenerate the locator HTML to bake in the latest JSON.
