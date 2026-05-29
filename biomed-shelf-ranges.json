@@ -1,0 +1,642 @@
+{
+  "5|bot-1|left": {
+    "start": "W1 DE244",
+    "end": "W1 DE918"
+  },
+  "5|bot-1|right": {
+    "start": "W1 DE926",
+    "end": "W1 DE957"
+  },
+  "5|bot-2|left": {
+    "start": "W1 DO181",
+    "end": "W1 EC899"
+  },
+  "5|bot-2|right": {
+    "start": "W1 EC899",
+    "end": "W1 EM647"
+  },
+  "5|bot-3|left": {
+    "start": "W1 EN996D",
+    "end": "W1 ER511"
+  },
+  "5|bot-3|right": {
+    "start": "W1 ER511",
+    "end": "W1 EU726"
+  },
+  "6|top-1|left": {
+    "start": "W1 B711",
+    "end": "W1 BE126K"
+  },
+  "6|top-1|right": {
+    "start": "W1 BI621",
+    "end": "W1 BI631"
+  },
+  "6|top-2|left": {
+    "start": "W1 BI635",
+    "end": "W1 BI636"
+  },
+  "6|top-2|right": {
+    "start": "W1 BI652",
+    "end": "W1 BI652"
+  },
+  "6|top-3|left": {
+    "start": "W1 BI652",
+    "end": "W1 BI704"
+  },
+  "6|top-3|right": {
+    "start": "W1 BI8764L",
+    "end": "W1 BL467"
+  },
+  "6|top-4|left": {
+    "start": "W1 BL467",
+    "end": "W1 BO853"
+  },
+  "6|top-4|right": {
+    "start": "W1 BO853",
+    "end": "W1 BR115V"
+  },
+  "6|top-5|left": {
+    "start": "W1 BR115V",
+    "end": "W1 BR123"
+  },
+  "6|top-5|right": {
+    "start": "W1 BR123",
+    "end": "W1 BR509"
+  },
+  "6|top-6|left": {
+    "start": "W1 BR509",
+    "end": "W1 BR531"
+  },
+  "6|top-6|right": {
+    "start": "W1 BR531",
+    "end": "W1 BR557"
+  },
+  "6|bot-1|left": {
+    "start": "W1 BE126K",
+    "end": "W1 BE958E"
+  },
+  "6|bot-1|right": {
+    "start": "W1 BE958E",
+    "end": "W1 BI621"
+  },
+  "6|bot-2|left": {
+    "start": "W1 BI636",
+    "end": "W1 BI6495"
+  },
+  "6|bot-2|right": {
+    "start": "W1 BI6495",
+    "end": "W1 BI652"
+  },
+  "6|bot-3|left": {
+    "start": "W1 BI704",
+    "end": "W1 BI838E"
+  },
+  "6|bot-3|right": {
+    "start": "W1 BI838K",
+    "end": "W1 BI8764L"
+  },
+  "7|bot-1|left": {
+    "start": "W1 A1Q2",
+    "end": "W1 AC489"
+  },
+  "7|bot-1|right": {
+    "start": "W1 AC489",
+    "end": "W1 AC745"
+  },
+  "7|bot-2|left": {
+    "start": "W1 AC824",
+    "end": "W1 AC869"
+  },
+  "7|bot-2|right": {
+    "start": "W1 AC869",
+    "end": "W1 AD153"
+  },
+  "7|bot-3|left": {
+    "start": "W1 AD757",
+    "end": "W1 AD844"
+  },
+  "7|bot-3|right": {
+    "start": "W1 AD847",
+    "end": "W1 AG342"
+  },
+  "8|bot-1|left": {
+    "start": "WJ 752 Q5",
+    "end": "WK 400 S961"
+  },
+  "8|bot-1|right": {
+    "start": "WK 400 T5465",
+    "end": "WL 20 N277i"
+  },
+  "8|bot-2|left": {
+    "start": "WL 102.8 N398",
+    "end": "WL 141 E195"
+  },
+  "8|bot-2|right": {
+    "start": "WL 141 E38",
+    "end": "WL 310 R438"
+  },
+  "8|bot-3|left": {
+    "start": "WL 400 A517s",
+    "end": "WM 13 D5536"
+  },
+  "8|bot-3|right": {
+    "start": "WM 13 D5537",
+    "end": "WM 33 AA1"
+  },
+  "11|top-1|left": {
+    "start": "*AG 5 N421",
+    "end": "BF 57 D53"
+  },
+  "11|top-1|right": {
+    "start": "BF 371 B141p",
+    "end": "BF 455 D646s"
+  },
+  "11|top-2|left": {
+    "start": "BF 455 E36p",
+    "end": "BF 575 S37 G373t"
+  },
+  "11|top-2|right": {
+    "start": "BF 713 T655b",
+    "end": "BF 789 D4 6456s"
+  },
+  "11|top-3|left": {
+    "start": "BF 789 D4",
+    "end": "H 62 B113s"
+  },
+  "11|top-3|right": {
+    "start": "HQ 1090 M452m",
+    "end": "PE 1628 W39c"
+  },
+  "11|bot-1|left": {
+    "start": "BF 38 G952p",
+    "end": "BF 311 C6766"
+  },
+  "11|bot-1|right": {
+    "start": "BF 311 C6767",
+    "end": "BF 371 B141h"
+  },
+  "11|bot-2|left": {
+    "start": "BF 575 P9 R951p",
+    "end": "BF 697 P975"
+  },
+  "11|bot-2|right": {
+    "start": "BF 697 R277a",
+    "end": "BF 713 T65"
+  },
+  "11|bot-3|left": {
+    "start": "H 62 B113s",
+    "end": "HM 271 M598o"
+  },
+  "11|bot-3|right": {
+    "start": "HM 271 M598o",
+    "end": "HQ 1090 D754m"
+  },
+  "6|top-7|left": {
+    "start": "W1 BR557",
+    "end": "W1 BR649"
+  },
+  "6|top-8|left": {
+    "start": "W1 BU167",
+    "end": "W1 BU851"
+  },
+  "6|top-9|left": {
+    "start": "W1 CA4065",
+    "end": "W1 CA527"
+  },
+  "6|top-7|right": {
+    "start": "W1 BR649",
+    "end": "W1 BU167"
+  },
+  "6|top-8|right": {
+    "start": "W1 BU851",
+    "end": "W1 CA4065"
+  },
+  "6|top-9|right": {
+    "start": "W1 CA527",
+    "end": "W1 CA549R"
+  },
+  "6|top-10|left": {
+    "start": "W1 CA549R",
+    "end": "W1 CA566N"
+  },
+  "6|top-11|left": {
+    "start": "W1 CA692",
+    "end": "W1 CA705"
+  },
+  "6|top-12|left": {
+    "start": "W1 CE144",
+    "end": "W1 CE9022"
+  },
+  "6|top-10|right": {
+    "start": "W1 CA676P",
+    "end": "W1 CA692"
+  },
+  "6|top-11|right": {
+    "start": "W1 CE139",
+    "end": "W1 CE144"
+  },
+  "6|top-12|right": {
+    "start": "W1 CH819",
+    "end": "W1 CI743"
+  },
+  "6|bot-10|left": {
+    "start": "W1 CA566N",
+    "end": "W1 CA583"
+  },
+  "6|bot-11|left": {
+    "start": "W1 CA705",
+    "end": "W1 CA756TA"
+  },
+  "6|bot-12|left": {
+    "start": "W1 CE9022",
+    "end": "W1 CH295"
+  },
+  "6|bot-10|right": {
+    "start": "W1 CA601",
+    "end": "W1 CA672"
+  },
+  "6|bot-11|right": {
+    "start": "W1 CA757",
+    "end": "W1 CE139"
+  },
+  "6|bot-12|right": {
+    "start": "W1 CH295",
+    "end": "W1 CH819"
+  },
+  "6|top-13|left": {
+    "start": "W1 CI743",
+    "end": "W1 CL517"
+  },
+  "6|top-14|left": {
+    "start": "W1 CL613",
+    "end": "W1 CL663"
+  },
+  "6|top-15|left": {
+    "start": "W1 CL809",
+    "end": "W1 CL871"
+  },
+  "6|top-13|right": {
+    "start": "W1 CL517",
+    "end": "W1 CL613"
+  },
+  "6|top-14|right": {
+    "start": "W1 CL674",
+    "end": "W1 CL809"
+  },
+  "6|top-15|right": {
+    "start": "W1 CO745",
+    "end": "W1 CR139"
+  },
+  "6|top-16|left": {
+    "start": "W1 CR139",
+    "end": "W1 CU575"
+  },
+  "6|top-16|right": {
+    "start": "W1 CU821",
+    "end": "W1 CY967B"
+  },
+  "6|bot-14|single": {
+    "start": "W1 CL663",
+    "end": "W1 CL671"
+  },
+  "6|bot-15|left": {
+    "start": "W1 CO112",
+    "end": "W1 CO435A"
+  },
+  "6|bot-15|right": {
+    "start": "W1 CO435A",
+    "end": "W1 CO745"
+  },
+  "6|bot-16|left": {
+    "start": "W1 CU575",
+    "end": "W1 CU751R"
+  },
+  "6|bot-16|right": {
+    "start": "W1 CU751R",
+    "end": "W1 CU821"
+  },
+  "7|top-1|right": {
+    "start": "W1 AC748S",
+    "end": "W1 AC809"
+  },
+  "7|top-2|right": {
+    "start": "W1 AD153",
+    "end": "W1 AD751"
+  },
+  "7|top-3|right": {
+    "start": "W1 AG342",
+    "end": "W1 AL157"
+  },
+  "7|top-1|left": {
+    "start": "W1 A1C8",
+    "end": "W1 A1Q2"
+  },
+  "7|top-2|left": {
+    "start": "W1 AC809",
+    "end": "W1 AC824"
+  },
+  "7|top-3|left": {
+    "start": "W1 AD751",
+    "end": "W1 AD757"
+  },
+  "7|top-0|single": {
+    "start": "W1 A1C7",
+    "end": "W1 A1C8"
+  },
+  "7|top-4|left": {
+    "start": "W1 AL157",
+    "end": "W1 AM169"
+  },
+  "7|top-5|left": {
+    "start": "W1 AM302",
+    "end": "W1 AM343"
+  },
+  "7|top-6|left": {
+    "start": "W1 AM4225",
+    "end": "W1 AM4733"
+  },
+  "7|top-4|right": {
+    "start": "W1 AM169",
+    "end": "W1 AM302"
+  },
+  "7|top-5|right": {
+    "start": "W1 AM343",
+    "end": "W1 AM4225"
+  },
+  "7|top-6|right": {
+    "start": "W1 AM4733",
+    "end": "W1 AM477"
+  },
+  "7|top-7|left": {
+    "start": "W1 AM477",
+    "end": "W1 AM482"
+  },
+  "7|top-8|left": {
+    "start": "W1 AM489H",
+    "end": "W1 AM4945"
+  },
+  "7|top-9|left": {
+    "start": "W1 AM4986",
+    "end": "W1 AM511"
+  },
+  "7|top-7|right": {
+    "start": "W1 AM482",
+    "end": "W1 AM489H"
+  },
+  "7|top-8|right": {
+    "start": "W1 AM4945",
+    "end": "W1 AM4986"
+  },
+  "7|top-9|right": {
+    "start": "W1 AM511",
+    "end": "W1 AM511"
+  },
+  "7|top-10|left": {
+    "start": "W1 AM511",
+    "end": "W1 AM519"
+  },
+  "7|top-11|left": {
+    "start": "W1 AM554",
+    "end": "W1 AM598"
+  },
+  "7|top-12|left": {
+    "start": "W1 AN173",
+    "end": "W1 AN234G"
+  },
+  "7|top-10|right": {
+    "start": "W1 AM542",
+    "end": "W1 AM554"
+  },
+  "7|top-11|right": {
+    "start": "W1 AM972",
+    "end": "W1 AN173"
+  },
+  "7|top-12|right": {
+    "start": "W1 AN602",
+    "end": "W1 AN621"
+  },
+  "7|bot-10|right": {
+    "start": "W1 AM523",
+    "end": "W1 AM538"
+  },
+  "7|bot-11|right": {
+    "start": "W1 AM6744",
+    "end": "W1 AM972"
+  },
+  "7|bot-12|right": {
+    "start": "W1 AN261",
+    "end": "W1 AN602"
+  },
+  "7|bot-10|left": {
+    "start": "W1 AM519J",
+    "end": "W1 AM523"
+  },
+  "7|bot-11|left": {
+    "start": "W1 AM598",
+    "end": "W1 AM6744"
+  },
+  "7|bot-12|left": {
+    "start": "W1 AN234G",
+    "end": "W1 AN261"
+  },
+  "7|top-13|left": {
+    "start": "W1 AN621",
+    "end": "W1 AN634F"
+  },
+  "7|top-14|left": {
+    "start": "W1 AN786",
+    "end": "W1 AN819"
+  },
+  "7|top-15|left": {
+    "start": "W1 AQ141",
+    "end": "W1 AR405"
+  },
+  "7|top-13|right": {
+    "start": "W1 AN634F",
+    "end": "W1 AN7852"
+  },
+  "7|top-14|right": {
+    "start": "W1 AO671",
+    "end": "W1 AQ141"
+  },
+  "7|top-15|right": {
+    "start": "W1 AR4471",
+    "end": "W1 AR469"
+  },
+  "7|bot-14|single": {
+    "start": "W1 AN819",
+    "end": "W1 AO671"
+  },
+  "7|bot-15|left": {
+    "start": "W1 AR405",
+    "end": "W1 AR423H"
+  },
+  "7|bot-15|right": {
+    "start": "W1 AR423H",
+    "end": "W1 AR4471"
+  },
+  "7|bot-16|left": {
+    "start": "W1 AR947P",
+    "end": "W1 AT257"
+  },
+  "7|bot-16|right": {
+    "start": "W1 AT257",
+    "end": "W1 AU759"
+  },
+  "7|top-16|left": {
+    "start": "W1 AR469",
+    "end": "W1 AR947P"
+  },
+  "7|top-16|right": {
+    "start": "W1 AU771",
+    "end": "W1 AW469"
+  },
+  "5|top-1|left": {
+    "start": "W1 D116",
+    "end": "W1 DE244"
+  },
+  "5|top-1|right": {
+    "start": "W1 DE957",
+    "end": "W1 DI197"
+  },
+  "5|top-2|left": {
+    "start": "W1 DI197",
+    "end": "W1 DO181"
+  },
+  "5|top-2|right": {
+    "start": "W1 EM647",
+    "end": "W1 EN197"
+  },
+  "5|top-3|left": {
+    "start": "W1 EN197",
+    "end": "W1 EN996D"
+  },
+  "5|top-3|right": {
+    "start": "W1 EU726",
+    "end": "W1 EU733M"
+  },
+  "5|top-4|left": {
+    "start": "W1 EU733M",
+    "end": "W1 EU736"
+  },
+  "5|top-4|right": {
+    "start": "W1 EU736",
+    "end": "W1 EV275"
+  },
+  "5|top-5|left": {
+    "start": "W1 EV275",
+    "end": "W1 EX597"
+  },
+  "5|top-5|right": {
+    "start": "W1 EX597",
+    "end": "W1 EX623"
+  },
+  "5|top-6|left": {
+    "start": "W1 EX623",
+    "end": "W1 FA471"
+  },
+  "5|top-6|right": {
+    "start": "W1 FA471",
+    "end": "W1 FE119"
+  },
+  "5|top-7|left": {
+    "start": "W1 FE134",
+    "end": "W1 FL302B"
+  },
+  "5|top-7|right": {
+    "start": "W1 FL957",
+    "end": "W1 GA361"
+  },
+  "5|top-8|left": {
+    "start": "W1 GA361",
+    "end": "W1 GE179"
+  },
+  "5|top-8|right": {
+    "start": "W1 GE191",
+    "end": "W1 GE276"
+  },
+  "5|top-9|left": {
+    "start": "W1 GE278",
+    "end": "W1 GE383"
+  },
+  "5|top-9|right": {
+    "start": "W1 GE383",
+    "end": "W1 GR845"
+  },
+  "5|top-10|left": {
+    "start": "W1 GR845",
+    "end": "W1 HE121"
+  },
+  "5|top-10|right": {
+    "start": "W1 HE925",
+    "end": "W1 HI703"
+  },
+  "5|top-11|left": {
+    "start": "W1 HI703",
+    "end": "W1 HO681"
+  },
+  "5|top-11|right": {
+    "start": "W1 HU470",
+    "end": "W1 IB375"
+  },
+  "5|top-12|left": {
+    "start": "W1 IB375",
+    "end": "W1 IM547"
+  },
+  "5|top-12|right": {
+    "start": "W1 IN394",
+    "end": "W1 IN589P"
+  },
+  "5|top-13|left": {
+    "start": "W1 IN593",
+    "end": "W1 IN747"
+  },
+  "5|top-13|right": {
+    "start": "W1 IN474",
+    "end": "W1 IN7661"
+  },
+  "5|top-14|left": {
+    "start": "W1 IN7661A",
+    "end": "W1 IN778"
+  },
+  "5|top-14|right": {
+    "start": "W1 IN7886",
+    "end": "W1 IN795"
+  },
+  "5|top-15|left": {
+    "start": "W1 IN798",
+    "end": "W1 IN828"
+  },
+  "5|bot-10|left": {
+    "start": "W1 HE131",
+    "end": "W1 HE548"
+  },
+  "5|bot-10|right": {
+    "start": "W1 HE549",
+    "end": "W1 HE925"
+  },
+  "5|bot-11|left": {
+    "start": "W1 HO631",
+    "end": "W1 HU440"
+  },
+  "5|bot-11|right": {
+    "start": "W1 HU440",
+    "end": "W1 HU471"
+  },
+  "5|bot-12|left": {
+    "start": "W1 IM547A",
+    "end": "W1 IN236"
+  },
+  "5|bot-12|right": {
+    "start": "W1 IN236",
+    "end": "W1 IN3892"
+  },
+  "5|bot-14|single": {
+    "start": "W1 IN778",
+    "end": "W1 IN7886"
+  },
+  "5|bot-15|single": {
+    "start": "W1 IN998",
+    "end": "W1 IZ764"
+  }
+}
