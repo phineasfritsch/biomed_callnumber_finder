@@ -25,11 +25,13 @@ level|shelf-id|side
 
 - `level` — the stack-level number as a string: `5`, `6`, `7`, `8`, `11`, …
 - `shelf-id` — `top-N` or `bot-N`, where `N` is the column index (an integer).
-  - `top-0` is a special half-shelf that exists on some floors only (see §3).
+  - `top-0` is a special half-shelf that exists on some floors only (see §3). A floor may also have
+    a `bot-0` half-shelf at the same back-wall position (floor 3 has both).
   - top columns run `1`–`16`; bottom columns are a subset (see §3).
 - `side` — `left`, `right`, or `single`.
   - A **full** shelf has two faces → two keys: `…|left` and `…|right`.
-  - A **half** shelf has one face → one key: `…|single`.
+  - A **half** shelf has one face → one key: `…|single`. By convention on this collection the
+    visible face of a half shelf is the **right** face (left is against the wall).
 
 ### Value format
 
@@ -161,6 +163,17 @@ positions exist can differ by floor, so confirm with the user for any new floor:
 
 Do not assume a new floor matches this exactly. NLM floors (e.g. level 8) and others may have a
 different number of shelves or different occupied positions. Ask if unsure.
+
+**Floor 3 (matches the standard 16-column layout with one extra index-0 column):**
+- Numbered columns `1–16` follow the standard exactly: top full at every index, bot full at
+  `1, 2, 3, 10, 11, 12, 15, 16`, bot half (single) at `14`, no bot at `4–9, 13`.
+- Plus an **index-0** back-wall column with **one top + one bot** half shelf, both right-side-only:
+  `3|bot-0|single` (`W1 JA121 → W1 JO506`) and `3|top-0|single` (`W1 JO506 → W1 JO5221`).
+  These sit at the very start of the snake. Within col 0 the order is bot → top (the bot face holds
+  the lower range and the top face is the col's exit, seaming into `3|top-1|left`).
+- `3|top-12|right` (`JO852 → JO886`) is real but its label wasn't photographed; the range is
+  inferred from the surrounding seams (`bot-12|right` ends at `JO852`, `top-13|left` starts at
+  `JO886`). One more face — `3|top-16|right`, after `LY627` — is still unmapped.
 
 ### The "snake" reading order (the key structural invariant)
 

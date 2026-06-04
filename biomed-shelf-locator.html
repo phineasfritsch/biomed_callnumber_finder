@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Biomed Stacks — Shelf Locator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f3efe4; --paper-2:#ece6d6; --card:#fbf9f3;
+    --ink:#26221a; --ink-soft:#6b6353; --line:#d8cfba;
+    --green:#5b7d3a; --green-soft:#dde7cb;
+    --orange:#c66a25; --orange-soft:#f3ddc6;
+    --char:#3a3631; --char-soft:#d7d2c8;
+    --slate:#6a7080; --slate-soft:#cdd2dc;
+    --accent:#7a2e1e; --good:#3b6d3b; --hi:#1d9e75;
+    --mono:'Spline Sans Mono', ui-monospace, monospace;
+    --disp:'Fraunces', Georgia, serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--disp); -webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(var(--paper-2) 0.5px, transparent 0.5px); background-size:14px 14px;}
+  .wrap{max-width:1080px; margin:0 auto; padding:28px 22px 80px}
+  header{display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:16px; border-bottom:2px solid var(--ink); padding-bottom:14px}
+  h1{font-size:30px; font-weight:600; margin:0; letter-spacing:-0.5px}
+  h1 .sub{display:block; font-size:13px; font-weight:400; color:var(--ink-soft); letter-spacing:1.5px; text-transform:uppercase; margin-top:4px}
+  .coverage{font-family:var(--mono); font-size:12px; color:var(--ink-soft); text-align:right; line-height:1.5}
+  .coverage b{color:var(--accent); font-size:18px}
+
+  .lookup{display:flex; gap:8px; align-items:center; margin:18px 0 6px; padding:14px 16px; background:var(--card); border:1px solid var(--line); border-radius:12px; flex-wrap:wrap}
+  .lookup label{font-size:15px; color:var(--ink-soft)}
+  .lookup input{flex:1; font-family:var(--mono); font-size:16px; padding:11px 13px; border:1px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink); min-width:160px}
+  .lookup input:focus{outline:none; border-color:var(--accent)}
+  .btn{font-family:var(--mono); font-size:13px; padding:11px 16px; background:var(--ink); color:var(--paper); border:1px solid var(--ink); border-radius:8px; cursor:pointer; text-transform:uppercase; letter-spacing:.5px}
+  .btn.ghost{background:var(--card); color:var(--ink); border-color:var(--line)}
+  .btn:hover{opacity:.9}
+
+  .result{margin:10px 0 0; min-height:24px; font-family:var(--mono); font-size:14px}
+  .hit{background:var(--green-soft); border:1px solid #b9cd9b; border-radius:10px; padding:12px 14px; margin-bottom:8px}
+  .hit .loc{font-size:16px; color:var(--good); font-weight:600}
+  .hit .rng{color:var(--ink-soft); font-size:12.5px; margin-top:3px}
+  .miss{color:var(--accent); padding:8px 2px}
+  .examples{font-family:var(--mono); font-size:12px; color:var(--ink-soft); margin-top:8px}
+  .examples b{color:var(--ink); cursor:pointer; border-bottom:1px dotted var(--ink-soft)}
+
+  .levels{display:flex; flex-wrap:wrap; gap:5px; margin:20px 0 6px}
+  .lvl{font-family:var(--mono); font-size:13px; min-width:46px; padding:8px 5px; text-align:center; background:var(--card); border:1px solid var(--line); border-radius:8px; cursor:pointer; color:var(--ink-soft)}
+  .lvl:hover{border-color:var(--ink-soft)}
+  .lvl.active{background:var(--ink); color:var(--paper); border-color:var(--ink); font-weight:600}
+  .lvl.empty{opacity:.4}
+  .lvl small{display:block; font-size:9px; margin-top:2px; letter-spacing:.3px}
+
+  .stage{margin-top:8px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 10px 10px}
+  .rowlabel{font-size:11px; color:var(--ink-soft); letter-spacing:1.5px; text-transform:uppercase; margin:0 0 0 12px}
+  svg{display:block; width:100%; height:auto}
+  .shelf{cursor:pointer}
+  .shelf .frame{fill:none; stroke:var(--ink); stroke-width:1.4}
+  .shelf.absent{cursor:default}
+  .shelf.absent .frame{stroke:var(--line); stroke-dasharray:3 4; stroke-width:1}
+  .shelf.sel .frame{stroke:var(--accent); stroke-width:2.6}
+  .shelf.flash .frame{stroke:var(--hi); stroke-width:2.6}
+  .idx{font-family:var(--mono); font-size:11px; fill:var(--ink-soft)}
+  .face{font-family:var(--mono); font-size:8px; fill:var(--ink-soft)}
+
+  .detail{margin-top:14px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px 20px; font-family:var(--mono); font-size:13px}
+  .detail.empty{color:var(--ink-soft); text-align:center; padding:22px; font-family:var(--disp); font-size:15px}
+  .detail h2{font-family:var(--disp); font-size:19px; margin:0 0 4px}
+  .detail .meta{color:var(--ink-soft); font-size:12px; margin-bottom:10px}
+  .detail .face-row{display:flex; gap:10px; padding:7px 0; border-top:1px solid var(--line)}
+  .detail .face-row .fl{min-width:64px; color:var(--ink-soft)}
+  .detail .face-row .rg{font-weight:500}
+  footer{margin-top:26px; font-size:12px; color:var(--ink-soft); font-family:var(--mono); line-height:1.7}
+  .legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:10px; font-family:var(--mono); font-size:11px; color:var(--ink-soft); padding-left:12px}
+  .legend span{display:inline-flex; align-items:center; gap:5px}
+  .sw{width:11px; height:11px; border-radius:2px; display:inline-block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Biomed stacks · shelf locator<span class="sub">enter a call number → find the shelf</span></h1>
+    <div class="coverage" id="coverage"></div>
+  </header>
+
+  <div class="lookup">
+    <label>Call number:</label>
+    <input id="q" placeholder="e.g. W1 JO600  ·  W1 ME500  ·  BF 400  ·  WL 200" autocomplete="off" autofocus>
+    <button class="btn" id="go">Locate</button>
+    <button class="btn ghost" id="clear">Clear</button>
+  </div>
+  <div class="result" id="result">
+    <div class="examples">Try:
+      <b data-q="W1 BI700">W1 BI700</b> ·
+      <b data-q="W1 JO600">W1 JO600</b> ·
+      <b data-q="W1 ME500">W1 ME500</b> ·
+      <b data-q="W1 PE200">W1 PE200</b> ·
+      <b data-q="BF 400">BF 400</b> ·
+      <b data-q="HM 271 M598o">HM 271 M598o</b>
+    </div>
+  </div>
+
+  <div class="levels" id="levels"></div>
+
+  <div class="stage">
+    <div class="rowlabel">Top row →  (index 0–16)</div>
+    <svg id="plan" viewBox="0 0 720 400" role="img" aria-label="Floor plan"></svg>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--orange)"></i>orange · top-0 half (L3, L7)</span>
+      <span><i class="sw" style="background:var(--green)"></i>green · top-1..16 full</span>
+      <span><i class="sw" style="background:var(--char)"></i>black · bottom row</span>
+      <span><i class="sw" style="background:var(--slate)"></i>slate · bot-0 half (L3)</span>
+      <span>│ = double-sided · filled = mapped · — = unmapped</span>
+    </div>
+  </div>
+
+  <div class="detail empty" id="detail">Tap any shelf to see its mapped ranges, or search a call number above.</div>
+
+  <footer id="footer"></footer>
+</div>
+
+<script>
+/* ===== embedded dataset ===== */
+const DATA = {"11|bot-1|left":{"start":"BF 38 G952p","end":"BF 311 C6766"},"11|bot-1|right":{"start":"BF 311 C6767","end":"BF 371 B141h"},"11|bot-2|left":{"start":"BF 575 P9 R951p","end":"BF 697 P975"},"11|bot-2|right":{"start":"BF 697 R277a","end":"BF 713 T65"},"11|bot-3|left":{"start":"H 62 B113s","end":"HM 271 M598o"},"11|bot-3|right":{"start":"HM 271 M598o","end":"HQ 1090 D754m"},"11|top-1|left":{"start":"*AG 5 N421","end":"BF 57 D53"},"11|top-1|right":{"start":"BF 371 B141p","end":"BF 455 D646s"},"11|top-2|left":{"start":"BF 455 E36p","end":"BF 575 S37 G373t"},"11|top-2|right":{"start":"BF 713 T655b","end":"BF 789 D4 6456s"},"11|top-3|left":{"start":"BF 789 D4","end":"H 62 B113s"},"11|top-3|right":{"start":"HQ 1090 M452m","end":"PE 1628 W39c"},"2|bot-10|left":{"start":"W1 NE554","end":"W1 NE554"},"2|bot-10|right":{"start":"W1 NE554","end":"W1 NE788"},"2|bot-11|left":{"start":"W1 NO129","end":"W1 NO923"},"2|bot-11|right":{"start":"W1 NO923","end":"W1 NU511"},"2|bot-12|left":{"start":"W1 NU869","end":"W1 OC217"},"2|bot-12|right":{"start":"W1 OC217","end":"W1 OK716"},"2|bot-14|single":{"start":"W1 PA227","end":"W1 PA971"},"2|bot-15|left":{"start":"W1 PE734","end":"W1 PH294"},"2|bot-15|right":{"start":"W1 PH294","end":"W1 PH663"},"2|bot-16|left":{"start":"W1 PL111Y","end":"W1 PL217"},"2|bot-16|right":{"start":"W1 PL217","end":"W1 PO971"},"2|bot-1|left":{"start":"W1 MA757R","end":"W1 MC637"},"2|bot-1|right":{"start":"W1 MD239","end":"W1 ME2379"},"2|bot-2|left":{"start":"W1 ME635P","end":"W1 ME967"},"2|bot-2|right":{"start":"W1 ME967","end":"W1 MI186KH"},"2|bot-3|left":{"start":"W1 MI625","end":"W1 MO283"},"2|bot-3|right":{"start":"W1 MO283","end":"W1 MO287"},"2|top-10|left":{"start":"W1 NE419","end":"W1 NE554"},"2|top-10|right":{"start":"W1 NE793","end":"W1 NI885"},"2|top-11|left":{"start":"W1 NI885","end":"W1 NO122D"},"2|top-11|right":{"start":"W1 NU511","end":"W1 NU701"},"2|top-12|left":{"start":"W1 NU701","end":"W1 NU866"},"2|top-12|right":{"start":"W1 OK716","end":"W1 OP264"},"2|top-13|left":{"start":"W1 OP264","end":"W1 OR129"},"2|top-13|right":{"start":"W1 OR129","end":"W1 OR854"},"2|top-14|left":{"start":"W1 OR854","end":"W1 PA180"},"2|top-14|right":{"start":"W1 PA971","end":"W1 PE135H"},"2|top-15|left":{"start":"W1 PE135H","end":"W1 PE729"},"2|top-15|right":{"start":"W1 PH663","end":"W1 PH925"},"2|top-16|left":{"start":"W1 PH925","end":"W1 PL111"},"2|top-16|right":{"start":"W1 PO971","end":"W1 PO971"},"2|top-1|left":{"start":"W1 MA166","end":"W1 MA757R"},"2|top-1|right":{"start":"W1 ME2379","end":"W1 ME338"},"2|top-2|left":{"start":"W1 ME338","end":"W1 ME635P"},"2|top-2|right":{"start":"W1 MI186KH","end":"W1 MI425"},"2|top-3|left":{"start":"W1 MI425","end":"W1 MI625"},"2|top-3|right":{"start":"W1 MO287","end":"W1 MO295M"},"2|top-4|left":{"start":"W1 MO296A","end":"W1 MO583"},"2|top-4|right":{"start":"W1 MO594","end":"W1 MU869"},"2|top-5|left":{"start":"W1 MU869","end":"W1 NA1991"},"2|top-5|right":{"start":"W1 NA1991","end":"W1 NA835"},"2|top-6|left":{"start":"W1 NA835","end":"W1 NA835"},"2|top-6|right":{"start":"W1 NA839","end":"W1 NE185"},"2|top-7|left":{"start":"W1 NE185","end":"W1 NE252N"},"2|top-7|right":{"start":"W1 NE252N","end":"W1 NE282"},"2|top-8|left":{"start":"W1 NE282","end":"W1 NE286DB"},"2|top-8|right":{"start":"W1 NE286DH","end":"W1 NE286GK"},"2|top-9|left":{"start":"W1 NE286GK","end":"W1 NE411"},"2|top-9|right":{"start":"W1 NE411","end":"W1 NE411"},"3|bot-0|single":{"start":"W1 JA121","end":"W1 JO506"},"3|bot-10|left":{"start":"W1 JO718L","end":"W1 JO728"},"3|bot-10|right":{"start":"W1 JO728","end":"W1 JO7403"},"3|bot-11|left":{"start":"W1 JO757","end":"W1 JO788"},"3|bot-11|right":{"start":"W1 JO788","end":"W1 JO796"},"3|bot-12|left":{"start":"W1 JO829","end":"W1 JO836"},"3|bot-12|right":{"start":"W1 JO836","end":"W1 JO852"},"3|bot-14|single":{"start":"W1 JO922F","end":"W1 JO939"},"3|bot-15|left":{"start":"W1 KI311","end":"W1 LA208"},"3|bot-15|right":{"start":"W1 LA208","end":"W1 LA534"},"3|bot-16|left":{"start":"W1 LI431","end":"W1 LY621"},"3|bot-16|right":{"start":"W1 LY621","end":"W1 LY627"},"3|bot-1|left":{"start":"W1 JO523","end":"W1 JO535"},"3|bot-1|right":{"start":"W1 JO535","end":"W1 JO542"},"3|bot-2|left":{"start":"W1 JO547","end":"W1 JO551V"},"3|bot-2|right":{"start":"W1 JO551V","end":"W1 JO5576"},"3|bot-3|left":{"start":"W1 JO567","end":"W1 JO572"},"3|bot-3|right":{"start":"W1 JO572","end":"W1 JO599"},"3|top-0|single":{"start":"W1 JO506","end":"W1 JO5221"},"3|top-10|left":{"start":"W1 JO714","end":"W1 JO718D"},"3|top-10|right":{"start":"W1 JO7403","end":"W1 JO742H"},"3|top-11|left":{"start":"W1 JO742L","end":"W1 JO756"},"3|top-11|right":{"start":"W1 JO797","end":"W1 JO819"},"3|top-12|left":{"start":"W1 JO819","end":"W1 JO829"},"3|top-12|right":{"start":"W1 JO852","end":"W1 JO886"},"3|top-13|left":{"start":"W1 JO886","end":"W1 JO897VL"},"3|top-13|right":{"start":"W1 JO897VL","end":"W1 JO913"},"3|top-14|left":{"start":"W1 JO913","end":"W1 JO922F"},"3|top-14|right":{"start":"W1 JO939","end":"W1 JO955"},"3|top-15|left":{"start":"W1 JO955","end":"W1 KI311"},"3|top-15|right":{"start":"W1 LA534","end":"W1 LA719"},"3|top-16|left":{"start":"W1 LA719","end":"W1 LI388"},"3|top-1|left":{"start":"W1 JO5221","end":"W1 JO523"},"3|top-1|right":{"start":"W1 JO542","end":"W1 JO542"},"3|top-2|left":{"start":"W1 JO542","end":"W1 JO547"},"3|top-2|right":{"start":"W1 JO5576","end":"W1 JO565"},"3|top-3|left":{"start":"W1 JO565","end":"W1 JO567"},"3|top-3|right":{"start":"W1 JO599","end":"W1 JO6204"},"3|top-4|left":{"start":"W1 JO6204","end":"W1 JO623ML"},"3|top-4|right":{"start":"W1 JO623MP","end":"W1 JO626"},"3|top-5|left":{"start":"W1 JO626","end":"W1 JO629B"},"3|top-5|right":{"start":"W1 JO6292","end":"W1 JO632"},"3|top-6|left":{"start":"W1 JO632","end":"W1 JO6386"},"3|top-6|right":{"start":"W1 JO639N","end":"W1 JO650"},"3|top-7|left":{"start":"W1 JO650","end":"W1 JO656"},"3|top-7|right":{"start":"W1 JO656","end":"W1 JO669"},"3|top-8|left":{"start":"W1 JO669","end":"W1 JO682"},"3|top-8|right":{"start":"W1 JO682","end":"W1 JO6907"},"3|top-9|left":{"start":"W1 JO6907","end":"W1 JO701"},"3|top-9|right":{"start":"W1 JO701","end":"W1 JO714"},"5|bot-10|left":{"start":"W1 HE131","end":"W1 HE548"},"5|bot-10|right":{"start":"W1 HE549","end":"W1 HE925"},"5|bot-11|left":{"start":"W1 HO631","end":"W1 HU440"},"5|bot-11|right":{"start":"W1 HU440","end":"W1 HU471"},"5|bot-12|left":{"start":"W1 IM547A","end":"W1 IN236"},"5|bot-12|right":{"start":"W1 IN236","end":"W1 IN3892"},"5|bot-14|single":{"start":"W1 IN778","end":"W1 IN7886"},"5|bot-15|single":{"start":"W1 IN998","end":"W1 IZ764"},"5|bot-1|left":{"start":"W1 DE244","end":"W1 DE918"},"5|bot-1|right":{"start":"W1 DE926","end":"W1 DE957"},"5|bot-2|left":{"start":"W1 DO181","end":"W1 EC899"},"5|bot-2|right":{"start":"W1 EC899","end":"W1 EM647"},"5|bot-3|left":{"start":"W1 EN996D","end":"W1 ER511"},"5|bot-3|right":{"start":"W1 ER511","end":"W1 EU726"},"5|top-10|left":{"start":"W1 GR845","end":"W1 HE121"},"5|top-10|right":{"start":"W1 HE925","end":"W1 HI703"},"5|top-11|left":{"start":"W1 HI703","end":"W1 HO681"},"5|top-11|right":{"start":"W1 HU470","end":"W1 IB375"},"5|top-12|left":{"start":"W1 IB375","end":"W1 IM547"},"5|top-12|right":{"start":"W1 IN394","end":"W1 IN589P"},"5|top-13|left":{"start":"W1 IN593","end":"W1 IN747"},"5|top-13|right":{"start":"W1 IN747","end":"W1 IN7661"},"5|top-14|left":{"start":"W1 IN7661A","end":"W1 IN778"},"5|top-14|right":{"start":"W1 IN7886","end":"W1 IN795"},"5|top-15|left":{"start":"W1 IN798","end":"W1 IN828"},"5|top-1|left":{"start":"W1 D116","end":"W1 DE244"},"5|top-1|right":{"start":"W1 DE957","end":"W1 DI197"},"5|top-2|left":{"start":"W1 DI197","end":"W1 DO181"},"5|top-2|right":{"start":"W1 EM647","end":"W1 EN197"},"5|top-3|left":{"start":"W1 EN197","end":"W1 EN996D"},"5|top-3|right":{"start":"W1 EU726","end":"W1 EU733M"},"5|top-4|left":{"start":"W1 EU733M","end":"W1 EU736"},"5|top-4|right":{"start":"W1 EU736","end":"W1 EV275"},"5|top-5|left":{"start":"W1 EV275","end":"W1 EX597"},"5|top-5|right":{"start":"W1 EX597","end":"W1 EX623"},"5|top-6|left":{"start":"W1 EX623","end":"W1 FA471"},"5|top-6|right":{"start":"W1 FA471","end":"W1 FE119"},"5|top-7|left":{"start":"W1 FE134","end":"W1 FL302B"},"5|top-7|right":{"start":"W1 FL957","end":"W1 GA361"},"5|top-8|left":{"start":"W1 GA361","end":"W1 GE179"},"5|top-8|right":{"start":"W1 GE191","end":"W1 GE276"},"5|top-9|left":{"start":"W1 GE278","end":"W1 GE383"},"5|top-9|right":{"start":"W1 GE383","end":"W1 GR845"},"6|bot-10|left":{"start":"W1 CA566N","end":"W1 CA583"},"6|bot-10|right":{"start":"W1 CA601","end":"W1 CA672"},"6|bot-11|left":{"start":"W1 CA705","end":"W1 CA756TA"},"6|bot-11|right":{"start":"W1 CA757","end":"W1 CE139"},"6|bot-12|left":{"start":"W1 CE9022","end":"W1 CH295"},"6|bot-12|right":{"start":"W1 CH295","end":"W1 CH819"},"6|bot-14|single":{"start":"W1 CL663","end":"W1 CL671"},"6|bot-15|left":{"start":"W1 CO112","end":"W1 CO435A"},"6|bot-15|right":{"start":"W1 CO435A","end":"W1 CO745"},"6|bot-16|left":{"start":"W1 CU575","end":"W1 CU751R"},"6|bot-16|right":{"start":"W1 CU751R","end":"W1 CU821"},"6|bot-1|left":{"start":"W1 BE126K","end":"W1 BE958E"},"6|bot-1|right":{"start":"W1 BE958E","end":"W1 BI621"},"6|bot-2|left":{"start":"W1 BI636","end":"W1 BI6495"},"6|bot-2|right":{"start":"W1 BI6495","end":"W1 BI652"},"6|bot-3|left":{"start":"W1 BI704","end":"W1 BI838E"},"6|bot-3|right":{"start":"W1 BI838K","end":"W1 BI8764L"},"6|top-10|left":{"start":"W1 CA549R","end":"W1 CA566N"},"6|top-10|right":{"start":"W1 CA676P","end":"W1 CA692"},"6|top-11|left":{"start":"W1 CA692","end":"W1 CA705"},"6|top-11|right":{"start":"W1 CE139","end":"W1 CE144"},"6|top-12|left":{"start":"W1 CE144","end":"W1 CE9022"},"6|top-12|right":{"start":"W1 CH819","end":"W1 CI743"},"6|top-13|left":{"start":"W1 CI743","end":"W1 CL517"},"6|top-13|right":{"start":"W1 CL517","end":"W1 CL613"},"6|top-14|left":{"start":"W1 CL613","end":"W1 CL663"},"6|top-14|right":{"start":"W1 CL674","end":"W1 CL809"},"6|top-15|left":{"start":"W1 CL809","end":"W1 CL871"},"6|top-15|right":{"start":"W1 CO745","end":"W1 CR139"},"6|top-16|left":{"start":"W1 CR139","end":"W1 CU575"},"6|top-16|right":{"start":"W1 CU821","end":"W1 CY967B"},"6|top-1|left":{"start":"W1 B711","end":"W1 BE126K"},"6|top-1|right":{"start":"W1 BI621","end":"W1 BI631"},"6|top-2|left":{"start":"W1 BI635","end":"W1 BI636"},"6|top-2|right":{"start":"W1 BI652","end":"W1 BI652"},"6|top-3|left":{"start":"W1 BI652","end":"W1 BI704"},"6|top-3|right":{"start":"W1 BI8764L","end":"W1 BL467"},"6|top-4|left":{"start":"W1 BL467","end":"W1 BO853"},"6|top-4|right":{"start":"W1 BO853","end":"W1 BR115V"},"6|top-5|left":{"start":"W1 BR115V","end":"W1 BR123"},"6|top-5|right":{"start":"W1 BR123","end":"W1 BR509"},"6|top-6|left":{"start":"W1 BR509","end":"W1 BR531"},"6|top-6|right":{"start":"W1 BR531","end":"W1 BR557"},"6|top-7|left":{"start":"W1 BR557","end":"W1 BR649"},"6|top-7|right":{"start":"W1 BR649","end":"W1 BU167"},"6|top-8|left":{"start":"W1 BU167","end":"W1 BU851"},"6|top-8|right":{"start":"W1 BU851","end":"W1 CA4065"},"6|top-9|left":{"start":"W1 CA4065","end":"W1 CA527"},"6|top-9|right":{"start":"W1 CA527","end":"W1 CA549R"},"7|bot-10|left":{"start":"W1 AM519J","end":"W1 AM523"},"7|bot-10|right":{"start":"W1 AM523","end":"W1 AM538"},"7|bot-11|left":{"start":"W1 AM598","end":"W1 AM6744"},"7|bot-11|right":{"start":"W1 AM6744","end":"W1 AM972"},"7|bot-12|left":{"start":"W1 AN234G","end":"W1 AN261"},"7|bot-12|right":{"start":"W1 AN261","end":"W1 AN602"},"7|bot-14|single":{"start":"W1 AN819","end":"W1 AO671"},"7|bot-15|left":{"start":"W1 AR405","end":"W1 AR423H"},"7|bot-15|right":{"start":"W1 AR423H","end":"W1 AR4471"},"7|bot-16|left":{"start":"W1 AR947P","end":"W1 AT257"},"7|bot-16|right":{"start":"W1 AT257","end":"W1 AU759"},"7|bot-1|left":{"start":"W1 A1Q2","end":"W1 AC489"},"7|bot-1|right":{"start":"W1 AC489","end":"W1 AC745"},"7|bot-2|left":{"start":"W1 AC824","end":"W1 AC869"},"7|bot-2|right":{"start":"W1 AC869","end":"W1 AD153"},"7|bot-3|left":{"start":"W1 AD757","end":"W1 AD844"},"7|bot-3|right":{"start":"W1 AD847","end":"W1 AG342"},"7|top-0|single":{"start":"W1 A1C7","end":"W1 A1C8"},"7|top-10|left":{"start":"W1 AM511","end":"W1 AM519"},"7|top-10|right":{"start":"W1 AM542","end":"W1 AM554"},"7|top-11|left":{"start":"W1 AM554","end":"W1 AM598"},"7|top-11|right":{"start":"W1 AM972","end":"W1 AN173"},"7|top-12|left":{"start":"W1 AN173","end":"W1 AN234G"},"7|top-12|right":{"start":"W1 AN602","end":"W1 AN621"},"7|top-13|left":{"start":"W1 AN621","end":"W1 AN634F"},"7|top-13|right":{"start":"W1 AN634F","end":"W1 AN7852"},"7|top-14|left":{"start":"W1 AN786","end":"W1 AN819"},"7|top-14|right":{"start":"W1 AO671","end":"W1 AQ141"},"7|top-15|left":{"start":"W1 AQ141","end":"W1 AR405"},"7|top-15|right":{"start":"W1 AR4471","end":"W1 AR469"},"7|top-16|left":{"start":"W1 AR469","end":"W1 AR947P"},"7|top-16|right":{"start":"W1 AU771","end":"W1 AW469"},"7|top-1|left":{"start":"W1 A1C8","end":"W1 A1Q2"},"7|top-1|right":{"start":"W1 AC748S","end":"W1 AC809"},"7|top-2|left":{"start":"W1 AC809","end":"W1 AC824"},"7|top-2|right":{"start":"W1 AD153","end":"W1 AD751"},"7|top-3|left":{"start":"W1 AD751","end":"W1 AD757"},"7|top-3|right":{"start":"W1 AG342","end":"W1 AL157"},"7|top-4|left":{"start":"W1 AL157","end":"W1 AM169"},"7|top-4|right":{"start":"W1 AM169","end":"W1 AM302"},"7|top-5|left":{"start":"W1 AM302","end":"W1 AM343"},"7|top-5|right":{"start":"W1 AM343","end":"W1 AM4225"},"7|top-6|left":{"start":"W1 AM4225","end":"W1 AM4733"},"7|top-6|right":{"start":"W1 AM4733","end":"W1 AM477"},"7|top-7|left":{"start":"W1 AM477","end":"W1 AM482"},"7|top-7|right":{"start":"W1 AM482","end":"W1 AM489H"},"7|top-8|left":{"start":"W1 AM489H","end":"W1 AM4945"},"7|top-8|right":{"start":"W1 AM4945","end":"W1 AM4986"},"7|top-9|left":{"start":"W1 AM4986","end":"W1 AM511"},"7|top-9|right":{"start":"W1 AM511","end":"W1 AM511"},"8|bot-1|left":{"start":"WJ 752 Q5","end":"WK 400 S961"},"8|bot-1|right":{"start":"WK 400 T5465","end":"WL 20 N277i"},"8|bot-2|left":{"start":"WL 102.8 N398","end":"WL 141 E195"},"8|bot-2|right":{"start":"WL 141 E38","end":"WL 310 R438"},"8|bot-3|left":{"start":"WL 400 A517s","end":"WM 13 D5536"},"8|bot-3|right":{"start":"WM 13 D5537","end":"WM 33 AA1"}};
+
+/* ===== NLM call-number comparator (matches the Python parser in the spec) ===== */
+function parseCN(raw){
+  const toks=(raw||'').trim().toUpperCase().replace(/\*/g,'').replace(/\s+/g,' ').split(' ').filter(Boolean);
+  if(!toks.length) return [];
+  const out=[];
+  const m0=toks[0].match(/^([A-Z]+)(\d*\.?\d*)$/);
+  let classAlpha, classNum, rest;
+  if(m0){
+    classAlpha=m0[1];
+    rest=toks.slice(1);
+    if(m0[2]){ classNum=parseFloat(m0[2]); }
+    else if(rest.length && /^\d+\.?\d*$/.test(rest[0])){ classNum=parseFloat(rest[0]); rest=rest.slice(1); }
+    else { classNum=0; }
+  } else {
+    classAlpha=toks[0]; classNum=0; rest=toks.slice(1);
+  }
+  out.push({t:'A', a:classAlpha});
+  out.push({t:'N', n:classNum});
+  rest.forEach(t=>{
+    const mm=t.match(/^([A-Z]+)(\d*)([A-Z]*)$/);
+    if(mm){
+      const d=mm[2]?parseFloat('0.'+mm[2]):0;
+      out.push({t:'C', a:mm[1], n:d, s:mm[3]});
+    } else {
+      out.push({t:'C', a:t, n:0, s:''});
+    }
+  });
+  return out;
+}
+function cmpSeg(a,b){
+  if(!a) return -1; if(!b) return 1;
+  if(a.t!==b.t) return a.t<b.t?-1:1;
+  if(a.t==='A') return a.a===b.a?0:(a.a<b.a?-1:1);
+  if(a.t==='N') return a.n===b.n?0:(a.n<b.n?-1:1);
+  if(a.a!==b.a) return a.a<b.a?-1:1;
+  if(a.n!==b.n) return a.n<b.n?-1:1;
+  if(a.s!==b.s) return a.s<b.s?-1:1;
+  return 0;
+}
+function cmpCN(x,y){
+  const a=parseCN(x), b=parseCN(y), n=Math.max(a.length,b.length);
+  for(let i=0;i<n;i++){const c=cmpSeg(a[i],b[i]); if(c!==0) return c<0?-1:1;}
+  return 0;
+}
+
+/* ===== layout =====
+   Standard biomed grid:
+     - top row: index 0 sometimes (half), 1..16 full
+     - bot row: full at 1, 2, 3, 10, 11, 12, 15, 16; half at 14
+   Floor 3 deviation: also has a bot-0 half (back-wall, right-side-only).
+*/
+const STACK_LEVELS=[1,2,3,4,5,6,7,8,9,10,11];
+const SHELVES=[];
+SHELVES.push({id:'top-0',  index:0, row:'top',    group:'orange', type:'half'});
+SHELVES.push({id:'bot-0',  index:0, row:'bottom', group:'slate',  type:'half'});
+for(let i=1;i<=16;i++) SHELVES.push({id:`top-${i}`,index:i,row:'top',group:'green',type:'full'});
+[1,2,3,10,11,12,15,16].forEach(i=>SHELVES.push({id:`bot-${i}`,index:i,row:'bottom',group:'black',type:'full'}));
+SHELVES.push({id:'bot-14',index:14,row:'bottom',group:'black',type:'half'});
+
+/* which levels actually have data (computed from DATA) */
+const levelsWithData={};
+Object.keys(DATA).forEach(key=>{ levelsWithData[+key.split('|')[0]]=true; });
+
+function existsOnLevel(s,lvl){
+  if(s.id==='top-0') return lvl===3 || lvl===7;
+  if(s.id==='bot-0') return lvl===3;
+  return levelsWithData[lvl] === true;
+}
+const sidesOf = s => s.type==='full' ? ['left','right'] : ['single'];
+const shelfById = id => SHELVES.find(s=>s.id===id);
+const k=(lvl,id,side)=>`${lvl}|${id}|${side}`;
+
+let level=3, selected=null, flashId=null;
+
+/* ===== floor plan ===== */
+const groupColor={green:'var(--green)',orange:'var(--orange)',black:'var(--char)',slate:'var(--slate)'};
+const groupSoft ={green:'var(--green-soft)',orange:'var(--orange-soft)',black:'var(--char-soft)',slate:'var(--slate-soft)'};
+const filled=(lvl,id,side)=>{const d=DATA[k(lvl,id,side)];return d&&d.start&&d.end;};
+
+function renderPlan(){
+  const startX=20, slotW=40, topY=46, topH=140, botY=232, botH=140;
+  const cx=i=>startX+i*slotW+slotW/2;
+  let svg='';
+  SHELVES.forEach(s=>{
+    const present=existsOnLevel(s,level);
+    const y=s.row==='top'?topY:botY, h=s.row==='top'?topH:botH, c=cx(s.index);
+    let cls='shelf'+(present?'':' absent')+(selected===s.id?' sel':'')+(flashId===s.id?' flash':'');
+    const click=present?` onclick="pick('${s.id}')"`:'';
+    let inner='';
+    if(s.type==='full'){
+      const w=14;
+      const lFill = present && filled(level,s.id,'left');
+      const rFill = present && filled(level,s.id,'right');
+      const lf = lFill ? groupColor[s.group] : 'transparent';
+      const rf = rFill ? groupColor[s.group] : 'transparent';
+      inner+=`<rect x="${c-w}" y="${y}" width="${w}" height="${h}" fill="${lf}"/>`;
+      inner+=`<rect x="${c}" y="${y}" width="${w}" height="${h}" fill="${rf}"/>`;
+      inner+=`<line x1="${c}" y1="${y+5}" x2="${c}" y2="${y+h-5}" stroke="var(--line)" stroke-width="0.8"/>`;
+      inner+=`<rect class="frame" x="${c-w}" y="${y}" width="${w*2}" height="${h}" rx="3"/>`;
+      if(present){
+        inner+=`<text class="face" x="${c-w/2}" y="${y+h-6}" text-anchor="middle">L</text>`;
+        inner+=`<text class="face" x="${c+w/2}" y="${y+h-6}" text-anchor="middle">R</text>`;
+        if(!lFill) inner+=`<text x="${c-w/2}" y="${y+h/2+5}" text-anchor="middle" font-family="var(--mono)" font-size="15" fill="var(--ink-soft)">—</text>`;
+        if(!rFill) inner+=`<text x="${c+w/2}" y="${y+h/2+5}" text-anchor="middle" font-family="var(--mono)" font-size="15" fill="var(--ink-soft)">—</text>`;
+      }
+    } else {
+      const w=9;
+      const sFill = present && filled(level,s.id,'single');
+      const sf = sFill ? groupColor[s.group] : 'transparent';
+      inner+=`<rect x="${c-w}" y="${y}" width="${w*2}" height="${h}" fill="${sf}"/>`;
+      inner+=`<rect class="frame" x="${c-w}" y="${y}" width="${w*2}" height="${h}" rx="3"/>`;
+      if(present){
+        inner+=`<text class="face" x="${c}" y="${y+h-6}" text-anchor="middle">R</text>`;
+        if(!sFill) inner+=`<text x="${c}" y="${y+h/2+5}" text-anchor="middle" font-family="var(--mono)" font-size="15" fill="var(--ink-soft)">—</text>`;
+      }
+    }
+    svg+=`<g class="${cls}"${click}>${inner}</g>`;
+  });
+  for(let i=0;i<=16;i++) svg+=`<text class="idx" x="${cx(i)}" y="38" text-anchor="middle">${i}</text>`;
+  svg+=`<text class="idx" x="${startX}" y="${botY-8}" text-anchor="start" style="letter-spacing:1.5px">▾ bottom row</text>`;
+  const plan=document.getElementById('plan');
+  plan.innerHTML=svg; plan.setAttribute('viewBox',`0 0 720 ${botY+botH+16}`);
+}
+
+/* ===== levels bar ===== */
+function renderLevels(){
+  const el=document.getElementById('levels'); el.innerHTML='';
+  STACK_LEVELS.forEach(l=>{
+    const has=levelsWithData[l];
+    const n = has ? Object.keys(DATA).filter(k=>k.startsWith(l+'|')).length : 0;
+    const b=document.createElement('div');
+    b.className='lvl'+(l===level?' active':'')+(has?'':' empty');
+    b.innerHTML=`${l}<small>${has?n+' faces':'—'}</small>`;
+    b.onclick=()=>{ level=l; selected=null; flashId=null; renderLevels(); renderPlan(); renderDetail(); };
+    el.appendChild(b);
+  });
+}
+
+/* ===== detail panel ===== */
+const sideName={left:'Left',right:'Right',single:'Single (R)'};
+function pick(id){ selected=id; flashId=null; renderPlan(); renderDetail(); }
+window.pick=pick;
+function renderDetail(){
+  const el=document.getElementById('detail');
+  if(!selected){ el.className='detail empty'; el.textContent='Tap any shelf to see its mapped ranges, or search a call number above.'; return; }
+  const s=shelfById(selected); el.className='detail';
+  let html=`<h2>Index ${s.index} · ${s.row} row</h2><div class="meta">level ${level} · ${s.group} · ${s.type}-shelf</div>`;
+  let any=false;
+  sidesOf(s).forEach(side=>{
+    const d=DATA[k(level,s.id,side)];
+    if(d){any=true; html+=`<div class="face-row"><span class="fl">${sideName[side]}</span><span class="rg">${d.start} → ${d.end}</span></div>`;}
+  });
+  if(!any) html+=`<div class="face-row"><span class="rg" style="color:var(--ink-soft)">No ranges mapped on this level yet.</span></div>`;
+  el.innerHTML=html;
+}
+
+/* ===== lookup ===== */
+function locate(){
+  const q=document.getElementById('q').value.trim();
+  const out=document.getElementById('result');
+  if(!q){ out.innerHTML=''; return; }
+  const hits=[];
+  for(const key in DATA){
+    const d=DATA[key]; if(!d.start||!d.end) continue;
+    if(cmpCN(q,d.start)>=0 && cmpCN(q,d.end)<=0){
+      const [lvl,id,side]=key.split('|'); hits.push({lvl:+lvl,id,side,d});
+    }
+  }
+  if(hits.length){
+    hits.sort((a,b)=>a.lvl-b.lvl);
+    out.innerHTML=hits.map(h=>{
+      const s=shelfById(h.id);
+      return `<div class="hit"><div class="loc">Level ${h.lvl} · ${s.row} row · index ${s.index} · ${sideName[h.side]} side</div>`
+        +`<div class="rng">${h.d.start} → ${h.d.end}</div></div>`;
+    }).join('')
+    + (hits.length>1?`<div class="examples">${hits.length} shelves match — for serials, check the volume/year on the spine to pick the right one.</div>`:'');
+    const first=hits[0]; level=first.lvl; selected=first.id; flashId=first.id;
+    renderLevels(); renderPlan(); renderDetail();
+    setTimeout(()=>{flashId=null;renderPlan();},1600);
+  } else {
+    out.innerHTML=`<div class="miss">No mapped shelf contains <b>${q.toUpperCase()}</b>. It may be on a shelf/level not yet entered, or just outside the mapped ranges.</div>`;
+  }
+}
+
+/* ===== coverage summary ===== */
+function renderCoverage(){
+  const lv=Object.keys(levelsWithData).map(Number).sort((a,b)=>a-b);
+  document.getElementById('coverage').innerHTML=`<b>${Object.keys(DATA).length}</b> shelf-sides mapped<br>levels ${lv.join(', ')}`;
+}
+
+document.getElementById('footer').innerHTML=
+  'Lookup compares NLM call numbers by class, then class-number, then Cutter-as-decimal, then suffix. '+
+  'Full shelves are double-sided (left + right); a few serial shelves share one call number across many volumes, so a search there returns every matching shelf. '+
+  'Floors 2, 3, 5, 6, 7 are densely mapped in the W1 (biomed) scheme; floors 8 and 11 have partial NLM coverage.';
+
+/* ===== init ===== */
+renderCoverage(); renderLevels(); renderPlan(); renderDetail();
+document.getElementById('go').onclick=locate;
+document.getElementById('clear').onclick=()=>{document.getElementById('q').value='';document.getElementById('result').innerHTML='';selected=null;flashId=null;renderPlan();renderDetail();};
+document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')locate();});
+document.querySelectorAll('.examples b').forEach(b=>b.onclick=()=>{document.getElementById('q').value=b.dataset.q;locate();});
+</script>
+</body>
+</html>
