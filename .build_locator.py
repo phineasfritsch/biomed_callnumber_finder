@@ -1,9 +1,10 @@
-"""Build biomed-shelf-locator.html with the current JSON baked in."""
-import json, os
+"""Build biomed-shelf-locator.html (and index.html for CF Pages) with the current JSON baked in."""
+import json, os, shutil
 
 REPO = os.path.dirname(os.path.abspath(__file__))
 JSON_PATH = os.path.join(REPO, 'biomed-shelf-ranges.json')
 OUT_PATH = os.path.join(REPO, 'biomed-shelf-locator.html')
+INDEX_PATH = os.path.join(REPO, 'index.html')  # CF Pages entry point
 
 d = json.load(open(JSON_PATH))
 parts = []
@@ -109,7 +110,7 @@ HTML = r"""<!DOCTYPE html>
 
   <div class="lookup">
     <label>Call number:</label>
-    <input id="q" placeholder="e.g.  QL737.C22  ·  W1 JO600  ·  BF 575 P9" autocomplete="off" autofocus>
+    <input id="q" placeholder="call number or paste full catalog page" autocomplete="off" autofocus>
     <button class="btn" id="go">Locate</button>
     <button class="btn ghost" id="clear">Clear</button>
   </div>
@@ -473,6 +474,35 @@ document.getElementById('go').onclick=locate;
 document.getElementById('clear').onclick=()=>{document.getElementById('q').value='';document.getElementById('result').innerHTML='';selected=null;flashId=null;setCollection('stacks');renderPlan();renderDetail();};
 document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')locate();});
 document.querySelectorAll('.examples b').forEach(b=>b.onclick=()=>{setCollection('stacks');document.getElementById('q').value=b.dataset.q;locate();});
+
+/* ===== Smart paste: accept full UCLA catalog Ctrl+A text =====
+   Looks for the location line pattern: "Biomed Library ; W3 JA271 1977"
+   If pasted text is multi-line or long, extract the call number and auto-search.
+*/
+function extractCallNumber(text){
+  // Primary: UCLA catalog location line "Available Biomed Library ; <call number>"
+  const m=text.match(/Biomed\s+Library\s*;\s*([^\n\r;(]+)/i);
+  if(m) return m[1].trim();
+  // Fallback: first short line that looks like a call number (letters then digits/space)
+  const lines=text.split(/[\n\r]+/).map(l=>l.trim()).filter(Boolean);
+  const cn=lines.find(l=>/^[A-Z*][A-Z0-9]*[\s.]/i.test(l) && l.length<60);
+  if(cn) return cn;
+  return text.trim();
+}
+document.getElementById('q').addEventListener('paste',e=>{
+  const pasted=(e.clipboardData||window.clipboardData).getData('text');
+  // Only intercept if it's clearly multi-line or long catalog text
+  if(pasted.includes('\n') || pasted.length>80){
+    const cn=extractCallNumber(pasted);
+    if(cn && cn.length<60){
+      e.preventDefault();
+      const inp=document.getElementById('q');
+      inp.value=cn;
+      inp.dispatchEvent(new Event('input'));
+      setTimeout(locate,60);
+    }
+  }
+});
 document.querySelectorAll('#sect .pill').forEach(p=>{
   p.onclick=()=>{
     setCollection(p.dataset.coll);
@@ -496,6 +526,8 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
 html = HTML.replace('__DATA__', DATA_JS)
 with open(OUT_PATH, 'w', encoding='utf-8') as f:
     f.write(html)
+shutil.copy2(OUT_PATH, INDEX_PATH)  # CF Pages serves index.html at /
 
 print(f'wrote {OUT_PATH}: {len(html)} chars')
+print(f'wrote {INDEX_PATH} (CF Pages entry point)')
 print(f'embedded {len(d)} keys across {len({k.split("|")[0] for k in d})} floors')
