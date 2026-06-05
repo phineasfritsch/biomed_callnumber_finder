@@ -30,44 +30,53 @@ HTML = r"""<!DOCTYPE html>
     --char:#3a3631; --char-soft:#d7d2c8;
     --slate:#6a7080; --slate-soft:#cdd2dc;
     --accent:#7a2e1e; --good:#3b6d3b; --hi:#1d9e75;
+    --ink-faint:#9a9080; --r:12px;
     --mono:'Spline Sans Mono', ui-monospace, monospace;
     --disp:'Fraunces', Georgia, serif;
   }
   *{box-sizing:border-box}
-  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--disp); -webkit-font-smoothing:antialiased;
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--mono); font-size:13px; line-height:1.5; -webkit-font-smoothing:antialiased;
     background-image:radial-gradient(var(--paper-2) 0.5px, transparent 0.5px); background-size:14px 14px;}
-  .wrap{max-width:1080px; margin:0 auto; padding:28px 22px 80px}
-  header{display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:16px; border-bottom:2px solid var(--ink); padding-bottom:14px}
-  h1{font-size:30px; font-weight:600; margin:0; letter-spacing:-0.5px}
-  h1 .sub{display:block; font-size:13px; font-weight:400; color:var(--ink-soft); letter-spacing:1.5px; text-transform:uppercase; margin-top:4px}
-  .coverage{font-family:var(--mono); font-size:12px; color:var(--ink-soft); text-align:right; line-height:1.5}
-  .coverage b{color:var(--accent); font-size:18px}
+  .wrap{max-width:1060px; margin:0 auto; padding:30px 22px 80px}
+  header{display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:14px; border-bottom:2px solid var(--ink); padding-bottom:16px}
+  h1{font-family:var(--disp); font-size:30px; font-weight:600; margin:0; letter-spacing:-0.4px; line-height:1.05}
+  h1 .sub{display:block; font-size:11px; font-weight:400; color:var(--ink-soft); letter-spacing:1.6px; text-transform:uppercase; margin-top:6px}
+  .coverage{font-size:11px; color:var(--ink-soft); text-align:right; line-height:1.6}
+  .coverage b{color:var(--accent); font-size:16px; font-weight:600}
 
-  .lookup{display:flex; gap:8px; align-items:center; margin:18px 0 6px; padding:14px 16px; background:var(--card); border:1px solid var(--line); border-radius:12px; flex-wrap:wrap}
-  .lookup label{font-size:15px; color:var(--ink-soft)}
-  .lookup input{flex:1; font-family:var(--mono); font-size:16px; padding:11px 13px; border:1px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink); min-width:160px}
-  .lookup input:focus{outline:none; border-color:var(--accent)}
-  .btn{font-family:var(--mono); font-size:13px; padding:11px 16px; background:var(--ink); color:var(--paper); border:1px solid var(--ink); border-radius:8px; cursor:pointer; text-transform:uppercase; letter-spacing:.5px}
-  .btn.ghost{background:var(--card); color:var(--ink); border-color:var(--line)}
-  .btn:hover{opacity:.9}
+  .lookup{display:flex; gap:8px; align-items:center; margin:20px 0 10px; padding:12px 14px; background:var(--card); border:1px solid var(--line); border-radius:var(--r); flex-wrap:wrap}
+  .lookup label{font-size:11px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:1px}
+  .lookup input{flex:1; font-family:var(--mono); font-size:15px; padding:11px 13px; border:1px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink); min-width:180px}
+  .lookup input:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft)}
+  .btn{font-family:var(--mono); font-size:11px; font-weight:600; padding:11px 16px; background:var(--ink); color:var(--paper); border:1px solid var(--ink); border-radius:8px; cursor:pointer; text-transform:uppercase; letter-spacing:.8px}
+  .btn.ghost{background:transparent; color:var(--ink-soft); border-color:var(--line)}
+  .btn:hover{opacity:.88}
 
-  .result{margin:10px 0 0; min-height:24px; font-family:var(--mono); font-size:14px}
-  .hit{background:var(--green-soft); border:1px solid #b9cd9b; border-radius:10px; padding:12px 14px; margin-bottom:8px}
-  .hit .loc{font-size:16px; color:var(--good); font-weight:600}
-  .hit .rng{color:var(--ink-soft); font-size:12.5px; margin-top:3px}
-  .miss{color:var(--accent); padding:8px 2px}
-  .examples{font-family:var(--mono); font-size:12px; color:var(--ink-soft); margin-top:8px}
-  .examples b{color:var(--ink); cursor:pointer; border-bottom:1px dotted var(--ink-soft)}
+  .result{margin:12px 0 0; min-height:20px}
+  .hit{background:var(--green-soft); border:1px solid #bcce9e; border-radius:10px; padding:11px 14px; margin-bottom:7px}
+  .hit .loc{font-size:13px; font-weight:600; color:var(--ink)}
+  .hit .rng{font-size:12px; color:var(--ink-soft); margin-top:4px; letter-spacing:.2px}
+  .miss{font-size:13px; color:var(--accent); padding:8px 2px}
+  .examples{font-size:11px; color:var(--ink-soft); margin-top:8px}
+  .examples b{color:var(--ink); font-weight:500; cursor:pointer; border-bottom:1px dotted var(--ink-faint)}
+  .examples b:hover{color:var(--accent); border-color:var(--accent)}
 
-  .levels{display:flex; flex-wrap:wrap; gap:5px; margin:20px 0 6px}
-  .lvl{font-family:var(--mono); font-size:13px; min-width:46px; padding:8px 5px; text-align:center; background:var(--card); border:1px solid var(--line); border-radius:8px; cursor:pointer; color:var(--ink-soft)}
-  .lvl:hover{border-color:var(--ink-soft)}
+  .sect{display:flex; gap:6px; align-items:center; margin:8px 2px 0; flex-wrap:wrap}
+  .sect-label{font-size:11px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:1px; margin-right:4px}
+  .pill{font-family:var(--mono); font-size:11px; padding:6px 13px; background:var(--card); color:var(--ink-soft); border:1px solid var(--line); border-radius:99px; cursor:pointer; transition:.15s}
+  .pill:hover{border-color:var(--ink-soft); color:var(--ink)}
+  .pill.active{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+
+  .levels{display:flex; flex-wrap:wrap; gap:5px; margin:22px 0 8px}
+  .lvl{font-family:var(--mono); font-size:13px; font-weight:500; min-width:48px; padding:7px 5px 6px; text-align:center; background:var(--card); border:1px solid var(--line); border-radius:8px; cursor:pointer; color:var(--ink-soft)}
+  .lvl:hover{border-color:var(--ink-soft); color:var(--ink)}
   .lvl.active{background:var(--ink); color:var(--paper); border-color:var(--ink); font-weight:600}
-  .lvl.empty{opacity:.4}
-  .lvl small{display:block; font-size:9px; margin-top:2px; letter-spacing:.3px}
+  .lvl.empty{opacity:.45}
+  .lvl.special{opacity:1; border-style:dashed; border-color:var(--ink-soft)}
+  .lvl.special small{color:var(--accent)}
+  .lvl small{display:block; font-size:9.5px; font-weight:400; margin-top:3px; letter-spacing:.2px; opacity:.9}
 
-  .stage{margin-top:8px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 10px 10px}
-  .rowlabel{font-size:11px; color:var(--ink-soft); letter-spacing:1.5px; text-transform:uppercase; margin:0 0 0 12px}
+  .stage{margin-top:6px; background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:8px 12px 12px}
   svg{display:block; width:100%; height:auto}
   .shelf{cursor:pointer}
   .shelf .frame{fill:none; stroke:var(--ink); stroke-width:1.4}
@@ -76,19 +85,19 @@ HTML = r"""<!DOCTYPE html>
   .shelf.sel .frame{stroke:var(--accent); stroke-width:2.6}
   .shelf.flash .frame{stroke:var(--hi); stroke-width:2.6}
   .idx{font-family:var(--mono); font-size:11px; fill:var(--ink-soft)}
-  .face{font-family:var(--mono); font-size:8px; fill:var(--ink-soft)}
+  .face{font-family:var(--mono); font-size:8px; fill:var(--ink-faint)}
 
-  .detail{margin-top:14px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px 20px; font-family:var(--mono); font-size:13px}
-  .detail.empty{color:var(--ink-soft); text-align:center; padding:22px; font-family:var(--disp); font-size:15px}
-  .detail h2{font-family:var(--disp); font-size:19px; margin:0 0 4px}
-  .detail .meta{color:var(--ink-soft); font-size:12px; margin-bottom:10px}
-  .detail .face-row{display:flex; gap:10px; padding:7px 0; border-top:1px solid var(--line)}
-  .detail .face-row .fl{min-width:64px; color:var(--ink-soft)}
+  .detail{margin-top:14px; background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:16px 20px}
+  .detail.empty{color:var(--ink-soft); text-align:center; padding:22px; font-size:13px}
+  .detail h2{font-family:var(--disp); font-size:18px; font-weight:600; margin:0 0 3px}
+  .detail .meta{font-size:11px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.8px; margin-bottom:8px}
+  .detail .face-row{display:flex; gap:12px; padding:8px 0; border-top:1px solid var(--line); font-size:13px}
+  .detail .face-row .fl{min-width:64px; color:var(--ink-soft); text-transform:uppercase; font-size:11px; letter-spacing:.5px; padding-top:1px}
   .detail .face-row .rg{font-weight:500}
-  footer{margin-top:26px; font-size:12px; color:var(--ink-soft); font-family:var(--mono); line-height:1.7}
-  .legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:10px; font-family:var(--mono); font-size:11px; color:var(--ink-soft); padding-left:12px}
-  .legend span{display:inline-flex; align-items:center; gap:5px}
-  .sw{width:11px; height:11px; border-radius:2px; display:inline-block}
+  footer{margin-top:28px; padding-top:16px; border-top:1px solid var(--line); font-size:11px; color:var(--ink-soft); line-height:1.75; max-width:760px}
+  .legend{display:flex; gap:14px; flex-wrap:wrap; margin-top:12px; padding-left:2px; font-size:11px; color:var(--ink-soft)}
+  .legend span{display:inline-flex; align-items:center; gap:6px}
+  .sw{width:11px; height:11px; border-radius:3px; display:inline-block; border:1px solid rgba(0,0,0,.12)}
 </style>
 </head>
 <body>
@@ -100,31 +109,38 @@ HTML = r"""<!DOCTYPE html>
 
   <div class="lookup">
     <label>Call number:</label>
-    <input id="q" placeholder="e.g. W1 JO600  ·  W1 ME500  ·  BF 400  ·  WL 200" autocomplete="off" autofocus>
+    <input id="q" placeholder="e.g.  QL737.C22  ·  W1 JO600  ·  BF 575 P9" autocomplete="off" autofocus>
     <button class="btn" id="go">Locate</button>
     <button class="btn ghost" id="clear">Clear</button>
   </div>
+  <div class="sect" id="sect">
+    <span class="sect-label">Section:</span>
+    <button class="pill active" data-coll="stacks">Main stacks</button>
+    <button class="pill" data-coll="ref">Reference · L4</button>
+    <button class="pill" data-coll="spec">Special Collections · L9</button>
+  </div>
   <div class="result" id="result">
     <div class="examples">Try:
+      <b data-q="QL737.C22 M616g">QL737.C22</b> ·
       <b data-q="W1 BI700">W1 BI700</b> ·
       <b data-q="W1 JO600">W1 JO600</b> ·
-      <b data-q="W1 ME500">W1 ME500</b> ·
-      <b data-q="W1 PE200">W1 PE200</b> ·
+      <b data-q="QW 4 S851b">QW 4 S851b</b> ·
       <b data-q="BF 400">BF 400</b> ·
-      <b data-q="HM 271 M598o">HM 271 M598o</b>
+      <b data-q="WS 200 P370">WS 200 P370</b>
     </div>
   </div>
 
   <div class="levels" id="levels"></div>
 
   <div class="stage">
-    <div class="rowlabel">Top row →  (index 0–16)</div>
     <svg id="plan" viewBox="0 0 720 400" role="img" aria-label="Floor plan"></svg>
     <div class="legend">
       <span><i class="sw" style="background:var(--orange)"></i>orange · top-0 half (L3, L7)</span>
       <span><i class="sw" style="background:var(--green)"></i>green · top-1..16 full</span>
       <span><i class="sw" style="background:var(--char)"></i>black · bottom row</span>
       <span><i class="sw" style="background:var(--slate)"></i>slate · bot-0 half (L3)</span>
+      <span><i class="sw" style="background:var(--orange)"></i>stairs</span>
+      <span><i class="sw" style="background:var(--accent)"></i>elevator</span>
       <span>│ = double-sided · filled = mapped · — = unmapped</span>
     </div>
   </div>
@@ -138,21 +154,36 @@ HTML = r"""<!DOCTYPE html>
 /* ===== embedded dataset ===== */
 const DATA = __DATA__;
 
-/* ===== NLM call-number comparator (matches the Python parser in the spec) ===== */
+/* ===== NLM call-number comparator =====
+   Tolerant of how people actually type call numbers:
+   "QL737.C22 M616g 1971" parses the same as the stored "QL 737 C22 M616g 1971".
+   - an LC-style cutter dot (a '.' before a letter) starts a new Cutter
+   - a class number jammed onto the letters (QL737) or onto a cutter (QL737C22) is split out
+   - a decimal class number (WL102.8) is preserved
+*/
 function parseCN(raw){
-  const toks=(raw||'').trim().toUpperCase().replace(/\*/g,'').replace(/\s+/g,' ').split(' ').filter(Boolean);
+  let s=(raw||'').toUpperCase().replace(/\*/g,'');
+  s=s.replace(/\.(?=[A-Z])/g,' ');           // ".C22" -> " C22" (cutter dot), leaves "102.8" alone
+  const toks=s.trim().replace(/\s+/g,' ').split(' ').filter(Boolean);
   if(!toks.length) return [];
   const out=[];
-  const m0=toks[0].match(/^([A-Z]+)(\d*\.?\d*)$/);
-  let classAlpha, classNum, rest;
-  if(m0){
-    classAlpha=m0[1];
-    rest=toks.slice(1);
-    if(m0[2]){ classNum=parseFloat(m0[2]); }
-    else if(rest.length && /^\d+\.?\d*$/.test(rest[0])){ classNum=parseFloat(rest[0]); rest=rest.slice(1); }
-    else { classNum=0; }
+  let classAlpha, classNum=0, rest=toks.slice(1);
+  if(/^W[1-4][A-Z]{0,2}$/.test(toks[0])){
+    // Biomedical serials prefix (W1, W2, W3, W4C). Keep it as an opaque class so it
+    // never collides with NLM class W + number (e.g. "W 13" on floor 10).
+    classAlpha=toks[0];
   } else {
-    classAlpha=toks[0]; classNum=0; rest=toks.slice(1);
+    // NLM: class letters, optional class number, optional jammed cutter
+    const m0=toks[0].match(/^([A-Z]+)(\d+\.?\d*)?(.*)$/);
+    if(m0){
+      classAlpha=m0[1];
+      if(m0[2]) classNum=parseFloat(m0[2]);
+      if(m0[3]) rest=[m0[3]].concat(rest);    // leftover jammed cutter, e.g. "QL737C22" -> "C22"
+    } else {
+      classAlpha=toks[0];
+    }
+    // class number may instead be the next standalone token (NLM: "QL 737 C22")
+    if(!classNum && rest.length && /^\d+\.?\d*$/.test(rest[0])){ classNum=parseFloat(rest[0]); rest=rest.slice(1); }
   }
   out.push({t:'A', a:classAlpha});
   out.push({t:'N', n:classNum});
@@ -182,6 +213,10 @@ function cmpCN(x,y){
   for(let i=0;i<n;i++){const c=cmpSeg(a[i],b[i]); if(c!==0) return c<0?-1:1;}
   return 0;
 }
+/* Two classification namespaces share the letter W: the biomedical serials prefix
+   (W1, W2, W3, W4C — floors 1–7) and NLM class W + number (e.g. "W 13" — floor 10).
+   They must never match across schemes, so gate containment by scheme. */
+function scheme(cn){ return /^\s*W[1-4]([A-Z]|\b)/i.test(cn||'') ? 'w1' : 'nlm'; }
 
 /* ===== layout =====
    Standard biomed grid:
@@ -190,6 +225,10 @@ function cmpCN(x,y){
    Floor 3 deviation: also has a bot-0 half (back-wall, right-side-only).
 */
 const STACK_LEVELS=[1,2,3,4,5,6,7,8,9,10,11];
+const SPECIAL_FLOORS={4:'Reference'};
+const COLL_TO_LEVEL={ref:4, spec:9};
+const LEVEL_TO_COLL={4:'ref'};
+let collection='stacks';
 const SHELVES=[];
 SHELVES.push({id:'top-0',  index:0, row:'top',    group:'orange', type:'half'});
 SHELVES.push({id:'bot-0',  index:0, row:'bottom', group:'slate',  type:'half'});
@@ -201,9 +240,12 @@ SHELVES.push({id:'bot-14',index:14,row:'bottom',group:'black',type:'half'});
 const levelsWithData={};
 Object.keys(DATA).forEach(key=>{ levelsWithData[+key.split('|')[0]]=true; });
 
+/* Floor 9: Special Collections — standard bottom row only, no top row */
+const FLOOR9_BOT=new Set(['bot-1','bot-2','bot-3','bot-10','bot-11','bot-12','bot-14','bot-15','bot-16']);
 function existsOnLevel(s,lvl){
   if(s.id==='top-0') return lvl===3 || lvl===7;
   if(s.id==='bot-0') return lvl===3;
+  if(lvl===9) return FLOOR9_BOT.has(s.id);
   return levelsWithData[lvl] === true;
 }
 const sidesOf = s => s.type==='full' ? ['left','right'] : ['single'];
@@ -218,6 +260,18 @@ const groupSoft ={green:'var(--green-soft)',orange:'var(--orange-soft)',black:'v
 const filled=(lvl,id,side)=>{const d=DATA[k(lvl,id,side)];return d&&d.start&&d.end;};
 
 function renderPlan(){
+  const plan=document.getElementById('plan');
+  if(SPECIAL_FLOORS[level]){
+    const name=SPECIAL_FLOORS[level];
+    plan.innerHTML =
+      `<rect x="40" y="40" width="640" height="160" rx="14" fill="var(--paper-2)" stroke="var(--line)" stroke-dasharray="6 5" stroke-width="1.2"/>`+
+      `<text x="360" y="92" text-anchor="middle" font-family="var(--disp)" font-size="26" font-weight="600" fill="var(--accent)">${name}</text>`+
+      `<text x="360" y="118" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--ink-soft)" letter-spacing="2">FLOOR ${level}</text>`+
+      `<text x="360" y="152" text-anchor="middle" font-family="var(--mono)" font-size="12" fill="var(--ink)">All ${name.toLowerCase()} books are on this floor.</text>`+
+      `<text x="360" y="172" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--ink-soft)">Books are shelved by call number. No per-shelf map.</text>`;
+    plan.setAttribute('viewBox','0 0 720 230');
+    return;
+  }
   const startX=20, slotW=40, topY=46, topH=140, botY=232, botH=140;
   const cx=i=>startX+i*slotW+slotW/2;
   let svg='';
@@ -247,19 +301,56 @@ function renderPlan(){
       const w=9;
       const sFill = present && filled(level,s.id,'single');
       const sf = sFill ? groupColor[s.group] : 'transparent';
-      inner+=`<rect x="${c-w}" y="${y}" width="${w*2}" height="${h}" fill="${sf}"/>`;
-      inner+=`<rect class="frame" x="${c-w}" y="${y}" width="${w*2}" height="${h}" rx="3"/>`;
+      // half shelves are right-side only: start at cx (not cx-w)
+      inner+=`<rect x="${c}" y="${y}" width="${w*2}" height="${h}" fill="${sf}"/>`;
+      inner+=`<rect class="frame" x="${c}" y="${y}" width="${w*2}" height="${h}" rx="3"/>`;
       if(present){
-        inner+=`<text class="face" x="${c}" y="${y+h-6}" text-anchor="middle">R</text>`;
-        if(!sFill) inner+=`<text x="${c}" y="${y+h/2+5}" text-anchor="middle" font-family="var(--mono)" font-size="15" fill="var(--ink-soft)">—</text>`;
+        inner+=`<text class="face" x="${c+w}" y="${y+h-6}" text-anchor="middle">R</text>`;
+        if(!sFill) inner+=`<text x="${c+w}" y="${y+h/2+5}" text-anchor="middle" font-family="var(--mono)" font-size="15" fill="var(--ink-soft)">—</text>`;
       }
     }
     svg+=`<g class="${cls}"${click}>${inner}</g>`;
   });
   for(let i=0;i<=16;i++) svg+=`<text class="idx" x="${cx(i)}" y="38" text-anchor="middle">${i}</text>`;
-  svg+=`<text class="idx" x="${startX}" y="${botY-8}" text-anchor="start" style="letter-spacing:1.5px">▾ bottom row</text>`;
-  const plan=document.getElementById('plan');
+  // Both row labels are SVG text at the SAME font-size so they scale identically with the plan.
+  const rlbl=`text-anchor="start" font-family="var(--mono)" font-size="11" fill="var(--ink-soft)" letter-spacing="0.6"`;
+  svg+=`<text x="${startX+2}" y="16" ${rlbl}>top row · index 0–16</text>`;
+  svg+=`<text x="${startX+2}" y="${botY-7}" ${rlbl}>bottom row · index 0–16</text>`;
+
+  /* ── Architectural features (elevator + stairs) — same on every floor ── */
+  const ax=i=>startX+i*slotW;       // left edge of slot i
+  const fstroke=`stroke="var(--ink)" stroke-width="1.3"`;
+
+  // ── Block 1: Elevator + Stairs (indices 5–8, bottom row) ──
+  const eLeft=ax(5), eW=(ax(9)-ax(5));
+  const stairsH=Math.round(botH*0.38);
+  const stairsInset=18;   // each corner gap is this wide
+
+  // Stairs: narrower block at the TOP — corner rectangles each side are just blank page background
+  svg+=`<rect x="${eLeft+stairsInset}" y="${botY}" width="${eW-2*stairsInset}" height="${stairsH}" rx="4" fill="var(--orange)" ${fstroke}/>`;
+  svg+=`<text x="${eLeft+eW/2}" y="${botY+stairsH/2+5}" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--paper)" letter-spacing="1.5">STAIRS</text>`;
+
+  // Elevator: full width, starts BELOW the stairs block — corners stay blank
+  const elevTop=botY+stairsH+2;  // 2px gap
+  svg+=`<rect x="${eLeft}" y="${elevTop}" width="${eW}" height="${botH-stairsH-2}" rx="4" fill="var(--accent)" ${fstroke}/>`;
+  svg+=`<text x="${eLeft+eW/2}" y="${elevTop+(botH-stairsH-2)/2+4}" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--paper)" letter-spacing="1.5">ELEVATOR</text>`;
+
+  // ── Block 2: Stairs at index 13 + left half of slot 14 ──
+  // Ends at cx(14) — does NOT overlap the right-aligned bot-14|single half shelf
+  const s2Left=ax(13), s2Right=startX+14*slotW+slotW/2-2, s2W=s2Right-s2Left;
+  svg+=`<rect x="${s2Left}" y="${botY}" width="${s2W}" height="${botH}" rx="4" fill="var(--orange)" ${fstroke}/>`;
+  svg+=`<text x="${s2Left+s2W/2}" y="${botY+botH/2+5}" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--paper)" letter-spacing="1.5">STAIRS</text>`;
+
   plan.innerHTML=svg; plan.setAttribute('viewBox',`0 0 720 ${botY+botH+16}`);
+}
+
+/* ===== section pills + level sync ===== */
+function setCollection(coll){
+  collection = coll;
+  document.querySelectorAll('.pill').forEach(p=>p.classList.toggle('active', p.dataset.coll===coll));
+}
+function syncCollectionToLevel(){
+  setCollection(LEVEL_TO_COLL[level] || 'stacks');
 }
 
 /* ===== levels bar ===== */
@@ -267,11 +358,15 @@ function renderLevels(){
   const el=document.getElementById('levels'); el.innerHTML='';
   STACK_LEVELS.forEach(l=>{
     const has=levelsWithData[l];
+    const special = SPECIAL_FLOORS[l];
     const n = has ? Object.keys(DATA).filter(k=>k.startsWith(l+'|')).length : 0;
     const b=document.createElement('div');
-    b.className='lvl'+(l===level?' active':'')+(has?'':' empty');
-    b.innerHTML=`${l}<small>${has?n+' faces':'—'}</small>`;
-    b.onclick=()=>{ level=l; selected=null; flashId=null; renderLevels(); renderPlan(); renderDetail(); };
+    let cls='lvl'+(l===level?' active':'');
+    if(!has){ cls += special ? ' special' : ' empty'; }
+    b.className=cls;
+    const sub = has ? (n+' faces') : (special ? (l===4?'Ref':'Spec') : '—');
+    b.innerHTML=`${l}<small>${sub}</small>`;
+    b.onclick=()=>{ level=l; selected=null; flashId=null; syncCollectionToLevel(); renderLevels(); renderPlan(); renderDetail(); };
     el.appendChild(b);
   });
 }
@@ -298,10 +393,48 @@ function renderDetail(){
 function locate(){
   const q=document.getElementById('q').value.trim();
   const out=document.getElementById('result');
+  if(collection==='ref'){
+    const subject = q ? `<b>${q.toUpperCase()}</b>` : 'Your book';
+    out.innerHTML = `<div class="hit"><div class="loc">Floor 4 · Reference</div>`+
+      `<div class="rng">${subject} is in the reference section on floor 4. Books are shelved by call number.</div></div>`;
+    level=4; selected=null; flashId=null;
+    renderLevels(); renderPlan(); renderDetail();
+    return;
+  }
+  if(collection==='spec'){
+    if(!q){ out.innerHTML=''; level=9; renderLevels(); renderPlan(); renderDetail(); return; }
+    const qs=scheme(q);
+    const hits=[];
+    for(const key in DATA){
+      const dd=DATA[key]; if(!dd.start||!dd.end) continue;
+      if(!key.startsWith('9|')) continue;
+      if(scheme(dd.start)!==qs) continue;
+      if(cmpCN(q,dd.start)>=0 && cmpCN(q,dd.end)<=0){
+        const [lvl,id,side]=key.split('|'); hits.push({lvl:+lvl,id,side,d:dd});
+      }
+    }
+    if(hits.length){
+      out.innerHTML=hits.map(h=>{
+        const s=shelfById(h.id);
+        return `<div class="hit"><div class="loc">Level 9 · Special Collections · ${s?s.row+' row · index '+s.index:'shelf '+h.id} · ${sideName[h.side]} side</div>`
+          +`<div class="rng">${h.d.start} → ${h.d.end}</div></div>`;
+      }).join('');
+      level=9; selected=hits[0].id; flashId=hits[0].id;
+      renderLevels(); renderPlan(); renderDetail();
+      setTimeout(()=>{flashId=null;renderPlan();},1600);
+    } else {
+      out.innerHTML=`<div class="miss">Not found in mapped Special Collections ranges for <b>${q.toUpperCase()}</b>.</div>`;
+      level=9; renderLevels(); renderPlan(); renderDetail();
+    }
+    return;
+  }
   if(!q){ out.innerHTML=''; return; }
+  const qs=scheme(q);
   const hits=[];
   for(const key in DATA){
     const d=DATA[key]; if(!d.start||!d.end) continue;
+    if(key.startsWith('9|')) continue;     // Special Collections excluded from main stacks search
+    if(scheme(d.start)!==qs) continue;     // don't match across W1-serials / NLM schemes
     if(cmpCN(q,d.start)>=0 && cmpCN(q,d.end)<=0){
       const [lvl,id,side]=key.split('|'); hits.push({lvl:+lvl,id,side,d});
     }
@@ -329,16 +462,32 @@ function renderCoverage(){
 }
 
 document.getElementById('footer').innerHTML=
-  'Lookup compares NLM call numbers by class, then class-number, then Cutter-as-decimal, then suffix. '+
-  'Full shelves are double-sided (left + right); a few serial shelves share one call number across many volumes, so a search there returns every matching shelf. '+
-  'Floors 2, 3, 5, 6, 7 are densely mapped in the W1 (biomed) scheme; floors 8 and 11 have partial NLM coverage.';
+  'Type a call number as printed — spaces and the Cutter dot are optional, so <b style="color:var(--ink)">QL737.C22</b>, <b style="color:var(--ink)">QL 737 C22</b>, and <b style="color:var(--ink)">W1 JO600</b> all work. '+
+  'The locator finds the shelf whose range contains it, comparing class letters, then class number, then each Cutter as a decimal — so AM4733 sorts before AM477. '+
+  'Each green column is a double-sided shelf (L / R faces); black is the bottom row. A range where start = end is a serial run — many volumes share one call number, so the search returns every matching shelf and you check the spine. '+
+  'Reference is shelved on floor 4 and Special Collections on floor 9; switch the Section pill to search those.';
 
 /* ===== init ===== */
 renderCoverage(); renderLevels(); renderPlan(); renderDetail();
 document.getElementById('go').onclick=locate;
-document.getElementById('clear').onclick=()=>{document.getElementById('q').value='';document.getElementById('result').innerHTML='';selected=null;flashId=null;renderPlan();renderDetail();};
+document.getElementById('clear').onclick=()=>{document.getElementById('q').value='';document.getElementById('result').innerHTML='';selected=null;flashId=null;setCollection('stacks');renderPlan();renderDetail();};
 document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')locate();});
-document.querySelectorAll('.examples b').forEach(b=>b.onclick=()=>{document.getElementById('q').value=b.dataset.q;locate();});
+document.querySelectorAll('.examples b').forEach(b=>b.onclick=()=>{setCollection('stacks');document.getElementById('q').value=b.dataset.q;locate();});
+document.querySelectorAll('#sect .pill').forEach(p=>{
+  p.onclick=()=>{
+    setCollection(p.dataset.coll);
+    if(collection==='stacks'){
+      // jumping back to stacks: pick a floor with data if currently on L4/L9
+      if(SPECIAL_FLOORS[level]) level=3;
+    } else {
+      level = COLL_TO_LEVEL[collection];
+    }
+    selected=null; flashId=null;
+    renderLevels(); renderPlan(); renderDetail();
+    // If there's a query in the box, re-run locate so the result panel updates
+    if(document.getElementById('q').value.trim()) locate();
+  };
+});
 </script>
 </body>
 </html>
