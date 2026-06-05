@@ -1,0 +1,26 @@
+# Cloudflare Workers assets ignore
+# GitHub still tracks everything normally — this only affects what CF uploads.
+
+# Raw shelf photos (large HEIC files, multi-GB total)
+Floors/
+
+# JSON source (already baked into index.html)
+biomed-shelf-ranges.json
+
+# Build tooling
+.build_locator.py
+*.py
+
+# Instruction docs
+Instructions.txt
+SHELF-MAPPING-INSTRUCTIONS.md
+
+# Git internals (CF was choking on the 991 MB pack file)
+.git/
+
+# Misc downloads that ended up in the repo
+*.exe
+*.zip
+*.msix
+*.xz
+*.tar
