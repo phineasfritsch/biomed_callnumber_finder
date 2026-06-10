@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Biomed Stacks — Shelf Locator</title>
+<title>Biomed Shelf Locator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -448,10 +448,11 @@ function renderCoverage(){
 }
 
 document.getElementById('footer').innerHTML=
-  'Type a call number as printed — spaces and the Cutter dot are optional, so <b style="color:var(--ink)">QL737.C22</b>, <b style="color:var(--ink)">QL 737 C22</b>, and <b style="color:var(--ink)">W1 JO600</b> all work. '+
-  'The locator finds the shelf whose range contains it, comparing class letters, then class number, then each Cutter as a decimal — so AM4733 sorts before AM477. '+
-  'Each green column is a double-sided shelf (L / R faces); black is the bottom row. A range where start = end is a serial run — many volumes share one call number, so the search returns every matching shelf and you check the spine. '+
-  'Reference is shelved on floor 4 and Special Collections on floor 9; switch the Section pill to search those.';
+  'Type a call number as printed, spaces and the Cutter dot are optional, so <b style="color:var(--ink)">QL737.C22</b>, <b style="color:var(--ink)">QL 737 C22</b>, and <b style="color:var(--ink)">W1 JO600</b> all work. '+
+  'HOWEVER, it is important the W1 in a call number have a leading space. '+
+  'The locator finds the shelf whose range contains it, comparing class letters, then class number, then each Cutter as a decimal, so AM4733 sorts before AM477. '+
+  'Each green column is a double-sided shelf (L / R faces); black is the bottom row. A range where start = end is a serial run, many volumes share one call number, so the search returns every matching shelf and you check the spine. '+
+  'Reference is shelved on floor 4 and Special Collections on floor 9; switch the Section pill to search for those.';
 
 /* ===== init ===== */
 renderCoverage(); renderLevels(); renderPlan(); renderDetail();
