@@ -18,7 +18,7 @@ HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Biomed Stacks — Shelf Locator</title>
+<title>Biomed Shelf Locator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -99,6 +99,67 @@ HTML = r"""<!DOCTYPE html>
   .legend{display:flex; gap:14px; flex-wrap:wrap; margin-top:12px; padding-left:2px; font-size:11px; color:var(--ink-soft)}
   .legend span{display:inline-flex; align-items:center; gap:6px}
   .sw{width:11px; height:11px; border-radius:3px; display:inline-block; border:1px solid rgba(0,0,0,.12)}
+
+  /* ── route planner ── */
+  .route{margin:18px 0 6px; background:var(--card); border:1px solid var(--line); border-radius:var(--r); overflow:hidden}
+  .route-head{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 16px; cursor:pointer}
+  .route-head h2{font-family:var(--disp); font-size:17px; font-weight:600; margin:0; display:flex; align-items:center}
+  .route-head .tag{font-size:9.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--accent); background:var(--orange-soft); padding:2px 7px; border-radius:99px; margin-left:9px}
+  .route-body{padding:0 16px 16px; border-top:1px solid var(--line)}
+  .route-hint{font-size:12px; color:var(--ink-soft); line-height:1.65; margin:13px 0}
+  .route-hint b{color:var(--ink)}
+  .drop{display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:16px; border:1.5px dashed var(--line); border-radius:10px; background:var(--paper); transition:.15s}
+  .drop.over{border-color:var(--accent); background:var(--orange-soft)}
+  .drop-hint{font-size:11px; color:var(--ink-soft)}
+  .ocr-status{font-size:12px; color:var(--ink-soft); min-height:18px; margin:9px 2px 0}
+  .ocr-status.err{color:var(--accent)}
+  .thumbs{display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 0}
+  .thumbs img{width:50px; height:50px; object-fit:cover; border-radius:6px; border:1px solid var(--line)}
+  .cn-label{display:block; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--ink-soft); margin:14px 0 5px}
+  #cnList{width:100%; font-family:var(--mono); font-size:14px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink); resize:vertical}
+  #cnList:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft)}
+  .route-actions{display:flex; gap:8px; margin:10px 0 0}
+  .itinerary{margin-top:12px}
+  .itin-summary{font-size:12px; color:var(--ink); background:var(--paper-2); border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin-bottom:10px; line-height:1.6}
+  .itin-summary b{color:var(--accent)}
+  .itin-transit{display:flex; align-items:center; gap:9px; font-size:12px; color:var(--ink-soft); margin:9px 0; padding-left:4px}
+  .itin-transit .ic{display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; font-size:12px; color:var(--paper); flex:none}
+  .itin-transit .ic.st{background:var(--orange)}
+  .itin-transit .ic.el{background:var(--accent)}
+  .itin-floor{border:1px solid var(--line); border-radius:10px; overflow:hidden; margin:8px 0}
+  .itin-floor-h{display:flex; justify-content:space-between; align-items:center; gap:8px; padding:9px 13px; background:var(--green-soft); border-bottom:1px solid #bcce9e; cursor:pointer}
+  .itin-floor-h .lv{font-family:var(--disp); font-size:15px; font-weight:600}
+  .itin-floor-h .ct{font-size:10.5px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.5px}
+  .itin-stop{display:flex; flex-wrap:wrap; gap:3px 12px; padding:8px 13px; border-top:1px solid var(--line)}
+  .itin-stop .loc{font-weight:600; font-size:12px; min-width:160px}
+  .itin-stop .cns{font-size:12px; color:var(--accent)}
+  .itin-stop .rng{font-size:11px; color:var(--ink-soft); width:100%}
+  .itin-miss{font-size:12px; color:var(--accent); background:var(--orange-soft); border:1px solid var(--line); border-radius:8px; padding:9px 12px; margin-top:10px; line-height:1.65}
+  .itin-miss b{color:var(--accent)}
+
+  /* ── responsive / mobile ── */
+  .planwrap{width:100%}
+  @media (hover:hover) and (pointer:fine){ #shoot{display:none} }
+  @media (max-width:620px){
+    .wrap{padding:16px 12px 56px}
+    h1{font-size:22px; line-height:1.12}
+    h1 .sub{letter-spacing:1.2px}
+    header{gap:8px; padding-bottom:12px}
+    .coverage{text-align:left}
+    .lookup{padding:10px; gap:7px}
+    .lookup label{flex:1 0 100%}
+    .lookup input{flex:1 1 100%; min-width:0; font-size:16px}
+    .lookup .btn{flex:1 1 0}
+    .planwrap{overflow-x:auto; -webkit-overflow-scrolling:touch}
+    #plan{min-width:560px}
+    #cnList{font-size:16px}
+    .drop{padding:13px}
+    .drop .btn{flex:1 1 auto}
+    .route-head{padding:11px 13px}
+    .route-body{padding:0 13px 14px}
+    .detail{padding:14px 15px}
+    .itin-stop .loc{min-width:0; flex:1 1 100%}
+  }
 </style>
 </head>
 <body>
@@ -131,10 +192,36 @@ HTML = r"""<!DOCTYPE html>
     </div>
   </div>
 
+  <div class="route" id="route">
+    <div class="route-head" id="routeHead">
+      <h2>Plan a pickup walk<span class="tag">beta</span></h2>
+      <button class="btn ghost" type="button"><span class="tgl">Open</span></button>
+    </div>
+    <div class="route-body" id="routeBody" hidden>
+      <p class="route-hint">Upload photos of ILL slips or a pull list (JPEG/PNG) and the call numbers are read for you &mdash; or just type them in. Then we build the shortest walk: start at the highest floor, take the stairs <b>down one floor at a time</b>, and use the elevator only to skip floors or go up. Text recognition runs in your browser and is imperfect (especially handwriting), so check the list before building.</p>
+      <div class="drop" id="drop">
+        <input type="file" id="files" accept="image/*,.heic,.heif" multiple hidden>
+        <input type="file" id="camera" accept="image/*" capture="environment" hidden>
+        <button class="btn" type="button" id="pick">Choose images</button>
+        <button class="btn" type="button" id="shoot">Take photo</button>
+        <span class="drop-hint">or drag &amp; drop here</span>
+      </div>
+      <div class="ocr-status" id="ocrStatus"></div>
+      <div class="thumbs" id="thumbs"></div>
+      <label class="cn-label" for="cnList">Call numbers &mdash; one per line, edit freely</label>
+      <textarea id="cnList" rows="6" placeholder="W1 AM477&#10;QL 737 C22 M616g&#10;WM 13 D5537"></textarea>
+      <div class="route-actions">
+        <button class="btn" type="button" id="buildRoute">Build route</button>
+        <button class="btn ghost" type="button" id="clearRoute">Clear</button>
+      </div>
+      <div class="itinerary" id="itinerary"></div>
+    </div>
+  </div>
+
   <div class="levels" id="levels"></div>
 
   <div class="stage">
-    <svg id="plan" viewBox="0 0 720 400" role="img" aria-label="Floor plan"></svg>
+    <div class="planwrap"><svg id="plan" viewBox="0 0 720 400" role="img" aria-label="Floor plan"></svg></div>
     <div class="legend">
       <span><i class="sw" style="background:var(--orange)"></i>orange · top-0 half (L3, L7)</span>
       <span><i class="sw" style="background:var(--green)"></i>green · top-1..16 full</span>
@@ -463,10 +550,11 @@ function renderCoverage(){
 }
 
 document.getElementById('footer').innerHTML=
-  'Type a call number as printed — spaces and the Cutter dot are optional, so <b style="color:var(--ink)">QL737.C22</b>, <b style="color:var(--ink)">QL 737 C22</b>, and <b style="color:var(--ink)">W1 JO600</b> all work. '+
-  'The locator finds the shelf whose range contains it, comparing class letters, then class number, then each Cutter as a decimal — so AM4733 sorts before AM477. '+
-  'Each green column is a double-sided shelf (L / R faces); black is the bottom row. A range where start = end is a serial run — many volumes share one call number, so the search returns every matching shelf and you check the spine. '+
-  'Reference is shelved on floor 4 and Special Collections on floor 9; switch the Section pill to search those.';
+  'Type a call number as printed, spaces and the Cutter dot are optional, so <b style="color:var(--ink)">QL737.C22</b>, <b style="color:var(--ink)">QL 737 C22</b>, and <b style="color:var(--ink)">W1 JO600</b> all work. '+
+  'HOWEVER, it is important the W1 in a call number have a leading space. '+
+  'The locator finds the shelf whose range contains it, comparing class letters, then class number, then each Cutter as a decimal, so AM4733 sorts before AM477. '+
+  'Each green column is a double-sided shelf (L / R faces); black is the bottom row. A range where start = end is a serial run, many volumes share one call number, so the search returns every matching shelf and you check the spine. '+
+  'Reference is shelved on floor 4 and Special Collections on floor 9; switch the Section pill to search for those.';
 
 /* ===== init ===== */
 renderCoverage(); renderLevels(); renderPlan(); renderDetail();
@@ -518,6 +606,191 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     if(document.getElementById('q').value.trim()) locate();
   };
 });
+
+/* ===== Route planner =====
+   OCR (client-side Tesseract.js) fills an editable list of call numbers; the human
+   corrects it; then a deterministic engine builds a top-down walk. Movement model:
+   each stairwell goes DOWN exactly one floor (the quick move); the elevator handles
+   going up or skipping floors. Two stairwells per floor (west ~col 6.5, east ~col 13.5);
+   the elevator sits at the west block (~col 6.5). Within a floor we sweep across the
+   stacks once instead of backtracking. */
+(function(){
+  const ELEV_X=6.5, STAIR_W=6.5, STAIR_E=13.5;
+  const $=id=>document.getElementById(id);
+  const route=$('route'); if(!route) return;
+  const head=$('routeHead'), body=$('routeBody'), statusEl=$('ocrStatus'),
+        thumbs=$('thumbs'), cnList=$('cnList'), itin=$('itinerary'),
+        drop=$('drop'), fileInput=$('files'), cam=$('camera');
+  let tessLoaded=false, heicLoaded=false;
+
+  head.addEventListener('click',()=>{ body.hidden=!body.hidden; head.querySelector('.tgl').textContent=body.hidden?'Open':'Close'; });
+  $('pick').addEventListener('click',e=>{ e.stopPropagation(); fileInput.click(); });
+  $('shoot').addEventListener('click',e=>{ e.stopPropagation(); cam.click(); });
+  fileInput.addEventListener('change',e=>handleFiles(e.target.files));
+  cam.addEventListener('change',e=>handleFiles(e.target.files));
+  ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{ e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{ e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop',e=>{ if(e.dataTransfer && e.dataTransfer.files) handleFiles(e.dataTransfer.files); });
+  $('buildRoute').addEventListener('click',buildRoute);
+  $('clearRoute').addEventListener('click',()=>{ cnList.value=''; itin.innerHTML=''; thumbs.innerHTML=''; setStatus(''); });
+
+  function setStatus(t,err){ statusEl.textContent=t||''; statusEl.classList.toggle('err',!!err); }
+  function lines(){ return cnList.value.split(/[\n\r]+/).map(s=>s.trim()).filter(Boolean); }
+  function setLines(arr){ cnList.value=arr.join('\n'); }
+
+  /* ---- OCR ---- */
+  function loadTess(){
+    if(tessLoaded) return Promise.resolve();
+    return new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+      s.onload=()=>{ tessLoaded=true; res(); };
+      s.onerror=()=>rej(new Error('Could not load the text-recognition library (are you offline?). You can still type call numbers below.'));
+      document.head.appendChild(s);
+    });
+  }
+  /* iPhone HEIC/HEIF can't be decoded by <canvas>; convert to JPEG first. */
+  function loadHeic(){
+    if(heicLoaded) return Promise.resolve();
+    return new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js';
+      s.onload=()=>{ heicLoaded=true; res(); };
+      s.onerror=()=>rej(new Error('Could not load the HEIC photo converter (are you offline?).'));
+      document.head.appendChild(s);
+    });
+  }
+  const isHeic=f=>/image\/hei[cf]/i.test(f.type||'') || /\.hei[cf]$/i.test(f.name||'');
+  async function toJpeg(file){
+    if(!isHeic(file)) return file;
+    await loadHeic();
+    const out=await heic2any({blob:file, toType:'image/jpeg', quality:0.85});
+    return Array.isArray(out) ? out[0] : out;
+  }
+  function preprocess(file){
+    return new Promise(res=>{
+      const url=URL.createObjectURL(file), img=new Image();
+      img.onload=()=>{
+        let scale=1700/img.width; scale=Math.max(0.4, Math.min(2.2, scale));   // shrink big phone photos, enlarge tiny labels
+        const c=document.createElement('canvas'); c.width=Math.round(img.width*scale); c.height=Math.round(img.height*scale);
+        const ctx=c.getContext('2d'); ctx.drawImage(img,0,0,c.width,c.height);
+        try{ const d=ctx.getImageData(0,0,c.width,c.height), p=d.data;
+          for(let i=0;i<p.length;i+=4){ const g=0.299*p[i]+0.587*p[i+1]+0.114*p[i+2]; const v=g>185?255:(g<95?0:g); p[i]=p[i+1]=p[i+2]=v; }
+          ctx.putImageData(d,0,0);
+        }catch(_){}
+        URL.revokeObjectURL(url); res(c);
+      };
+      img.onerror=()=>{ URL.revokeObjectURL(url); res(file); };
+      img.src=url;
+    });
+  }
+  async function handleFiles(fl){
+    const files=[...fl].filter(f=>/^image\//.test(f.type)||isHeic(f));
+    if(!files.length){ setStatus('Those files are not images — upload JPEG/PNG/HEIC photos, or type call numbers below.',true); return; }
+    setStatus('Loading text-recognition…');
+    try{ await loadTess(); }catch(e){ setStatus(e.message,true); return; }
+    const found=new Set(lines());
+    for(let i=0;i<files.length;i++){
+      try{
+        let src=files[i];
+        if(isHeic(src)){ setStatus(`Converting iPhone photo ${i+1} of ${files.length}…`); src=await toJpeg(src); }
+        const im=new Image(); im.src=URL.createObjectURL(src); thumbs.appendChild(im);
+        setStatus(`Reading image ${i+1} of ${files.length}…`);
+        const pre=await preprocess(src);
+        const r=await Tesseract.recognize(pre,'eng',{logger:m=>{ if(m.status==='recognizing text') setStatus(`Reading image ${i+1} of ${files.length}… ${Math.round(m.progress*100)}%`); }});
+        extractCNs(r.data.text).forEach(c=>found.add(c));
+      }catch(_){ /* skip an unreadable image */ }
+    }
+    setLines([...found]);
+    setStatus(`Read ${files.length} image${files.length===1?'':'s'} — ${found.size} call number${found.size===1?'':'s'} detected. Check & fix the list, then Build route.`);
+  }
+  function extractCNs(text){
+    if(!text) return [];
+    const norm=' '+text.toUpperCase().replace(/[|=_]+/g,' ').replace(/[^\nA-Z0-9. ]/g,' ')+' ';
+    const out=[], rx=[
+      /\bW[1-4][A-Z]{0,2}\s*[A-Z]{1,3}\s?\d[\dA-Z. ]{0,12}/g,        // W1 serials: "W1 AM477" (tolerant of a missing space)
+      /\b[A-Z]{1,3}\s?\d{1,4}(?:\.\d+)?\s+\.?[A-Z]\d[\dA-Z. ]{0,14}/g  // NLM / LC: "WM 13 D5537", "QL737.C22"
+    ];
+    rx.forEach(r=>{ let m; while((m=r.exec(norm))) out.push(m[0].replace(/\s+/g,' ').trim().replace(/[ .]+$/,'')); });
+    return out;
+  }
+
+  /* ---- routing ---- */
+  function routeLocate(cn){
+    const qs=scheme(cn), hits=[];
+    for(const key in DATA){ const d=DATA[key]; if(!d.start||!d.end) continue; if(scheme(d.start)!==qs) continue;
+      if(cmpCN(cn,d.start)>=0 && cmpCN(cn,d.end)<=0){ const [lvl,id,side]=key.split('|'); hits.push({lvl:+lvl,id,side,d}); } }
+    hits.sort((a,b)=>a.lvl-b.lvl);
+    return hits;
+  }
+  // 1-D sweep: cover span [L,R] starting at s, ending at e; return cheaper direction.
+  function sweep(L,R,s,e){
+    const a=Math.abs(s-L)+(R-L)+Math.abs(R-e), b=Math.abs(s-R)+(R-L)+Math.abs(L-e);
+    return a<=b?{cost:a,dir:'LR'}:{cost:b,dir:'RL'};
+  }
+  const rowOrd=s=>s.row==='top'?0:1;
+  function groupStops(items){
+    const m={};
+    items.forEach(it=>{ const s=shelfById(it.hit.id), key=it.hit.id+'|'+it.hit.side;
+      if(!m[key]) m[key]={id:it.hit.id,side:it.hit.side,x:s?s.index:8,row:s?s.row:'',d:it.hit.d,cns:[]};
+      m[key].cns.push(it.cn); });
+    return Object.values(m);
+  }
+  function buildRoute(){
+    const want=[...new Set(lines())];
+    if(!want.length){ itin.innerHTML='<div class="itin-miss">Add some call numbers first — upload an image or type them above.</div>'; return; }
+    const located=[], missing=[];
+    want.forEach(cn=>{ const h=routeLocate(cn); if(h.length) located.push({cn,hit:h[0]}); else missing.push(cn); });
+    if(!located.length){ itin.innerHTML=miss(missing); return; }
+    const byLvl={};
+    located.forEach(it=>{ (byLvl[it.hit.lvl]=byLvl[it.hit.lvl]||[]).push(it); });
+    const levels=Object.keys(byLvl).map(Number).sort((a,b)=>b-a);   // top floor first
+
+    let entry=ELEV_X, html='', stairs=0, skips=0;
+    html+=transit('el',`Take the <b>elevator</b> to <b>Level ${levels[0]}</b> to start.`);
+    for(let i=0;i<levels.length;i++){
+      const lvl=levels[i], stops=groupStops(byLvl[lvl]);
+      const xs=stops.map(s=>s.x), L=Math.min(...xs), R=Math.max(...xs);
+      let exit=ELEV_X, nextTransit='', nextEntry=ELEV_X;
+      if(i<levels.length-1){
+        const nlvl=levels[i+1], gap=lvl-nlvl;
+        if(gap===1){
+          const ns=groupStops(byLvl[nlvl]), nc=ns.reduce((a,s)=>a+s.x,0)/ns.length;
+          let best=null;
+          [['west',STAIR_W],['east',STAIR_E]].forEach(([nm,x])=>{ const sc=sweep(L,R,entry,x).cost+Math.abs(x-nc); if(!best||sc<best.sc) best={nm,x,sc}; });
+          exit=best.x; nextEntry=best.x; stairs++;
+          nextTransit=transit('st',`Take the <b>${best.nm} stairwell</b> down one floor to <b>Level ${nlvl}</b>.`);
+        } else {
+          exit=ELEV_X; nextEntry=ELEV_X; skips++;
+          nextTransit=transit('el',`Take the <b>elevator</b> down to <b>Level ${nlvl}</b> (skips ${gap-1} floor${gap-1===1?'':'s'}).`);
+        }
+      }
+      const dir=sweep(L,R,entry,exit).dir;
+      stops.sort((a,b)=> dir==='LR' ? (a.x-b.x)||(rowOrd(a)-rowOrd(b)) : (b.x-a.x)||(rowOrd(a)-rowOrd(b)));
+      html+=floorCard(lvl,stops);
+      html+=nextTransit; entry=nextEntry;
+    }
+    const books=located.length, fl=levels.length;
+    let plan;
+    if(stairs===0 && skips===0){ plan=`All on Level ${levels[0]} — take the elevator there.`; }
+    else { plan=`Elevator to Level ${levels[0]}, then ${stairs} stair descent${stairs===1?'':'s'}`+(skips?` and ${skips} elevator skip${skips===1?'':'s'}.`:'.'); }
+    const sum=`<b>${books}</b> book${books===1?'':'s'} across <b>${fl}</b> floor${fl===1?'':'s'}. ${plan}`;
+    html=`<div class="itin-summary">${sum}</div>`+html;
+    if(missing.length) html+=miss(missing);
+    itin.innerHTML=html;
+  }
+  function transit(kind,txt){ const cls=kind==='st'?'st':'el', ic=kind==='st'?'↓':'⇅'; return `<div class="itin-transit"><span class="ic ${cls}">${ic}</span><span>${txt}</span></div>`; }
+  function floorCard(lvl,stops){
+    const total=stops.reduce((a,s)=>a+s.cns.length,0);
+    let h=`<div class="itin-floor"><div class="itin-floor-h" onclick="routeShow(${lvl},'${stops[0].id}')"><span class="lv">Level ${lvl}</span><span class="ct">${total} book${total===1?'':'s'} · tap to show on map</span></div>`;
+    const sn={left:'Left',right:'Right',single:'Single (R)'};
+    stops.forEach(s=>{ h+=`<div class="itin-stop"><span class="loc">index ${s.x} · ${s.row||'—'} · ${sn[s.side]||s.side}</span><span class="cns">${s.cns.join(', ')}</span><span class="rng">${s.d.start} → ${s.d.end}</span></div>`; });
+    return h+'</div>';
+  }
+  function miss(arr){ return `<div class="itin-miss"><b>Not located (${arr.length}):</b> ${arr.join(' · ')}<br>These may be mis-read by OCR, shelved in Reference (Floor 4), or outside the mapped ranges. Fix the spelling above and rebuild, or look them up one at a time.</div>`; }
+
+  window.routeShow=function(lvl,id){ level=lvl; selected=id; flashId=id; if(typeof syncCollectionToLevel==='function') syncCollectionToLevel(); renderLevels(); renderPlan(); renderDetail(); setTimeout(()=>{ flashId=null; renderPlan(); },1600); const st=document.querySelector('.stage'); if(st) st.scrollIntoView({behavior:'smooth',block:'center'}); };
+})();
 </script>
 </body>
 </html>
