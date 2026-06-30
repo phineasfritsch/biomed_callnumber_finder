@@ -1,9 +1,8 @@
-"""Build biomed-shelf-locator.html (and index.html for CF Pages) with the current JSON baked in."""
-import json, os, shutil
+"""Build index.html (CF Pages entry point) with the current JSON baked in."""
+import json, os
 
 REPO = os.path.dirname(os.path.abspath(__file__))
 JSON_PATH = os.path.join(REPO, 'biomed-shelf-ranges.json')
-OUT_PATH = os.path.join(REPO, 'biomed-shelf-locator.html')
 INDEX_PATH = os.path.join(REPO, 'index.html')  # CF Pages entry point
 
 d = json.load(open(JSON_PATH))
@@ -621,7 +620,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
   const head=$('routeHead'), body=$('routeBody'), statusEl=$('ocrStatus'),
         thumbs=$('thumbs'), cnList=$('cnList'), itin=$('itinerary'),
         drop=$('drop'), fileInput=$('files'), cam=$('camera');
-  let tessLoaded=false, heicLoaded=false;
+  let tessLoaded=false, heicLoaded=false, tessWorker=null;
 
   head.addEventListener('click',()=>{ body.hidden=!body.hidden; head.querySelector('.tgl').textContent=body.hidden?'Open':'Close'; });
   $('pick').addEventListener('click',e=>{ e.stopPropagation(); fileInput.click(); });
@@ -649,6 +648,18 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       document.head.appendChild(s);
     });
   }
+  /* One reusable worker, tuned for short library call-number labels. */
+  async function getWorker(onProgress){
+    await loadTess();
+    if(tessWorker) return tessWorker;
+    tessWorker=await Tesseract.createWorker('eng',1,{logger:onProgress});
+    await tessWorker.setParameters({
+      tessedit_pageseg_mode:'11',                                   // sparse text: find scattered labels on a shelf
+      tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789. ',
+      preserve_interword_spaces:'1'
+    });
+    return tessWorker;
+  }
   /* iPhone HEIC/HEIF can't be decoded by <canvas>; convert to JPEG first. */
   function loadHeic(){
     if(heicLoaded) return Promise.resolve();
@@ -667,15 +678,31 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     const out=await heic2any({blob:file, toType:'image/jpeg', quality:0.85});
     return Array.isArray(out) ? out[0] : out;
   }
+  // Otsu: pick the grayscale threshold that best splits ink from paper.
+  function otsu(hist,total){
+    let sum=0; for(let i=0;i<256;i++) sum+=i*hist[i];
+    let sumB=0,wB=0,max=0,thr=127;
+    for(let t=0;t<256;t++){
+      wB+=hist[t]; if(!wB) continue; const wF=total-wB; if(!wF) break;
+      sumB+=t*hist[t];
+      const mB=sumB/wB, mF=(sum-sumB)/wF, between=wB*wF*(mB-mF)*(mB-mF);
+      if(between>max){ max=between; thr=t; }
+    }
+    return thr;
+  }
   function preprocess(file){
     return new Promise(res=>{
       const url=URL.createObjectURL(file), img=new Image();
       img.onload=()=>{
-        let scale=1700/img.width; scale=Math.max(0.4, Math.min(2.2, scale));   // shrink big phone photos, enlarge tiny labels
+        let scale=1900/img.width; scale=Math.max(0.5, Math.min(3, scale));   // shrink big phone photos, enlarge tiny labels
         const c=document.createElement('canvas'); c.width=Math.round(img.width*scale); c.height=Math.round(img.height*scale);
         const ctx=c.getContext('2d'); ctx.drawImage(img,0,0,c.width,c.height);
-        try{ const d=ctx.getImageData(0,0,c.width,c.height), p=d.data;
-          for(let i=0;i<p.length;i+=4){ const g=0.299*p[i]+0.587*p[i+1]+0.114*p[i+2]; const v=g>185?255:(g<95?0:g); p[i]=p[i+1]=p[i+2]=v; }
+        try{
+          const d=ctx.getImageData(0,0,c.width,c.height), p=d.data;
+          const hist=new Array(256).fill(0), g=new Uint8Array(p.length/4);
+          for(let i=0,j=0;i<p.length;i+=4,j++){ const v=(0.299*p[i]+0.587*p[i+1]+0.114*p[i+2])|0; g[j]=v; hist[v]++; }
+          const thr=otsu(hist,g.length), bias=thr+8;                          // small bias toward white = cleaner glyphs
+          for(let i=0,j=0;i<p.length;i+=4,j++){ const v=g[j]>=bias?255:0; p[i]=p[i+1]=p[i+2]=v; }
           ctx.putImageData(d,0,0);
         }catch(_){}
         URL.revokeObjectURL(url); res(c);
@@ -688,7 +715,9 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     const files=[...fl].filter(f=>/^image\//.test(f.type)||isHeic(f));
     if(!files.length){ setStatus('Those files are not images — upload JPEG/PNG/HEIC photos, or type call numbers below.',true); return; }
     setStatus('Loading text-recognition…');
-    try{ await loadTess(); }catch(e){ setStatus(e.message,true); return; }
+    let worker;
+    try{ worker=await getWorker(m=>{ if(m.status==='recognizing text') setStatus(`Reading… ${Math.round(m.progress*100)}%`); }); }
+    catch(e){ setStatus(e.message,true); return; }
     const found=new Set(lines());
     for(let i=0;i<files.length;i++){
       try{
@@ -697,7 +726,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
         const im=new Image(); im.src=URL.createObjectURL(src); thumbs.appendChild(im);
         setStatus(`Reading image ${i+1} of ${files.length}…`);
         const pre=await preprocess(src);
-        const r=await Tesseract.recognize(pre,'eng',{logger:m=>{ if(m.status==='recognizing text') setStatus(`Reading image ${i+1} of ${files.length}… ${Math.round(m.progress*100)}%`); }});
+        const r=await worker.recognize(pre);
         extractCNs(r.data.text).forEach(c=>found.add(c));
       }catch(_){ /* skip an unreadable image */ }
     }
@@ -797,10 +826,8 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
 """
 
 html = HTML.replace('__DATA__', DATA_JS)
-with open(OUT_PATH, 'w', encoding='utf-8') as f:
+with open(INDEX_PATH, 'w', encoding='utf-8') as f:  # CF Pages serves index.html at /
     f.write(html)
-shutil.copy2(OUT_PATH, INDEX_PATH)  # CF Pages serves index.html at /
 
-print(f'wrote {OUT_PATH}: {len(html)} chars')
-print(f'wrote {INDEX_PATH} (CF Pages entry point)')
+print(f'wrote {INDEX_PATH}: {len(html)} chars (CF Pages entry point)')
 print(f'embedded {len(d)} keys across {len({k.split("|")[0] for k in d})} floors')
