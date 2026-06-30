@@ -67,7 +67,6 @@ what makes iPhone uploads work at all.
 | Path | What it is |
 | --- | --- |
 | [`index.html`](index.html) | The deployed app (data baked in). **Generated** — see below. |
-| `biomed-shelf-locator.html` | Same app, downloadable copy (also generated). |
 | [`biomed-shelf-ranges.json`](biomed-shelf-ranges.json) | The master dataset: one entry per shelf *face*. |
 | [`.build_locator.py`](.build_locator.py) | Source of truth for the HTML; bakes the JSON in. |
 | [`Instructions.txt`](Instructions.txt) | The mapping handbook: dataset format, comparator, shelf physics. |
@@ -111,7 +110,7 @@ build script), regenerate so the new data is baked into the served HTML:
 
 ```bash
 python .build_locator.py
-# writes biomed-shelf-locator.html and copies it to index.html
+# writes index.html
 ```
 
 `index.html` and the HTML template inside `.build_locator.py` must stay in sync — the build script
