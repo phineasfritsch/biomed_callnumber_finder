@@ -1,0 +1,309 @@
+[
+ {
+  "name": "single-book",
+  "input": [
+   "W1 NA388 no.66 1984"
+  ],
+  "expected": {
+   "steps": [
+    {
+     "type": "transit",
+     "kind": "elevator",
+     "to": 2,
+     "skipping": 0
+    },
+    {
+     "type": "floor",
+     "level": 2,
+     "direction": "LR",
+     "stops": [
+      {
+       "id": "top-5",
+       "side": "right",
+       "x": 5,
+       "cns": [
+        "W1 NA388 no.66 1984"
+       ]
+      }
+     ]
+    }
+   ],
+   "unlocated": [],
+   "bookCount": 1,
+   "stairs": 0,
+   "skips": 0
+  }
+ },
+ {
+  "name": "one-floor",
+  "input": [
+   "W1 NA388 no.66 1984",
+   "W1 NA835",
+   "W1 NA1991"
+  ],
+  "expected": {
+   "steps": [
+    {
+     "type": "transit",
+     "kind": "elevator",
+     "to": 2,
+     "skipping": 0
+    },
+    {
+     "type": "floor",
+     "level": 2,
+     "direction": "LR",
+     "stops": [
+      {
+       "id": "top-5",
+       "side": "right",
+       "x": 5,
+       "cns": [
+        "W1 NA388 no.66 1984",
+        "W1 NA835"
+       ]
+      },
+      {
+       "id": "top-5",
+       "side": "left",
+       "x": 5,
+       "cns": [
+        "W1 NA1991"
+       ]
+      }
+     ]
+    }
+   ],
+   "unlocated": [],
+   "bookCount": 3,
+   "stairs": 0,
+   "skips": 0
+  }
+ },
+ {
+  "name": "multi-floor",
+  "input": [
+   "W1 NA388 no.66 1984",
+   "W1 AM477",
+   "WM 13 D5537",
+   "W1 AN819",
+   "W1 MO283"
+  ],
+  "expected": {
+   "steps": [
+    {
+     "type": "transit",
+     "kind": "elevator",
+     "to": 8,
+     "skipping": 0
+    },
+    {
+     "type": "floor",
+     "level": 8,
+     "direction": "LR",
+     "stops": [
+      {
+       "id": "bot-3",
+       "side": "right",
+       "x": 3,
+       "cns": [
+        "WM 13 D5537"
+       ]
+      }
+     ]
+    },
+    {
+     "type": "transit",
+     "kind": "stairs",
+     "well": "west",
+     "to": 7
+    },
+    {
+     "type": "floor",
+     "level": 7,
+     "direction": "LR",
+     "stops": [
+      {
+       "id": "top-6",
+       "side": "right",
+       "x": 6,
+       "cns": [
+        "W1 AM477"
+       ]
+      },
+      {
+       "id": "top-14",
+       "side": "left",
+       "x": 14,
+       "cns": [
+        "W1 AN819"
+       ]
+      }
+     ]
+    },
+    {
+     "type": "transit",
+     "kind": "elevator",
+     "to": 2,
+     "skipping": 4
+    },
+    {
+     "type": "floor",
+     "level": 2,
+     "direction": "LR",
+     "stops": [
+      {
+       "id": "bot-3",
+       "side": "left",
+       "x": 3,
+       "cns": [
+        "W1 MO283"
+       ]
+      },
+      {
+       "id": "top-5",
+       "side": "right",
+       "x": 5,
+       "cns": [
+        "W1 NA388 no.66 1984"
+       ]
+      }
+     ]
+    }
+   ],
+   "unlocated": [],
+   "bookCount": 5,
+   "stairs": 1,
+   "skips": 1
+  }
+ },
+ {
+  "name": "wide-sweep",
+  "input": [
+   "W1 A1C7",
+   "W1 AM477",
+   "W1 AN819",
+   "W1 AO671",
+   "W1 AQ141",
+   "W1 AR405",
+   "W1 AT257",
+   "W1 AU759"
+  ],
+  "expected": {
+   "steps": [
+    {
+     "type": "transit",
+     "kind": "elevator",
+     "to": 7,
+     "skipping": 0
+    },
+    {
+     "type": "floor",
+     "level": 7,
+     "direction": "LR",
+     "stops": [
+      {
+       "id": "top-0",
+       "side": "single",
+       "x": 0,
+       "cns": [
+        "W1 A1C7"
+       ]
+      },
+      {
+       "id": "top-6",
+       "side": "right",
+       "x": 6,
+       "cns": [
+        "W1 AM477"
+       ]
+      },
+      {
+       "id": "top-14",
+       "side": "left",
+       "x": 14,
+       "cns": [
+        "W1 AN819"
+       ]
+      },
+      {
+       "id": "top-14",
+       "side": "right",
+       "x": 14,
+       "cns": [
+        "W1 AO671"
+       ]
+      },
+      {
+       "id": "top-15",
+       "side": "left",
+       "x": 15,
+       "cns": [
+        "W1 AQ141",
+        "W1 AR405"
+       ]
+      },
+      {
+       "id": "bot-16",
+       "side": "left",
+       "x": 16,
+       "cns": [
+        "W1 AT257"
+       ]
+      },
+      {
+       "id": "bot-16",
+       "side": "right",
+       "x": 16,
+       "cns": [
+        "W1 AU759"
+       ]
+      }
+     ]
+    }
+   ],
+   "unlocated": [],
+   "bookCount": 8,
+   "stairs": 0,
+   "skips": 0
+  }
+ },
+ {
+  "name": "with-unlocated",
+  "input": [
+   "W1 NA388 no.66 1984",
+   "ZZ 999 X1"
+  ],
+  "expected": {
+   "steps": [
+    {
+     "type": "transit",
+     "kind": "elevator",
+     "to": 2,
+     "skipping": 0
+    },
+    {
+     "type": "floor",
+     "level": 2,
+     "direction": "LR",
+     "stops": [
+      {
+       "id": "top-5",
+       "side": "right",
+       "x": 5,
+       "cns": [
+        "W1 NA388 no.66 1984"
+       ]
+      }
+     ]
+    }
+   ],
+   "unlocated": [
+    "ZZ 999 X1"
+   ],
+   "bookCount": 1,
+   "stairs": 0,
+   "skips": 0
+  }
+ }
+]
