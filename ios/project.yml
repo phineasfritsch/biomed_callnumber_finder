@@ -40,6 +40,11 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.biomedshelf.scanner
         INFOPLIST_FILE: BiomedShelfScanner/Info.plist
+        # Compiles Assets.xcassets/AppIcon.appiconset into the bundle. The catalog holds a single
+        # 1024x1024 (Xcode 14+ single-size); Xcode derives every size from it, including the
+        # 120x120 that upload validation (error 90022) checks for. Pairs with CFBundleIconName
+        # in Info.plist — hand-written plists don't get that key injected for free.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # Portrait only. This is a one-handed tool used while pushing a cart; there is no
         # landscape story worth the layout cost.
         TARGETED_DEVICE_FAMILY: "1"
