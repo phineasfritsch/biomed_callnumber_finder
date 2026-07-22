@@ -38,7 +38,18 @@ final class FrameProcessor: @unchecked Sendable {
         self.request = r
     }
 
-    func setRegionOfInterest(_ roi: CGRect) { request.regionOfInterest = roi }
+    /// The scan band, in **upright portrait** normalized coordinates (bottom-left origin) — the
+    /// same space the viewfinder overlay draws in.
+    ///
+    /// Deliberately NOT `request.regionOfInterest`. That property crops the raw buffer, which is
+    /// landscape (pre-rotation), so a rect that looks right on the portrait screen selects a
+    /// different region of the sensor — the guide box and the scanned area silently disagree.
+    /// Instead we OCR the full frame and filter observations by bounding box: with an
+    /// orientation supplied to the handler, observation boxes come back in upright space, which
+    /// is exactly the overlay's space. What you see is what gets scanned, by construction.
+    private var band = CGRect(x: 0, y: 0.25, width: 1, height: 0.5)
+
+    func setBand(_ rect: CGRect) { band = rect }
     func reset() { voter.reset() }
 
     /// Returns nil when the frame was throttled away.
@@ -50,44 +61,67 @@ final class FrameProcessor: @unchecked Sendable {
         let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: orientation)
         do { try handler.perform([request]) } catch { return .nothing }
 
-        guard let observations = request.results, !observations.isEmpty else {
+        let inBand = (request.results ?? []).filter {
+            band.contains(CGPoint(x: $0.boundingBox.midX, y: $0.boundingBox.midY))
+        }
+        guard !inBand.isEmpty else {
             voter.miss()
             return .nothing
         }
 
-        // Diagnostics is per-FRAME, not per-observation. A frame showing a book cover carries
-        // many text observations (title words, publisher, shelf signs); recording each failure
-        // separately encoded a JPEG per observation at 10fps and wrapped the 500-record ring
-        // buffer in under a minute — evicting exactly the failures worth keeping. Accumulate,
-        // then record one verdict for the whole frame.
-        var frameCandidates: [(text: String, confidence: Float)] = []
+        // THE load-bearing step, learned from the first field build scanning nothing at all:
+        // Vision emits ONE OBSERVATION PER LINE. A spine label is stacked one token per line
+        // ("Biomed" / "W1" / "NA388" / "no.66" / "1984"), so no single observation ever contains
+        // a whole call number — resolving observations independently can never succeed. The
+        // label must be reassembled top-to-bottom first. (Bounding boxes are bottom-left origin,
+        // so "top of the frame" means larger midY.)
+        let lines = inBand
+            .sorted { $0.boundingBox.midY > $1.boundingBox.midY }
+            .prefix(8)
+            .map { $0.topCandidates(3) }
+            .filter { !$0.isEmpty }
 
-        for observation in observations {
-            // Ranked candidates. Taking only topCandidates(1) throws away the whole advantage of
-            // knowing what a call number looks like — see CallNumberRecognizer.
-            let candidates = observation.topCandidates(5).map { ($0.string, $0.confidence) }
-            guard let result = recognizer.resolve(candidates: candidates) else {
-                frameCandidates.append(contentsOf: candidates)
-                continue
-            }
+        let topTexts = lines.compactMap { $0.first?.string }
+        let confidences = lines.compactMap { $0.first?.confidence }
+        // Mean, not min: one glare-hit line shouldn't gate away an otherwise solid label.
+        let joinedConfidence = confidences.isEmpty
+            ? Float(0) : confidences.reduce(0, +) / Float(confidences.count)
 
-            let key: String
-            switch result {
-            case let .located(cn, _): key = cn.raw.uppercased()
-            case let .unlocated(cn):  key = cn.raw.uppercased()
+        var candidates: [(text: String, confidence: Float)] = [
+            (topTexts.joined(separator: "\n"), joinedConfidence)
+        ]
+        // Ranked variants: swap ONE line at a time for its 2nd/3rd read, others stay at top-1.
+        // Keeps the constrained-decoding advantage for whichever single line OCR fumbled.
+        for (i, lineCandidates) in lines.enumerated() {
+            for alt in lineCandidates.dropFirst() {
+                var parts = topTexts
+                parts[i] = alt.string
+                candidates.append((parts.joined(separator: "\n"), alt.confidence))
             }
-            let accepted = voter.consider(key)
-            diagnose(candidates, result: result, accepted: accepted, pixelBuffer: pixelBuffer)
-            return accepted ? .accepted(result) : .seeing(result)
+        }
+        // Single-line fallback: request slips and flat labels carry the whole call number in one
+        // observation, and joining them with unrelated neighbours could bury it.
+        for line in lines {
+            candidates.append(contentsOf: line.map { ($0.string, $0.confidence) })
         }
 
-        // Vision saw text but nothing in the frame survived the pipeline. One record — this is
-        // the bucket that distinguishes "bad read" from "good read, bad grammar".
-        if !frameCandidates.isEmpty {
-            diagnose(Array(frameCandidates.prefix(10)), result: nil, accepted: false, pixelBuffer: pixelBuffer)
+        guard let result = recognizer.resolve(candidates: candidates) else {
+            // One diagnostic record per FRAME (not per observation — that encoded a JPEG per
+            // title-word at 10fps and wrapped the ring buffer in a minute). This bucket is what
+            // separates "Vision misread it" from "good read, grammar rejected it".
+            diagnose(Array(candidates.prefix(10)), result: nil, accepted: false, pixelBuffer: pixelBuffer)
+            voter.miss()
+            return .nothing
         }
-        voter.miss()
-        return .nothing
+
+        let key: String
+        switch result {
+        case let .located(cn, _): key = cn.raw.uppercased()
+        case let .unlocated(cn):  key = cn.raw.uppercased()
+        }
+        let accepted = voter.consider(key)
+        diagnose(Array(candidates.prefix(10)), result: result, accepted: accepted, pixelBuffer: pixelBuffer)
+        return accepted ? .accepted(result) : .seeing(result)
     }
 
     /// Fire-and-forget hop to the diagnostics recorder. Cheap when recording is off — the JPEG is
@@ -177,15 +211,19 @@ final class ScanEngine {
         didSet { setTorch(isTorchOn) }
     }
 
-    /// Narrows recognition to a centred band. Tight spines sit millimetres apart, so a wide ROI
-    /// will happily read the neighbour's label. Vision's space is normalized with a **bottom-left
-    /// origin**, relative to the *rotated* image.
+    /// Narrows the scan band to one spine. Both rects are portrait-normalized, bottom-left
+    /// origin — the same space the overlay draws in and the processor filters in.
     var isPrecisionMode = false {
-        didSet { processor.setRegionOfInterest(isPrecisionMode ? Self.precisionROI : Self.wideROI) }
+        didSet { processor.setBand(isPrecisionMode ? Self.precisionROI : Self.wideROI) }
     }
 
+    /// Wide: horizontal band for sweeping along a shelf — labels sit at roughly the same height
+    /// across a row of shelved books.
     static let wideROI = CGRect(x: 0.0, y: 0.25, width: 1.0, height: 0.5)
-    static let precisionROI = CGRect(x: 0.15, y: 0.40, width: 0.7, height: 0.2)
+    /// Precision: TALL and narrow, because it frames a single *vertical spine* — the stacked
+    /// label reads top-to-bottom. The first build shipped this wide (a landscape strip), which is
+    /// a shape no spine label ever has.
+    static let precisionROI = CGRect(x: 0.30, y: 0.18, width: 0.40, height: 0.64)
 
     /// Set by the view. Called on the main actor.
     var onEvent: ((Event) -> Void)?
@@ -202,7 +240,7 @@ final class ScanEngine {
 
     init(router: Router) {
         self.processor = FrameProcessor(router: router)
-        processor.setRegionOfInterest(Self.wideROI)
+        processor.setBand(Self.wideROI)
         processor.isDiagnosing = ScanDiagnostics.shared.isRecording
     }
 

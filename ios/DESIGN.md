@@ -86,6 +86,26 @@ Vision also removes every hack currently in the web app: the 4-rotation loop (it
 arbitrary angles and returns the angle), the Otsu binarization (it works on raw pixels), and the
 page-segmentation-mode guessing (no such concept).
 
+### 3.1.1 Vision returns one observation per LINE — reassemble before parsing
+
+**This sank the first field build: the app scanned nothing, ever.** A spine label is stacked one
+token per line, so Vision returns five separate observations — `Biomed` / `W1` / `NA388` /
+`no.66` / `1984` — and no single observation ever contains a whole call number. Resolving
+observations independently *cannot* succeed: `W1` alone fails the grammar, `NA388` alone fails,
+forever. Verified in the model: every line alone → nil; joined → locates.
+
+The desk tests missed it because they fed multi-line strings as one candidate — an input shape
+Vision never actually produces. The corrected pipeline sorts in-band observations top-to-bottom
+(bounding boxes are bottom-left origin: top of frame = larger `midY`), joins top candidates with
+newlines, then adds ranked variants swapping one line at a time, then falls back to per-line for
+single-line labels (request slips). See `FrameProcessor.process`.
+
+Related trap fixed at the same time: `request.regionOfInterest` crops the **raw landscape
+buffer**, not the upright image, so a portrait-drawn guide box selects a different region of the
+sensor than it shows. The engine now OCRs the full frame and filters observations by bounding box
+in upright space — the overlay's own space — so what you see is what gets scanned, by
+construction.
+
 ### 3.2 Domain-constrained decoding — the biggest accuracy win
 
 Vision returns *ranked candidates*, not one string. Almost nobody uses past the first:
