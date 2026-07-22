@@ -50,6 +50,11 @@ struct ScanView: View {
             VStack {
                 topBar
                 Spacer()
+                if engine.captureMode == .single {
+                    scanButton
+                        // Clears the sheet's peek detent (104pt) plus breathing room.
+                        .padding(.bottom, 128)
+                }
             }
 
             if let message = engine.errorMessage {
@@ -86,6 +91,36 @@ struct ScanView: View {
         }
     }
 
+    // MARK: Scan button
+
+    /// The arm switch. Press → recognizer hunts until one read is accepted → idles again.
+    /// One press per book, by design: continuous capture filed partial re-reads of a single
+    /// label as separate entries, and a trip list that needs de-duplicating costs more trust
+    /// than a tap costs time.
+    private var scanButton: some View {
+        Button {
+            if engine.isArmed { engine.disarm() } else { engine.arm() }
+        } label: {
+            ZStack {
+                Circle()
+                    .strokeBorder(.white.opacity(0.9), lineWidth: 4)
+                    .frame(width: 78, height: 78)
+                Circle()
+                    .fill(engine.isArmed ? Theme.unlocated : Theme.accent)
+                    .frame(width: 62, height: 62)
+                if engine.isArmed {
+                    Image(systemName: "xmark")
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(.white)
+                }
+            }
+        }
+        .accessibilityLabel(engine.isArmed ? "Cancel scan" : "Scan a call number")
+        .accessibilityHint(engine.isArmed
+            ? "Scanning now. Double tap to stop without adding anything."
+            : "Starts scanning. Stops by itself once one call number is read.")
+    }
+
     // MARK: Top bar
 
     private var topBar: some View {
@@ -103,6 +138,20 @@ struct ScanView: View {
                 .frame(height: 44)
             }
             .accessibilityHint("Precision narrows the scan area to one label at a time, for tightly packed spines.")
+
+            Button {
+                engine.captureMode = engine.captureMode == .single ? .sweep : .single
+                engine.resetVoting()
+            } label: {
+                Label(
+                    engine.captureMode == .single ? "Single" : "Sweep",
+                    systemImage: engine.captureMode == .single ? "camera.metering.spot" : "camera.metering.matrix"
+                )
+                .font(.footnote.weight(.medium))
+                .padding(.horizontal, 12)
+                .frame(height: 44)
+            }
+            .accessibilityHint("Single scans one book per button press. Sweep scans continuously along a shelf.")
 
             Spacer()
 
@@ -158,16 +207,24 @@ struct ScanView: View {
             case let .unlocated(c):  cn = c; hit = nil
             }
 
-            let isNew = store.add(cn, hit: hit)
-            if isNew {
+            // Merge window only in sweep — single-shot disarms after each accept, so a same-book
+            // upgrade can never follow and prefix-merging would only ever eat the NEXT book
+            // (journals shelve as runs of the same title). See TripStore.add.
+            // 2.5s: a same-book upgrade lands within ~2s (voter cadence); anything later is more
+            // likely the next volume in the run. Tight window = small cross-book exposure.
+            let window: TimeInterval? = engine.captureMode == .sweep ? 2.5 : nil
+            switch store.add(cn, hit: hit, mergeWindow: window) {
+            case .added, .merged:
                 feedback.accepted(result)
                 flashNow(hit == nil ? .warning : .accepted)
-            } else {
-                // Already on the trip — quantity bumped. Distinct feel so you know it registered
-                // as a second copy rather than a missed scan.
+            case .alreadyPresent:
+                // Distinct feel: registered, but you already had it. Copies go through the
+                // quantity stepper deliberately — see TripStore.add.
                 feedback.duplicate()
                 flashNow(.duplicate)
             }
+            // Single-shot: one press, one book. Recognizer idles until the next press.
+            if engine.captureMode == .single { engine.disarm() }
             UIAccessibility.post(notification: .announcement, argument: announcement(cn, hit))
         }
     }

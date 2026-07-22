@@ -52,6 +52,11 @@ final class FrameProcessor: @unchecked Sendable {
     func setBand(_ rect: CGRect) { band = rect }
     func reset() { voter.reset() }
 
+    /// When false, frames are dropped before Vision runs. Single-shot mode leaves the preview
+    /// live but the recognizer idle between button presses — no battery spent OCRing a viewfinder
+    /// nobody has armed. Same benign-race contract as `isDiagnosing`.
+    var isActive = true
+
     // MARK: Preprocessing variants
 
     /// Journal labels come in every combination the bindery had in stock — white on red, gold on
@@ -103,8 +108,9 @@ final class FrameProcessor: @unchecked Sendable {
         variantIndex = (variantIndex + 1) % Variant.allCases.count
     }
 
-    /// Returns nil when the frame was throttled away.
+    /// Returns nil when the frame was throttled away or scanning is not armed.
     func process(_ pixelBuffer: CVPixelBuffer, orientation: CGImagePropertyOrientation) -> Outcome? {
+        guard isActive else { return nil }
         let now = Date()
         guard now.timeIntervalSince(lastProcessed) >= minFrameInterval else { return nil }
         lastProcessed = now
@@ -174,7 +180,13 @@ final class FrameProcessor: @unchecked Sendable {
         case let .located(cn, _): key = cn.raw.uppercased()
         case let .unlocated(cn):  key = cn.raw.uppercased()
         }
-        let accepted = voter.consider(key)
+        // Volume-less reads earn acceptance more slowly. No trailing NO./year token usually
+        // means the label's volume lines haven't assembled yet — 5 frames instead of 3 gives the
+        // full text a half-second to out-vote the partial. Costs 0.2s on books that genuinely
+        // have no volume; prevents most partial rows (the input to every merge hazard).
+        let hasTrail = key.range(
+            of: #"(NO\.?\s?\d|(18|19|20)\d{2})"#, options: .regularExpression) != nil
+        let accepted = voter.consider(key, required: hasTrail ? 3 : 5)
         diagnose(Array(candidates.prefix(10)), result: result, accepted: accepted, pixelBuffer: pixelBuffer)
         return accepted ? .accepted(result) : .seeing(result)
     }
@@ -272,6 +284,39 @@ final class ScanEngine {
         didSet { processor.setBand(isPrecisionMode ? Self.precisionROI : Self.wideROI) }
     }
 
+    // MARK: Capture mode
+
+    /// Field revision of the original zero-tap design. Continuous capture files partial re-reads
+    /// of one book as separate entries; a trip list that needs de-duplicating costs more trust
+    /// than a button press costs time. Default is now single-shot: arm → first accepted read →
+    /// recognizer idles. Sweep keeps continuous capture for running a whole truck shelf.
+    enum CaptureMode: String {
+        case single, sweep
+    }
+
+    var captureMode: CaptureMode = .single {
+        didSet { syncActive() }
+    }
+
+    /// Armed = the recognizer is live and hunting. Always true in sweep mode; in single mode,
+    /// true only between a button press and the next accepted read.
+    private(set) var isArmed = false
+
+    func arm() {
+        isArmed = true
+        processor.reset()   // fresh votes — don't inherit half-votes from the previous book
+        syncActive()
+    }
+
+    func disarm() {
+        isArmed = false
+        syncActive()
+    }
+
+    private func syncActive() {
+        processor.isActive = captureMode == .sweep || isArmed
+    }
+
     /// Wide: horizontal band for sweeping along a shelf — labels sit at roughly the same height
     /// across a row of shelved books.
     static let wideROI = CGRect(x: 0.0, y: 0.25, width: 1.0, height: 0.5)
@@ -297,6 +342,7 @@ final class ScanEngine {
         self.processor = FrameProcessor(router: router)
         processor.setBand(Self.wideROI)
         processor.isDiagnosing = ScanDiagnostics.shared.isRecording
+        syncActive()   // default single-shot: recognizer idle until the button arms it
     }
 
     /// Called when the diagnostics toggle changes, so the capture queue doesn't have to poll.

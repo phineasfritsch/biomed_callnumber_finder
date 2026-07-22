@@ -17,6 +17,14 @@ So the target interaction is **zero taps per book**. Point, feel a haptic tick, 
 confirms through touch and sound; the screen is for review afterward, not during. Every decision
 below follows from that.
 
+**Field revision — one tap per book, not zero.** Continuous capture met reality and lost:
+successive reads of ONE label normalize differently (a frame with the volume line, a frame
+without), so the same physical book landed in the list twice. A trip list that needs
+de-duplicating costs more trust than a button press costs time. Default is now **single-shot** —
+press, scan until one accept, idle — with continuous capture kept as an explicit Sweep mode for
+running a truck shelf. The store also merges token-prefix re-reads either way (§3.8). The
+eyes-off principle survives: you press without looking, the haptic still carries the verdict.
+
 ---
 
 ## 2. Navigation architecture
@@ -257,12 +265,37 @@ Two, not three:
 - **Sheet** — `VNDocumentCameraViewController` for an ILL request sheet. One capture, perspective-
   corrected, returns many lines at once → parse all → reviewable checklist.
 
-### 3.8 Duplicates
+### 3.8 Duplicates — revised in the field
 
-Two copies of the same title on one truck is real and dedupe-by-string would silently eat one.
-Each row carries a **quantity stepper**, and re-scanning a call number already in the list bumps
-quantity rather than being ignored (with a distinct "already have this — now ×2" haptic). Rapid
-re-reads of the *same physical book* are suppressed by a 2-second cooldown per string.
+The real duplicate problem turned out to be the opposite of the designed one. Exact duplicate
+copies are **rare** in this collection; what's common is one book producing two different reads
+(`W1 NA388` then `W1 NA388 NO.66 1984`), which exact-string dedupe files as two books.
+
+The rules now:
+
+* **Token-prefix merge, gated by a 2.5-second window, sweep mode only.** If one read's tokens are a
+  prefix of the other's *and* the existing row was written within the last few seconds, it's the
+  same label at different completeness — keep the longer text, no new row.
+
+  Both gates are load-bearing, and the first draft of this rule had neither. Prefix-relatedness
+  does NOT imply same book: journals shelve as **runs**, so the next book on the shelf is usually
+  the same title at a different volume, and its full read validly extends the previous book's
+  partial read. Ungated merging destroys books silently — scan A (no.66) partial, scan B (no.71)
+  full, row becomes B, **A is gone**; in the other order B is dropped instead. A same-book upgrade
+  can only arrive within the voter's cadence (~1–2s), hence the window. And in single-shot mode
+  the engine disarms after each accept, so an upgrade can *never* follow — there, prefix-merging
+  is pure cross-book hazard and is disabled outright. An occasional partial row to tidy in review
+  beats a silently missing book.
+
+  Also deliberately NOT "compare ignoring the volume": `NO.66` vs `NO.67` are different bound
+  volumes, neither a prefix of the other — separate rows always.
+* **Partial reads earn acceptance more slowly.** A volume-less read usually means the label's
+  volume lines haven't assembled yet, so it needs 5 agreeing frames instead of 3 — a half-second
+  for the full text to out-vote the partial. Fewer partial rows means fewer merge decisions to
+  get wrong at all.
+* **Re-scan of identical text is a no-op**, with a distinct "already have it" haptic. Auto-bumping
+  quantity on re-scan recorded phantom copies; real second copies go through the quantity stepper
+  on the row.
 
 ---
 

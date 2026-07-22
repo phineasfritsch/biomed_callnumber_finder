@@ -16,6 +16,11 @@ struct TripItem: Identifiable, Codable, Equatable {
     var level: Int?
     var shelfID: String?
     var side: String?
+    /// Last time this row was written by a scan. Gates prefix-merging: an upgrade from the SAME
+    /// physical book arrives within a couple of seconds; anything later is presumed to be a
+    /// different book that happens to share the base (journals shelve as runs of the same title).
+    /// Optional so trips persisted before this field existed still decode; nil reads as "long ago".
+    var updatedAt: Date? = nil
 
     var isLocated: Bool { level != nil }
 
@@ -77,25 +82,82 @@ final class TripStore {
 
     // MARK: Mutating the current trip
 
-    /// Add a scanned or typed call number. Returns true if this was a new book, false if it
-    /// bumped the quantity of one already present (the caller uses this to pick a haptic).
+    enum AddOutcome {
+        /// New book, new row.
+        case added
+        /// Same book, better read — an earlier partial ("W1 NA388") was upgraded to the fuller
+        /// text ("W1 NA388 NO.66 1984"). No new row.
+        case merged
+        /// Already on the trip, nothing changed.
+        case alreadyPresent
+    }
+
+    /// Add a scanned or typed call number.
+    ///
+    /// Exact-text re-scan is always a no-op (exact duplicate copies are rare here; real second
+    /// copies go through the quantity stepper).
+    ///
+    /// **Token-prefix merging is gated by `mergeWindow`, and that gate is load-bearing.** The
+    /// merge exists for one case only: the SAME physical book read twice at different
+    /// completeness (`W1 NA388`, then `W1 NA388 NO.66 1984` once the volume lines assemble). But
+    /// prefix-relatedness does NOT imply same book — journals shelve as runs, so the *next* book
+    /// on the shelf is usually the same title with a different volume, and its full read is a
+    /// perfectly valid extension of the previous book's partial read. Unconditional merging
+    /// therefore silently destroys books:
+    ///
+    ///   scan A (no.66) → partial row "W1 NA388"
+    ///   scan B (no.71) → "W1 NA388 NO.71 1989" extends it → row becomes B → **A is gone**
+    ///   (reverse order drops B instead, via the prefix no-op)
+    ///
+    /// A same-book upgrade can only arrive within a couple of seconds of the partial (the voter's
+    /// cadence). So: pass a short `mergeWindow` in sweep mode, where upgrades genuinely happen —
+    /// prefix rules then apply only against rows written within that window. Pass nil in
+    /// single-shot mode — the engine disarms after each accept, an upgrade can never follow, so
+    /// prefix-merging there is pure cross-book hazard with zero benefit. Manual entry and sheet
+    /// import also pass nil. Outside the window, a prefix-related read is presumed to be a
+    /// different volume and gets its own row; an occasional partial row to tidy in review beats a
+    /// silently missing book.
     @discardableResult
-    func add(_ cn: CallNumber, hit: Router.Hit?, typed: Bool = false) -> Bool {
+    func add(_ cn: CallNumber, hit: Router.Hit?, typed: Bool = false,
+             mergeWindow: TimeInterval? = nil) -> AddOutcome {
         let key = cn.raw.uppercased()
-        if let i = current.items.firstIndex(where: { $0.text == key }) {
-            current.items[i].quantity += 1
-            save()
-            return false
+        let newTokens = key.split(separator: " ")
+        let now = Date()
+
+        for (i, item) in current.items.enumerated() {
+            let oldTokens = item.text.split(separator: " ")
+            if oldTokens.elementsEqual(newTokens) { return .alreadyPresent }
+
+            guard let window = mergeWindow,
+                  let touched = item.updatedAt,
+                  now.timeIntervalSince(touched) <= window
+            else { continue }
+
+            if newTokens.starts(with: oldTokens) {
+                current.items[i].text = key
+                current.items[i].level = hit?.level
+                current.items[i].shelfID = hit?.shelfID
+                current.items[i].side = hit?.side
+                current.items[i].updatedAt = now
+                save()
+                return .merged
+            }
+            if oldTokens.starts(with: newTokens) {
+                current.items[i].updatedAt = now   // same book still in frame; keep window open
+                return .alreadyPresent
+            }
         }
+
         current.items.append(TripItem(
             text: key,
             wasTyped: typed,
             level: hit?.level,
             shelfID: hit?.shelfID,
-            side: hit?.side
+            side: hit?.side,
+            updatedAt: now
         ))
         save()
-        return true
+        return .added
     }
 
     func remove(_ item: TripItem) {

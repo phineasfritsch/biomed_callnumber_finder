@@ -162,13 +162,17 @@ final class StabilityVoter {
 
     private var consecutiveMisses = 0
 
-    func consider(_ key: String, now: Date = .now) -> Bool {
+    /// `required` overrides `requiredVotes` per read. The frame processor demands MORE agreeing
+    /// frames for volume-less reads: a bare "W1 NA388" usually means the label's volume lines
+    /// haven't assembled yet, and accepting it early is what creates partial rows — the raw
+    /// material for every cross-book merge hazard. Extra frames give the full label time to win.
+    func consider(_ key: String, required: Int? = nil, now: Date = .now) -> Bool {
         consecutiveMisses = 0
         if let last = lastAccepted[key], now.timeIntervalSince(last) < cooldown {
             return false
         }
         votes[key, default: 0] += 1
-        guard votes[key]! >= requiredVotes else { return false }
+        guard votes[key]! >= (required ?? requiredVotes) else { return false }
         votes.removeAll()
         lastAccepted[key] = now
         return true
