@@ -105,8 +105,20 @@ struct Router {
         self.ranges = ranges.filter { !$0.value.start.isEmpty && !$0.value.end.isEmpty }
     }
 
+    enum LoadError: LocalizedError {
+        case missingResource(String)
+        var errorDescription: String? {
+            switch self {
+            case let .missingResource(name):
+                return "\(name).json is missing from the app bundle."
+            }
+        }
+    }
+
     init(bundledRanges resource: String, bundle: Bundle = .main) throws {
-        let url = try XCTUnwrapURL(bundle.url(forResource: resource, withExtension: "json"), resource)
+        guard let url = bundle.url(forResource: resource, withExtension: "json") else {
+            throw LoadError.missingResource(resource)
+        }
         let raw = try JSONDecoder().decode([String: Range].self, from: Data(contentsOf: url))
         self.init(ranges: raw)
     }
@@ -287,12 +299,4 @@ extension Router.Route {
         }
         return s + "."
     }
-}
-
-private func XCTUnwrapURL(_ url: URL?, _ name: String) throws -> URL {
-    guard let url else {
-        throw NSError(domain: "Router", code: 1,
-                      userInfo: [NSLocalizedDescriptionKey: "Missing bundled resource \(name).json"])
-    }
-    return url
 }

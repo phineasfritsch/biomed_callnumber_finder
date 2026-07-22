@@ -9,12 +9,15 @@ struct TripSheet: View {
     @Environment(TripStore.self) private var store
 
     let router: Router
-    let onPlanRoute: () -> Void
-    let onScanSheet: () -> Void
+    let onToggleDiagnostics: (Bool) -> Void
 
     @State private var editing: TripItem?
     @State private var showManualEntry = false
     @State private var showHistory = false
+    @State private var showDiagnostics = false
+    @State private var showRoute = false
+    @State private var showSheetScanner = false
+    @State private var pendingImport: [(CallNumber, Router.Hit?)] = []
     @State private var confirmClear = false
 
     var body: some View {
@@ -53,12 +56,15 @@ struct TripSheet: View {
                         Button { showManualEntry = true } label: {
                             Label("Type a call number", systemImage: "keyboard")
                         }
-                        Button { onScanSheet() } label: {
+                        Button { showSheetScanner = true } label: {
                             Label("Scan a request sheet", systemImage: "doc.viewfinder")
                         }
                         Divider()
                         Button { showHistory = true } label: {
                             Label("Past trips", systemImage: "clock.arrow.circlepath")
+                        }
+                        Button { showDiagnostics = true } label: {
+                            Label("Scan diagnostics", systemImage: "stethoscope")
                         }
                         if !store.current.isEmpty {
                             Divider()
@@ -86,6 +92,29 @@ struct TripSheet: View {
             }
             .sheet(isPresented: $showHistory) {
                 HistoryView()
+            }
+            .sheet(isPresented: $showDiagnostics) {
+                DiagnosticsView(onToggle: onToggleDiagnostics)
+            }
+            .fullScreenCover(isPresented: $showRoute) {
+                RouteView(route: store.route())
+            }
+            .fullScreenCover(isPresented: $showSheetScanner) {
+                DocumentScanner(
+                    router: router,
+                    onFinish: { pendingImport = $0; showSheetScanner = false },
+                    onCancel: { showSheetScanner = false }
+                )
+                .ignoresSafeArea()
+            }
+            .sheet(isPresented: .init(
+                get: { !pendingImport.isEmpty },
+                set: { if !$0 { pendingImport = [] } }
+            )) {
+                SheetImportReview(found: pendingImport) { chosen in
+                    for (cn, hit) in chosen { store.add(cn, hit: hit) }
+                    pendingImport = []
+                }
             }
             .confirmationDialog("Clear this trip?", isPresented: $confirmClear, titleVisibility: .visible) {
                 Button("Clear \(store.current.bookCount) books", role: .destructive) { store.clear() }
@@ -122,7 +151,7 @@ struct TripSheet: View {
                     }
                 }
                 Spacer()
-                Button(action: onPlanRoute) {
+                Button { showRoute = true } label: {
                     Text("Plan route")
                         .frame(minHeight: 44)
                         .padding(.horizontal, 8)

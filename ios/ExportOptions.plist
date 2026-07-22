@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  TestFlight / App Store export. Used by:
+    xcodebuild -exportArchive -exportOptionsPlist ExportOptions.plist ...
+  Replace TEAMID with your 10-character Team ID (Apple Developer -> Membership).
+  For the faster ad-hoc/OTA loop, use ExportOptions-AdHoc.plist instead.
+-->
+<plist version="1.0">
+<dict>
+	<key>method</key>
+	<string>app-store-connect</string>
+	<key>teamID</key>
+	<string>TEAMID</string>
+	<key>uploadSymbols</key>
+	<true/>
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<!-- TestFlight builds should not be thinned to one device variant. -->
+	<key>thinning</key>
+	<string>&lt;none&gt;</string>
+</dict>
+</plist>

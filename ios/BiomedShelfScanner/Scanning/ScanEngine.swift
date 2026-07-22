@@ -1,4 +1,5 @@
 import AVFoundation
+import CoreImage
 import Observation
 import UIKit
 import Vision
@@ -54,22 +55,72 @@ final class FrameProcessor: @unchecked Sendable {
             return .nothing
         }
 
+        // Diagnostics is per-FRAME, not per-observation. A frame showing a book cover carries
+        // many text observations (title words, publisher, shelf signs); recording each failure
+        // separately encoded a JPEG per observation at 10fps and wrapped the 500-record ring
+        // buffer in under a minute — evicting exactly the failures worth keeping. Accumulate,
+        // then record one verdict for the whole frame.
+        var frameCandidates: [(text: String, confidence: Float)] = []
+
         for observation in observations {
             // Ranked candidates. Taking only topCandidates(1) throws away the whole advantage of
             // knowing what a call number looks like — see CallNumberRecognizer.
             let candidates = observation.topCandidates(5).map { ($0.string, $0.confidence) }
-            guard let result = recognizer.resolve(candidates: candidates) else { continue }
+            guard let result = recognizer.resolve(candidates: candidates) else {
+                frameCandidates.append(contentsOf: candidates)
+                continue
+            }
 
             let key: String
             switch result {
             case let .located(cn, _): key = cn.raw.uppercased()
             case let .unlocated(cn):  key = cn.raw.uppercased()
             }
-            return voter.consider(key) ? .accepted(result) : .seeing(result)
+            let accepted = voter.consider(key)
+            diagnose(candidates, result: result, accepted: accepted, pixelBuffer: pixelBuffer)
+            return accepted ? .accepted(result) : .seeing(result)
         }
 
+        // Vision saw text but nothing in the frame survived the pipeline. One record — this is
+        // the bucket that distinguishes "bad read" from "good read, bad grammar".
+        if !frameCandidates.isEmpty {
+            diagnose(Array(frameCandidates.prefix(10)), result: nil, accepted: false, pixelBuffer: pixelBuffer)
+        }
         voter.miss()
         return .nothing
+    }
+
+    /// Fire-and-forget hop to the diagnostics recorder. Cheap when recording is off — the JPEG is
+    /// only encoded for frames that failed, and only while capturing.
+    private func diagnose(
+        _ candidates: [(text: String, confidence: Float)],
+        result: CallNumberRecognizer.Result?,
+        accepted: Bool,
+        pixelBuffer: CVPixelBuffer
+    ) {
+        guard isDiagnosing else { return }
+        let extracted = candidates.flatMap { CallNumberRecognizer.extract(from: $0.text) }
+        var frame: Data?
+        if result == nil || !accepted {
+            frame = Self.jpeg(from: pixelBuffer)
+        }
+        Task { @MainActor in
+            ScanDiagnostics.shared.record(
+                candidates: candidates, extracted: extracted,
+                result: result, accepted: accepted, frame: frame
+            )
+        }
+    }
+
+    /// Mirrors `ScanDiagnostics.isRecording`, cached here so the capture queue never has to read
+    /// main-actor state per frame.
+    var isDiagnosing = false
+
+    private static func jpeg(from buffer: CVPixelBuffer, quality: CGFloat = 0.5) -> Data? {
+        let ci = CIImage(cvPixelBuffer: buffer)
+        let ctx = CIContext()
+        guard let cg = ctx.createCGImage(ci, from: ci.extent) else { return nil }
+        return UIImage(cgImage: cg, scale: 1, orientation: .right).jpegData(compressionQuality: quality)
     }
 }
 
@@ -152,6 +203,12 @@ final class ScanEngine {
     init(router: Router) {
         self.processor = FrameProcessor(router: router)
         processor.setRegionOfInterest(Self.wideROI)
+        processor.isDiagnosing = ScanDiagnostics.shared.isRecording
+    }
+
+    /// Called when the diagnostics toggle changes, so the capture queue doesn't have to poll.
+    func setDiagnosing(_ on: Bool) {
+        processor.isDiagnosing = on
     }
 
     // MARK: Session control
@@ -171,10 +228,15 @@ final class ScanEngine {
         let session = self.session
         await Task.detached(priority: .userInitiated) { session.startRunning() }.value
         isRunning = true
+        // Scanning is an eyes-off activity — the user is looking at book spines, not the screen,
+        // so nothing resets the system idle timer. Without this the phone dims and locks in the
+        // middle of a truck. Restored in stop(), which also runs on backgrounding.
+        UIApplication.shared.isIdleTimerDisabled = true
     }
 
     func stop() {
         if isTorchOn { isTorchOn = false }
+        UIApplication.shared.isIdleTimerDisabled = false
         guard session.isRunning else { return }
         let session = self.session
         Task.detached(priority: .userInitiated) { session.stopRunning() }

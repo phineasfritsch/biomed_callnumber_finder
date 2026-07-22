@@ -16,9 +16,6 @@ struct ScanView: View {
 
     @State private var seeing: CallNumberRecognizer.Result?
     @State private var flash: FlashState?
-    @State private var showSheetScanner = false
-    @State private var showRoute = false
-    @State private var pendingImport: [(CallNumber, Router.Hit?)] = []
 
     private let router: Router
 
@@ -72,33 +69,20 @@ struct ScanView: View {
             default:          break
             }
         }
+        // The trip sheet is permanently presented — it *is* the bottom half of the UI, and the
+        // camera stays live behind it. Route, request-sheet capture and import review are all
+        // presented from inside TripSheet rather than here: a fullScreenCover raised from a view
+        // that already has a sheet up does not reliably appear, because the sheet owns the
+        // presentation context.
         .sheet(isPresented: .constant(true)) {
             TripSheet(
                 router: router,
-                onPlanRoute: { showRoute = true },
-                onScanSheet: { showSheetScanner = true }
+                onToggleDiagnostics: { engine.setDiagnosing($0) }
             )
             .presentationDetents([.height(104), .medium, .large])
             .presentationBackgroundInteraction(.enabled(upThrough: .medium))
             .presentationDragIndicator(.visible)
             .interactiveDismissDisabled()
-        }
-        .fullScreenCover(isPresented: $showRoute) {
-            RouteView(route: store.route())
-        }
-        .fullScreenCover(isPresented: $showSheetScanner) {
-            DocumentScanner(
-                router: router,
-                onFinish: { pendingImport = $0; showSheetScanner = false },
-                onCancel: { showSheetScanner = false }
-            )
-            .ignoresSafeArea()
-        }
-        .sheet(isPresented: .init(get: { !pendingImport.isEmpty }, set: { if !$0 { pendingImport = [] } })) {
-            SheetImportReview(found: pendingImport) { chosen in
-                for (cn, hit) in chosen { store.add(cn, hit: hit) }
-                pendingImport = []
-            }
         }
     }
 

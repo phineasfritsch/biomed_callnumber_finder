@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Privacy manifest. Required since May 2024 for any binary that touches a "required reason" API —
+  uploads without it are auto-rejected (ITMS-91053) before a human reviewer is involved.
+
+  This app's entire footprint:
+    * UserDefaults (ScanDiagnostics persists its recording toggle) → category CA92.1,
+      "access info from same app" — the only permitted reason for plain preference storage.
+    * No tracking, no collected data, no third-party SDKs, no network code at all.
+
+  If you add a dependency later, check whether IT ships its own manifest; most rejection stories
+  are a dependency's undeclared API use, not the app's own.
+-->
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

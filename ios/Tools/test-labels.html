@@ -1,0 +1,221 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Shelf Scanner — test labels</title>
+<style>
+  @page { size: letter; margin: 12mm; }
+  body { font: 12px/1.4 -apple-system, Segoe UI, sans-serif; color: #111; }
+  h1 { font-size: 16px; margin: 0 0 2px; }
+  p.sub { margin: 0 0 14px; color: #555; font-size: 11px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .card { border: 1px solid #ccc; border-radius: 6px; padding: 8px; break-inside: avoid; }
+  .card.fail { border-color: #c66a25; border-style: dashed; }
+  /* Mimics the real spine label: white sticker, black monospace, one token per line. */
+  .label {
+    background: #fff; border: 1px solid #222; border-radius: 3px;
+    padding: 6px 8px; font-family: "SF Mono", Consolas, monospace;
+    font-size: 15px; font-weight: 600; letter-spacing: 0.4px; line-height: 1.25;
+    min-height: 92px;
+  }
+  .collection { font-size: 11px; font-weight: 400; }
+  .meta { margin-top: 6px; font-size: 10px; }
+  .expect { font-family: "SF Mono", Consolas, monospace; color: #1a5; }
+  .card.fail .expect { color: #c66a25; }
+  .note { color: #777; }
+  h2 { font-size: 13px; margin: 18px 0 6px; }
+</style>
+<h1>Shelf Scanner — test labels</h1>
+<p class="sub">
+  Real call numbers from the live dataset. Print at 100% (no “fit to page” — it changes the glyph size
+  the scanner sees). Green = expected shelf. Orange dashed = <b>expected to fail</b> the grammar gate
+  and require manual entry; that failure is correct behaviour, not a bug.
+</p>
+
+<h2>Should scan and locate</h2>
+<div class="grid">
+
+  <div class="card">
+    <div class="label">
+      <div class="collection">Biomed</div>
+      <div class="line">W1</div><div class="line">NA388</div><div class="line">NO.66</div><div class="line">1984</div>
+    </div>
+    <div class="meta">
+      <div class="expect">L2 · top-5 · right</div>
+      <div class="note">the original photo</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">
+      <div class="collection">Biomed</div>
+      <div class="line">W1</div><div class="line">A1Q2</div>
+    </div>
+    <div class="meta">
+      <div class="expect">L7 · bot-1 · left</div>
+      <div class="note">jammed double cutter</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">
+      <div class="collection">Biomed</div>
+      <div class="line">W1</div><div class="line">CA756TA</div>
+    </div>
+    <div class="meta">
+      <div class="expect">L6 · bot-11 · left</div>
+      <div class="note">two-letter suffix</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">
+      <div class="collection">Biomed</div>
+      <div class="line">W1</div><div class="line">EN996D</div>
+    </div>
+    <div class="meta">
+      <div class="expect">L5 · bot-3 · left</div>
+      <div class="note">one-letter suffix</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">
+      <div class="collection">Biomed</div>
+      <div class="line">W2</div><div class="line">AN231AN</div>
+    </div>
+    <div class="meta">
+      <div class="expect">L1 · bot-14 · single</div>
+      <div class="note">W2–W4 prefix</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">
+      <div class="collection">Biomed</div>
+      <div class="line">WJ</div><div class="line">752</div><div class="line">P968</div>
+    </div>
+    <div class="meta">
+      <div class="expect">L8 · top-1 · left</div>
+      <div class="note">NLM class + number</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">
+      <div class="collection">Biomed</div>
+      <div class="line">WL</div><div class="line">102.8</div><div class="line">N279N</div>
+    </div>
+    <div class="meta">
+      <div class="expect">L8 · top-2 · left</div>
+      <div class="note">decimal class number</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">
+      <div class="collection">Biomed</div>
+      <div class="line">W1</div><div class="line">PR189</div>
+    </div>
+    <div class="meta">
+      <div class="expect">L1 · top-1 · left</div>
+      <div class="note">level 1</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">
+      <div class="collection">Biomed</div>
+      <div class="line">W1</div><div class="line">MA166</div>
+    </div>
+    <div class="meta">
+      <div class="expect">L2 · top-1 · left</div>
+      <div class="note">level 2</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">
+      <div class="collection">Biomed</div>
+      <div class="line">W1</div><div class="line">JA121</div>
+    </div>
+    <div class="meta">
+      <div class="expect">L3 · bot-0 · single</div>
+      <div class="note">level 3</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">
+      <div class="collection">Biomed</div>
+      <div class="line">W1</div><div class="line">DE244</div>
+    </div>
+    <div class="meta">
+      <div class="expect">L5 · bot-1 · left</div>
+      <div class="note">level 5</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">
+      <div class="collection">Biomed</div>
+      <div class="line">W1</div><div class="line">B711</div>
+    </div>
+    <div class="meta">
+      <div class="expect">L6 · top-1 · left</div>
+      <div class="note">level 6</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">
+      <div class="collection">Biomed</div>
+      <div class="line">QW</div><div class="line">4</div><div class="line">S851B</div>
+    </div>
+    <div class="meta">
+      <div class="expect">L9 · bot-3 · left</div>
+      <div class="note">level 9</div>
+    </div>
+  </div>
+</div>
+
+<h2>Should NOT scan — verifies the manual-entry path</h2>
+<div class="grid">
+
+  <div class="card fail">
+    <div class="label">
+      <div class="collection">Biomed</div>
+      <div class="line">A</div>
+    </div>
+    <div class="meta">
+      <div class="expect">grammar rejects · type by hand</div>
+      <div class="note">known-odd real endpoint</div>
+    </div>
+  </div>
+  <div class="card fail">
+    <div class="label">
+      <div class="collection">Biomed</div>
+      <div class="line">ZWZ</div><div class="line">330</div>
+    </div>
+    <div class="meta">
+      <div class="expect">grammar rejects · type by hand</div>
+      <div class="note">known-odd real endpoint</div>
+    </div>
+  </div>
+  <div class="card fail">
+    <div class="label">
+      <div class="collection">Biomed</div>
+      <div class="line">Q</div><div class="line">41</div><div class="line">R81R8</div>
+    </div>
+    <div class="meta">
+      <div class="expect">grammar rejects · type by hand</div>
+      <div class="note">known-odd real endpoint</div>
+    </div>
+  </div>
+  <div class="card fail">
+    <div class="label">
+      <div class="collection">Biomed</div>
+      <div class="line">WC</div><div class="line">160</div><div class="line">G7.78T</div>
+    </div>
+    <div class="meta">
+      <div class="expect">grammar rejects · type by hand</div>
+      <div class="note">known-odd real endpoint</div>
+    </div>
+  </div>
+  <div class="card fail">
+    <div class="label">
+      <div class="collection">Biomed</div>
+      <div class="line">BF</div><div class="line">789</div><div class="line">D4</div><div class="line">6456S</div>
+    </div>
+    <div class="meta">
+      <div class="expect">grammar rejects · type by hand</div>
+      <div class="note">known-odd real endpoint</div>
+    </div>
+  </div>
+</div>

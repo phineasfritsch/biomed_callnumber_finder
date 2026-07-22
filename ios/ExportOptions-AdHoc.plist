@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Ad-hoc export for the fast iteration loop: build an .ipa, upload it to an OTA service
+  (Diawi / InstallOnAir), install straight to the phone. Skips App Store Connect processing
+  entirely — roughly 3 minutes instead of 15.
+
+  Requires your iPhone's UDID registered under Apple Developer -> Devices.
+  Replace TEAMID with your 10-character Team ID.
+
+  Note: Xcode 15 renamed this method from "ad-hoc" to "release-testing". If your Xcode rejects
+  the value below, it is older — use <string>ad-hoc</string> instead.
+-->
+<plist version="1.0">
+<dict>
+	<key>method</key>
+	<string>release-testing</string>
+	<key>teamID</key>
+	<string>TEAMID</string>
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<key>compileBitcode</key>
+	<false/>
+	<!-- Ship the manifest so the .ipa can be installed from a web link. -->
+	<key>thinning</key>
+	<string>&lt;none&gt;</string>
+</dict>
+</plist>

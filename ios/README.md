@@ -6,6 +6,10 @@ iOS 17+, iPhone, portrait, fully offline.
 **Read [DESIGN.md](DESIGN.md) first** — particularly §3.3, which documents a trap that looks
 obviously correct and is not.
 
+**Then [TESTING.md](TESTING.md)** — how to get it on a phone from a cloud Mac, and how to tune OCR
+*without* redeploying. That second part matters more than it sounds: the build loop here is ~15
+minutes, and recognition tuning needs dozens of cycles.
+
 ---
 
 ## Build
@@ -78,7 +82,11 @@ BiomedShelfScanner/
   Resources/
     biomed-shelf-ranges.json      copied from the repo root — see below
 Tests/                            golden fixtures + tests
-Tools/                            golden generators (Node)
+Tools/
+  golden.js       routeGolden.js  fixture generators
+  pipeline.js                     executable model of the recognizer
+  replay.js                       replay a phone-captured corpus (see TESTING.md §3)
+  testsheet.js                    printable real-label sheet for bench testing
 ```
 
 ### The dataset is duplicated
@@ -105,6 +113,15 @@ Do this whenever the ranges change, or the app will route against stale shelves.
 - **The seam tiebreak in `Router.locate`** exists because 237 of 651 endpoints match two faces at
   once and Swift's `Dictionary` order is randomized per launch. Removing the `$0.key < $1.key`
   tiebreak reintroduces a bug that changes answers between runs — it will look like flaky OCR.
-- **`SWIFT_STRICT_CONCURRENCY: complete`** is on deliberately. `FrameProcessor` is
-  `@unchecked Sendable` because `AVCaptureVideoDataOutput` serializes its delegate callbacks; if
-  you add a second caller, that reasoning stops holding.
+- **`SWIFT_STRICT_CONCURRENCY` starts at `minimal`.** Not because the design can't take `complete`
+  — `FrameProcessor` is `@unchecked Sendable` on the specific grounds that
+  `AVCaptureVideoDataOutput` serialises its delegate callbacks — but because strict checking on a
+  first build buries real errors under concurrency noise. Raise it in `project.yml` once the app
+  runs. If you add a second caller to `FrameProcessor`, that `@unchecked` reasoning stops holding.
+- **`Info.plist` is hand-written**, so it must carry `CFBundleIdentifier`, `CFBundleExecutable`,
+  `CFBundlePackageType` and friends itself. Omitting `CFBundleIdentifier` still *builds*, then
+  fails at install with `Missing bundle ID` (IXErrorDomain 13) — a confusing error, because
+  nothing went wrong at compile time.
+- **Never add a `resources:` key for a path already covered by `sources:`.** XcodeGen routes
+  non-compilable files into the Resources phase automatically; listing them twice produces
+  "Multiple commands produce …".
