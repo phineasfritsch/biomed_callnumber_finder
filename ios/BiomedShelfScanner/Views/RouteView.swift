@@ -160,10 +160,13 @@ struct TransitRow: View {
         }
     }
 
+    // Plain String, so no `^[…](inflect:)` here — that markup only inflects inside a Text
+    // LITERAL (LocalizedStringKey). Routed through a String first, it renders as raw markup;
+    // this shipped as "skips ^[5 floor](inflect: true)" on device.
     private var text: String {
         switch transit {
         case let .elevator(to, skipping) where skipping > 0:
-            return "Take the elevator down to Level \(to) (skips ^[\(skipping) floor](inflect: true))."
+            return "Take the elevator down to Level \(to) (skips \(skipping) floor\(skipping == 1 ? "" : "s"))."
         case let .elevator(to, _):
             return "Take the elevator to Level \(to)."
         case let .stairs(well, to):

@@ -52,19 +52,73 @@ final class FrameProcessor: @unchecked Sendable {
     func setBand(_ rect: CGRect) { band = rect }
     func reset() { voter.reset() }
 
+    // MARK: Preprocessing variants
+
+    /// Journal labels come in every combination the bindery had in stock — white on red, gold on
+    /// green, white on blue — and Vision's luminance view of those is low-contrast mush. But in
+    /// the right single channel they snap to near-B/W: white text on red is dark-vs-bright in the
+    /// GREEN channel; gold on green is brightest in RED. Pencil benefits from the plain
+    /// contrast-boosted grays.
+    ///
+    /// Strategy is hunt-and-stick: try one variant per frame, round-robin while nothing reads,
+    /// stay put as soon as one produces. Costs nothing when the plain image works (index 0), and
+    /// at 10fps a full cycle is under a second of hunting. `StabilityVoter.missTolerance` exists
+    /// precisely so this cycling doesn't wipe the vote count between hits.
+    private enum Variant: CaseIterable {
+        case plain, gray, grayInverted
+        case red, green, blue
+        case redInverted, greenInverted, blueInverted
+    }
+    private var variantIndex = 0
+
+    private func enhance(_ image: CIImage, _ v: Variant) -> CIImage {
+        func mono(_ x: CGFloat, _ y: CGFloat, _ z: CGFloat, inverted: Bool) -> CIImage {
+            let vec = CIVector(x: x, y: y, z: z, w: 0)
+            var out = image.applyingFilter("CIColorMatrix", parameters: [
+                "inputRVector": vec, "inputGVector": vec, "inputBVector": vec,
+            ])
+            out = out.applyingFilter("CIColorControls", parameters: [kCIInputContrastKey: 1.4])
+            return inverted ? out.applyingFilter("CIColorInvert") : out
+        }
+        switch v {
+        case .plain:
+            return image
+        case .gray, .grayInverted:
+            var out = image.applyingFilter("CIColorControls", parameters: [
+                kCIInputSaturationKey: 0, kCIInputContrastKey: 1.5,
+            ])
+            if v == .grayInverted { out = out.applyingFilter("CIColorInvert") }
+            return out
+        case .red, .redInverted:
+            return mono(1, 0, 0, inverted: v == .redInverted)
+        case .green, .greenInverted:
+            return mono(0, 1, 0, inverted: v == .greenInverted)
+        case .blue, .blueInverted:
+            return mono(0, 0, 1, inverted: v == .blueInverted)
+        }
+    }
+
+    /// Advance the hunt on a fruitless frame; success leaves the index where it is.
+    private func nextVariant() {
+        variantIndex = (variantIndex + 1) % Variant.allCases.count
+    }
+
     /// Returns nil when the frame was throttled away.
     func process(_ pixelBuffer: CVPixelBuffer, orientation: CGImagePropertyOrientation) -> Outcome? {
         let now = Date()
         guard now.timeIntervalSince(lastProcessed) >= minFrameInterval else { return nil }
         lastProcessed = now
 
-        let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: orientation)
-        do { try handler.perform([request]) } catch { return .nothing }
+        let base = CIImage(cvPixelBuffer: pixelBuffer)
+        let variant = Variant.allCases[variantIndex]
+        let handler = VNImageRequestHandler(ciImage: enhance(base, variant), orientation: orientation)
+        do { try handler.perform([request]) } catch { nextVariant(); return .nothing }
 
         let inBand = (request.results ?? []).filter {
             band.contains(CGPoint(x: $0.boundingBox.midX, y: $0.boundingBox.midY))
         }
         guard !inBand.isEmpty else {
+            nextVariant()
             voter.miss()
             return .nothing
         }
@@ -110,6 +164,7 @@ final class FrameProcessor: @unchecked Sendable {
             // title-word at 10fps and wrapped the ring buffer in a minute). This bucket is what
             // separates "Vision misread it" from "good read, grammar rejected it".
             diagnose(Array(candidates.prefix(10)), result: nil, accepted: false, pixelBuffer: pixelBuffer)
+            nextVariant()
             voter.miss()
             return .nothing
         }

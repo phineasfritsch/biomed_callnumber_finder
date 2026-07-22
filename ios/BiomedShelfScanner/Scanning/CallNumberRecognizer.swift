@@ -153,7 +153,17 @@ final class StabilityVoter {
     /// *second copy* is handled upstream by the quantity stepper, not here.
     var cooldown: TimeInterval = 2.0
 
+    /// Empty frames within this run don't clear votes. The frame processor hunts for a readable
+    /// preprocessing variant by cycling one per frame, so a colored label legitimately produces
+    /// several misses between hits — wiping votes on every miss would mean 3 agreeing frames
+    /// never accumulate and colored labels never scan. Only a sustained run of misses (camera
+    /// moved away) resets.
+    var missTolerance = 8
+
+    private var consecutiveMisses = 0
+
     func consider(_ key: String, now: Date = .now) -> Bool {
+        consecutiveMisses = 0
         if let last = lastAccepted[key], now.timeIntervalSince(last) < cooldown {
             return false
         }
@@ -164,14 +174,19 @@ final class StabilityVoter {
         return true
     }
 
-    /// Call when the frame yields nothing — decays stale votes so a half-seen label from a
-    /// previous book can't accumulate across a camera move.
+    /// Call when the frame yields nothing. Decays stale votes only after a sustained run of
+    /// misses, so a half-seen label from a previous book can't linger — but variant-hunting can.
     func miss() {
-        votes.removeAll()
+        consecutiveMisses += 1
+        if consecutiveMisses >= missTolerance {
+            votes.removeAll()
+            consecutiveMisses = 0
+        }
     }
 
     func reset() {
         votes.removeAll()
         lastAccepted.removeAll()
+        consecutiveMisses = 0
     }
 }

@@ -106,6 +106,25 @@ sensor than it shows. The engine now OCRs the full frame and filters observation
 in upright space — the overlay's own space — so what you see is what gets scanned, by
 construction.
 
+### 3.1.2 Colored journal labels: channel-hunting
+
+Field result: B/W labels scan well; colored bindery labels (white on red, gold on green, white on
+anything) fail — their luminance view is low-contrast mush. But in the right single RGB channel
+they snap to near-B/W: white-on-red is dark-vs-bright in the GREEN channel, gold-on-green is
+brightest in RED. So `FrameProcessor` holds nine CoreImage variants — plain, contrast-boosted
+gray, single-channel extracts, and inversions of each — and **hunts**: one variant per frame,
+round-robin while nothing reads, stick on the first that produces. Free when plain works (index
+stays 0); a full hunt cycle is under a second at 10fps.
+
+Two supporting pieces:
+* `StabilityVoter.missTolerance` (8): hunting means legitimate misses between hits, so votes only
+  reset after a *sustained* run of misses — otherwise 3 agreeing frames never accumulate and
+  colored labels never scan at all.
+* Pencil and handwriting: pencil is just low-contrast gray, which the contrast variants lift;
+  handwriting is handled natively by Vision `.accurate` with no extra work. Expect partial
+  accuracy on handwriting — the grammar gate discards the garbage and the review list catches the
+  rest. That's the designed failure path, not a gap.
+
 ### 3.2 Domain-constrained decoding — the biggest accuracy win
 
 Vision returns *ranked candidates*, not one string. Almost nobody uses past the first:
