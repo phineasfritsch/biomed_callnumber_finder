@@ -35,6 +35,7 @@ https://ucla.alma.exlibrisgroup.com/view/sru/01UCS_LAL
 | **Booleans** | `and` works (`alma.title="…" and alma.creator="…"`) | Available if v2 wants it. |
 | **Truncation `*`** | **Trailing only, and it works**: `alma.all_for_ui all "cardio*"` → 11 017 against `alma.title="cardiology"` → 1 104. Leading `*` is ignored (`"*cardiology"` returns exactly what `"cardiology"` returns) and infix is dead (`"card*logy"` → 0) | Trailing `*` is passed through untouched and documented in the syntax panel. Nothing pretends `*word` or `car*logy` does anything. |
 | **Parentheses** | Three rules, all unwritten. A parenthesised **single** clause is `Invalid query`. A parenthesised clause using the **`all` relation** returns **0 records, with no diagnostic**. A parenthesised **OR group of two or more** simple clauses is fine anywhere | The CQL builder never wraps one clause, and always emits the free-text `all` clause bare and first. The silent-zero case is the dangerous one: it reads at the desk as "the library does not have it". |
+| **Truncation on `permanentPhysicalLocation`** | `=` with a star returns **0**; `all "bi*"` works and returns *more* than the enumerated codes | This is how a library scope is expressed. See §2. |
 | **`not`** | Works, and may follow any number of `and` clauses | Negation (`-lang:eng`) is appended after every positive clause and before `sortBy`. |
 | **`maximumRecords=0`** | Returns the count with no records, in ~200–900 ms | Used for the probe scripts; cheap enough to sweep candidate values with. |
 | **`sortKeys`** | **Accepted and ignored**, whatever you pass it | Do not use it. It is a silent no-op, which is why the earlier round concluded sorting was impossible. |
@@ -71,6 +72,51 @@ five more. All nine are in the routing table:
 | `bicidperm` | Biomed Circulation Desk Permanent Reserves | At the desk |
 | `bicimm` | Biomed Circulation Desk Media | At the desk |
 | `biherb` | Biomed Herbarium | Ask at the desk |
+
+### Every library, not just Biomed
+
+The same index generalises. UCLA's location codes are **prefixed by library**, and
+`permanentPhysicalLocation` honours trailing truncation **under the `all` relation** — `=`
+with a star returns zero, the usual silent-failure trap here. So "which building" is one
+clause:
+
+```
+alma.permanentPhysicalLocation all "bi*"      Biomed
+alma.permanentPhysicalLocation all "yr*"      Young Research Library
+alma.permanentPhysicalLocation all "lw*"      Law
+```
+
+A prefix also beats the enumerated list: `bi*` returns **83 more** records than the nine known
+`bi*` codes, i.e. sublocations nobody has written down here, and those still land on the "not
+in the routing table" path rather than disappearing.
+
+Sampling 1 891 holdings across twenty subject areas found **22 libraries**. Each was then
+checked for leakage against a 40-holding sample: every prefix resolves to exactly one library,
+and none bleeds into another.
+
+| Prefix | `$b` | Library | Prefix | `$b` | Library |
+| --- | --- | --- | --- | --- | --- |
+| `bi` | BIOMED | Biomed | `ck` | CLARK | Clark |
+| `yr` | YRL | Young Research | `ls` | LSC | Special Collections |
+| `cl` | POWELL | Powell | `ft` | FTVA | Film & Television Archive |
+| `ar` | ARTS | Arts | `mg` | MANAGEMENT | Management |
+| `mu` | MUSIC | Music | `cs` | CSRC | Chicano Studies |
+| `lw` | LAW | Law | `ai` | AISC | American Indian Studies |
+| `ea` | EAL | East Asian | `aa` | AASC | Asian American Studies |
+| `sm` | SEL_EMS | SEL/EMS | `il` | IML | Instructional Media Lab |
+| `sg` | SEL_GEO | SEL/Geology | `err` | ERR | English Reading Room |
+| `sr` | SRLF | SRLF (offsite) | `et` | ETHNOMUS | Ethnomusicology |
+| `ue` | LABS | UCLA Lab School | `lg` | LGBT | LGBT Center |
+
+The reader picks their library once and it is remembered. It changes what counts as *here* —
+which scope is searched first, which holdings group to the top, what "only my library" filters
+to, and which records get the small ranking nudge — and `at:` accepts any of them
+(`at:yrl`, `at:powell`, `at:here`).
+
+**What it does not change is who may be given a shelf.** The shelf map covers Biomed and
+nothing else, so `resolve` still refuses everywhere else, and the UI says so in as many words
+rather than leaving a blank where an aisle would be. A Biomed copy keeps its aisle even when
+you are standing in the Law Library.
 
 **Those nine codes are also a server-side filter, and that is what makes the default work.**
 `alma.permanentPhysicalLocation` accepts each of them and narrows the result set
@@ -158,23 +204,119 @@ sixth. The same residual rule is what now lets **series, subject, uniform title 
 publisher** contribute at all: "cardiology lange" finds the Lange series, "atlas shrugged
 rand" still finds Rand, and none of them can reorder the printings of one book.
 
-**Spelling.** There is no fuzzy search and no "did you mean", so:
+**Spelling.** There is no fuzzy search and no "did you mean". Local word matching tolerates
+edits scaled to word length — none at three letters, one up to six, two beyond — so `wtlas`
+scores against `atlas` once the record is in hand. Getting the record in hand is the problem,
+and it takes two passes, in this order.
 
-- Word matching tolerates edits scaled to word length — none at three letters, one up to six,
-  two beyond. `wtlas` matches `atlas`; `cat` does not match `bat`.
-- When a query returns *nothing*, words are dropped and the query retried: one at a time
-  first, then pairs from among the four longest words. Each retry is one cheap 10-record
-  probe, and the **best** retry wins — judged by how well its top hit scores against what was
-  originally typed — rather than the first one that returns anything.
-- The winning relaxation is then **narrowed back down through the scope chain**, so a
-  misspelt title whose book *is* at Biomed comes back as a Biomed answer rather than an
-  all-of-UCLA one. `harrisons principals of internal medicin` (three typos, two of them real
-  words) recovers via `harrisons of internal` to 21 Biomed records, with the 20th edition on
-  top and a shelf under it.
+**Pass A — repair the broken word.** Only long words (≥6 characters) are candidates. Each is
+probed alone with `maximumRecords=0`; a word that appears in *no* UCLA record is a typo rather
+than a rare term. Its edit-1 variants are then substituted back into the whole query and
+count-probed, and the first that matches anything wins.
 
-**The limit worth knowing.** A real-word typo cannot be *detected*, only routed around —
-"principals" is a word, and the catalog has books about principals. Correcting it in place
-would need a spelling dictionary this app does not carry.
+The catalogue is the dictionary. That works because a count-only probe comes back in 70–100 ms
+once the connection is warm, so a dozen candidates cost about a second:
+
+```
+atlas shurgged  ->      0     shurgged alone ->  0   (a typo, not a rare word)
+atlas hsurgged  ->      0
+atlas suhrgged  ->      0
+atlas shrugged  ->     57     <- probe 3 of a possible 14
+```
+
+Variants are **adjacent transpositions first, then single deletions** — the two classes a
+dropped word cannot recover from. Substitution is not generated (25 variants per character,
+and pass B already handles it); insertion is not generated either, and that is the gap:
+`shruged` for `shrugged` is not repaired.
+
+**Pass B — drop a word.** One at a time, longest remaining query first, then pairs from among
+the four longest. Each retry is one 10-record probe and the **best** wins, judged by how well
+its top hit scores against what was originally typed, rather than the first that returns
+anything.
+
+**Why both.** They fail on opposite inputs, which is the point:
+
+| Typed | Pass A | Pass B | Outcome |
+| --- | --- | --- | --- |
+| `wtlas shrugged` | skipped — `wtlas` is 5 characters | drops `wtlas`, searches `shrugged` | Atlas Shrugged, 8 requests |
+| `atlas shurgged` | repairs to `atlas shrugged` | not reached | Atlas Shrugged, 10 requests |
+
+Pass B alone is what shipped first, and it got `atlas shurgged` wrong in a way worth recording:
+dropping the broken word leaves `atlas`, which matches **23 314** records at UCLA, and the
+newest of those is an anatomy atlas. It was presented in the same confident tone as a direct
+hit. Pass B only works when the words that *survive* are distinctive, and here the distinctive
+word was the broken one.
+
+**Whichever pass wins, the result is narrowed back down through the scope chain** — including
+the weak-result check in §3, which the recovery path did not originally run: a repaired
+`atlas shrugged` narrowed to Biomed, found the same one stray keyword hit, and stopped there.
+Both passes now go through the same `bestScope`.
+
+**Pass C — read the right spelling off the results.** Passes A and B between them still left
+three holes: an **insertion** (`shruged`) is unreachable by enumeration, a **substitution**
+(`wtlas`) needs 25 variants per character, and a **real-word typo** (`principals` for
+`principles`) cannot be *detected* at all, because the word exists — the catalog has 2 800
+records about principals, so the liveness probe reports it alive and pass A never runs.
+
+All three close without guessing a single letter. Every probe already comes back with records,
+and those records are made of words spelled the way the catalogue spells them. Harvest that
+vocabulary and match the broken word against it; the edit class stops mattering once the right
+word is in hand.
+
+- **In pass B, harvesting is free.** The probe for the reduced query has already been fetched.
+  `wtlas shrugged` drops `wtlas`, searches `shrugged`, and `atlas` is in the title of every
+  record that comes back — one edit away. `harrisons principals of internal medicine` drops
+  `principals`, searches `harrisons of internal medicine`, and `principles` is right there,
+  two edits away. A correction that makes the *whole* query match beats a shortened query, so
+  it wins outright.
+- **When the survivors are useless, ask by prefix.** `atlas shruged` drops to `atlas` — 23 314
+  records of anatomy, no vocabulary worth having. So the surviving words are searched
+  alongside a **truncated** form of the broken one, and the real spelling is read out of the
+  titles: `atlas shrug*` → 62 records → `shrugged`. The ladder starts at `length − 2`, which
+  was enough on the first rung in all five cases tested, and steps down to 3.
+
+| Typed | Fixed by | Requests |
+| --- | --- | --- |
+| `atlas shurgged` (transposition) | A — letter enumeration | 10 |
+| `wtlas shrugged` (substitution) | B — harvest from the reduced query | 8 |
+| `harrisons principals of…` (real word) | B — harvest from the reduced query | 12 |
+| `atlas shruged` (insertion) | A — prefix truncation, then harvest | 11 |
+
+**Pass D — enumerate everything, in batches.** A letter missing *early* in a word defeats all
+of the above: `srugged` for `shrugged` shares only `s`, so no prefix reaches it
+(`atlas srug*` → 0), no deletion produces it, and dropping it leaves `atlas` and 23 314
+records. Only enumeration reaches it, and enumeration means 26 insertions per position plus 25
+substitutions per character — 383 candidates for a seven-letter word.
+
+383 probes would be absurd. 383 *clauses* are not. A top-level OR of keyword clauses is
+accepted, 26 of them cost 1.1 s in one request, and any batch that matches can simply be read
+for its vocabulary rather than bisected. Candidates are generated earliest-position-first,
+batched to a URL budget, and the first batch that returns records is harvested.
+
+**Candidates are scored, not taken.** A variant that matches records is not necessarily the
+right word: `srugged` is one deletion from `rugged`, and `atlas rugged` really does match eight
+records about the deserts of California. Taking the first hit answered the wrong question in a
+confident voice. Every matching candidate is now scored against what was actually typed, the
+best wins, and the search stops early only when a candidate is unambiguous. A best candidate
+that still does not look like the query is discarded in favour of the drop-a-word answer, which
+at least labels itself a guess.
+
+| Typed | Reached by |
+| --- | --- |
+| `atlas shurgged` | A — transposition, enumerated |
+| `atlas shruged` | A — prefix truncation, then harvest |
+| `atlas srugged` | A — OR-batched enumeration, then harvest |
+| `wtlas shrugged` | B — harvest from the reduced query |
+| `harrisons principals of…` | B — harvest from the reduced query |
+
+**The limit that remains.** Two broken words at once is not attempted; nor is a real-word typo
+whose reduced query returns nothing to harvest from. Both fall back to the drop-a-word answer,
+labelled as a guess.
+
+**When it is only a guess, the status line says so.** A repaired spelling is reported as a
+correction; a dropped-word recovery whose best hit does not match a title at all is reported
+as "probably not the book you meant", because presenting anatomy atlases in the same voice as
+a direct hit is the actual failure.
 
 **Ranking pool.** Up to 150 records (3 pages) are pulled before anything is scored. With
 `sortBy` in play those are the newest 150 rather than the alphabetically first 150, which is
@@ -338,7 +480,7 @@ where 060 says `WJ 752 P96665` and the item says `WJ 752 P9665`. The spine follo
 ## 6. Tests
 
 ```bash
-node Tools/catalog.test.js      # 341 assertions, no network
+node Tools/catalog.test.js      # 396 assertions, no network
 ```
 
 The harness extracts the `catalog-core` block and the comparator **verbatim out of the built

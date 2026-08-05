@@ -20,6 +20,8 @@ final class RouterTests: XCTestCase {
             // floor
             let level: Int?
             let direction: String?
+            let entryX: Double?
+            let exitX: Double?
             let stops: [Stop]?
         }
         struct Expected: Decodable {
@@ -27,7 +29,8 @@ final class RouterTests: XCTestCase {
             let unlocated: [String]
             let bookCount: Int
             let stairs: Int
-            let skips: Int
+            let lifts: Int
+            let truck: Bool
         }
         let name: String
         let input: [String]
@@ -51,7 +54,13 @@ final class RouterTests: XCTestCase {
 
             XCTAssertEqual(route.bookCount, c.expected.bookCount, "[\(c.name)] bookCount")
             XCTAssertEqual(route.stairDescents, c.expected.stairs, "[\(c.name)] stair descents")
-            XCTAssertEqual(route.elevatorSkips, c.expected.skips, "[\(c.name)] elevator skips")
+            XCTAssertEqual(route.elevatorMoves, c.expected.lifts, "[\(c.name)] elevator moves")
+            // Over five books the stairs come off the table entirely, so this is not a cost
+            // tie-break that happens to agree — it has to agree exactly.
+            XCTAssertEqual(route.isTruckTrip, c.expected.truck, "[\(c.name)] truck trip")
+            if c.expected.truck {
+                XCTAssertEqual(route.stairDescents, 0, "[\(c.name)] a truck never takes the stairs")
+            }
             XCTAssertEqual(Set(route.unlocated), Set(c.expected.unlocated), "[\(c.name)] unlocated")
             XCTAssertEqual(route.steps.count, c.expected.steps.count, "[\(c.name)] step count")
 
@@ -85,6 +94,12 @@ final class RouterTests: XCTestCase {
         XCTAssertEqual(leg.level, want.level, "\(ctx) level")
         let dir = leg.direction == .leftToRight ? "LR" : "RL"
         XCTAssertEqual(dir, want.direction, "\(ctx) sweep direction")
+
+        // The corridor columns the doors deliver you to. These decide the sweep direction and
+        // where the drawn walk starts, so a port that agrees on the stops but not on these is
+        // drawing a different route.
+        if let e = want.entryX { XCTAssertEqual(leg.entryX, e, accuracy: 1e-9, "\(ctx) entry column") }
+        if let e = want.exitX { XCTAssertEqual(leg.exitX, e, accuracy: 1e-9, "\(ctx) exit column") }
 
         // Stop *order* is the point — a route whose stops are right but ordered wrong is a route
         // that backtracks.

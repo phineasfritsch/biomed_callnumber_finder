@@ -115,10 +115,31 @@
   .itin-floor-h{display:flex; justify-content:space-between; align-items:center; gap:8px; padding:9px 13px; background:var(--green-soft); border-bottom:1px solid #bcce9e; cursor:pointer}
   .itin-floor-h .lv{font-family:var(--disp); font-size:15px; font-weight:600}
   .itin-floor-h .ct{font-size:10.5px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.5px}
-  .itin-stop{display:flex; flex-wrap:wrap; gap:3px 12px; padding:8px 13px; border-top:1px solid var(--line)}
-  .itin-stop .loc{font-weight:600; font-size:12px; min-width:160px}
-  .itin-stop .cns{font-size:12px; color:var(--accent)}
-  .itin-stop .rng{font-size:11px; color:var(--ink-soft); width:100%}
+
+  /* ── per-floor walking map ── */
+  .walkwrap{padding:12px 13px 0; overflow-x:auto; -webkit-overflow-scrolling:touch}
+  .walkmap{min-width:520px}   /* below this the aisle numbers collide; scroll instead of lying */
+  .ramp{display:flex; align-items:center; gap:8px; padding:6px 13px 2px; font-size:10px; color:var(--ink-soft)}
+  .ramp .bar{display:flex; flex:1 1 auto; height:7px; border-radius:99px; overflow:hidden; max-width:260px}
+  .ramp .bar span{flex:1 1 auto}
+  .ramp .rl{white-space:nowrap}
+  /* One row per stop. Everything a stop is — the move, the face, the books, the shelf-end label
+     — used to be printed twice, once as an instruction and again as a location line saying the
+     same thing in other words. It is one line now, and the columns line up down the floor so you
+     can read any one of them without reading the rest. */
+  .itin-steps{list-style:none; margin:8px 0 4px; padding:0 13px}
+  .itin-steps li{display:flex; flex-wrap:wrap; gap:2px 12px; align-items:baseline; padding:7px 0; border-top:1px solid var(--line)}
+  .itin-steps li:first-child{border-top:0}
+  .itin-steps .sn{flex:none; width:21px; height:21px; border-radius:99px; color:#fff; font-family:var(--mono); font-size:11px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; align-self:flex-start}
+  .itin-steps .sn.out{background:var(--slate)}
+  .itin-steps .sd{flex:0 0 auto; min-width:230px; font-size:12px; line-height:1.6; color:var(--ink-soft)}
+  .itin-steps .sd b{color:var(--ink)}
+  .itin-steps .sat{flex:0 0 auto; min-width:210px; font-size:12px; line-height:1.6; color:var(--ink-soft)}
+  .itin-steps .sat b{color:var(--ink)}
+  .itin-steps .scn{flex:1 1 auto; font-family:var(--mono); font-size:11.5px; color:var(--accent)}
+  /* The shelf-end label is what you check when you get there, so it goes last and gives way
+     first: on a narrow screen it drops to its own line rather than squeezing the instruction. */
+  .itin-steps .srng{flex:0 1 auto; margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--ink-soft)}
   .itin-miss{font-size:12px; color:var(--accent); background:var(--orange-soft); border:1px solid var(--line); border-radius:8px; padding:9px 12px; margin-top:10px; line-height:1.65}
   .itin-miss b{color:var(--accent)}
 
@@ -180,7 +201,14 @@
   .cat-empty{font-size:12.5px; color:var(--ink-soft); background:var(--paper-2); border:1px solid var(--line); border-radius:8px; padding:12px 14px; line-height:1.7}
   .cat-empty b{color:var(--ink)}
   .cat-more{display:flex; justify-content:center; margin:12px 0 2px}
+  .routed{font-size:11.5px; color:var(--ink-soft); margin:9px 2px 0; line-height:1.6}
+  .routed b{color:var(--ink)}
+  .linky{font:inherit; font-size:11.5px; color:var(--accent); background:none; border:0; border-bottom:1px solid currentColor; padding:0; cursor:pointer}
+  .linky:hover{color:var(--ink)}
   .cat-scope{display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin:13px 0 0}
+  .cat-scope select{font:inherit; font-size:12.5px; padding:6px 8px; border:1px solid var(--line); border-radius:7px; background:var(--paper); color:var(--ink); max-width:100%}
+  .cat-scope select:focus-visible{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft)}
+  .cat-libnote{font-size:11.5px; color:var(--ink-soft); background:var(--paper-2); border:1px solid var(--line); border-radius:8px; padding:8px 11px; margin:9px 0 0; line-height:1.65}
   .cat-opts select{font:inherit; font-size:12px; padding:5px 7px; border:1px solid var(--line); border-radius:7px; background:var(--paper); color:var(--ink)}
   .cat-adv{margin:11px 0 0; border:1px solid var(--line); border-radius:9px; background:var(--paper-2)}
   .cat-adv>summary{cursor:pointer; list-style:none; padding:9px 13px; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--ink-soft); min-height:38px; display:flex; align-items:center}
@@ -243,12 +271,13 @@
     .route-head,.cat-head{padding:11px 13px}
     .route-body,.cat-body{padding:0 13px 14px}
     .detail{padding:14px 15px}
-    .itin-stop .loc{min-width:0; flex:1 1 100%}
+    .itin-steps .sd,.itin-steps .sat,.itin-steps .scn,.itin-steps .srng{flex:1 1 100%; min-width:0; margin-left:0}
     /* 16px keeps iOS from auto-zooming the field; 44px is the Apple/Material tap floor */
     .cat-form input{font-size:16px; flex:1 1 100%}
     .cat-form .btn{flex:1 1 0; min-height:44px}
     .cat-modes .pill{min-height:44px; padding:8px 16px}
     .cat-scope .pill{min-height:44px; padding:8px 16px}
+    .cat-scope select{font-size:16px; min-height:44px; flex:1 1 100%}
     .filt{grid-template-columns:1fr}
     .filt .f input,.filt .f select{font-size:16px}
     .cheat{grid-template-columns:1fr; gap:2px 0}
@@ -272,11 +301,13 @@
   </header>
 
   <div class="lookup">
-    <label>Call number:</label>
-    <input id="q" placeholder="call number or paste full catalog page" autocomplete="off" autofocus>
-    <button class="btn" id="go">Locate</button>
+    <label for="q">Search:</label>
+    <input id="q" placeholder="call number, book title, author, ISBN…" autocomplete="off" autofocus
+           enterkeyhint="search" spellcheck="false">
+    <button class="btn" id="go">Search</button>
     <button class="btn ghost" id="clear">Clear</button>
   </div>
+  <div class="routed" id="routed" hidden></div>
   <div class="sect" id="sect">
     <span class="sect-label">Section:</span>
     <button class="pill active" data-coll="stacks">Main stacks</button>
@@ -284,41 +315,61 @@
     <button class="pill" data-coll="spec">Special Collections · L9</button>
   </div>
   <div class="result" id="result">
-    <div class="examples">Try:
+    <div class="examples">Try a call number:
       <b data-q="QL737.C22 M616g">QL737.C22</b> ·
       <b data-q="W1 BI700">W1 BI700</b> ·
-      <b data-q="W1 JO600">W1 JO600</b> ·
       <b data-q="QW 4 S851b">QW 4 S851b</b> ·
-      <b data-q="BF 400">BF 400</b> ·
-      <b data-q="WS 200 P370">WS 200 P370</b>
+      <b data-q="BF 400">BF 400</b>
+      &nbsp;&nbsp;or a book:
+      <b data-q="harrison's principles of internal medicine">harrison&rsquo;s principles</b> ·
+      <b data-q="mesh:neoplasms year:2020+ shelf:yes">mesh:neoplasms year:2020+</b>
     </div>
   </div>
 
   <div class="cat" id="cat">
     <div class="cat-head" id="catHead">
-      <h2>Find a book in the catalog<span class="tag">beta</span></h2>
+      <h2>Find a book in the catalog</h2>
       <button class="btn ghost" type="button" id="catToggle" aria-expanded="false" aria-controls="catBody"><span class="tgl">Open</span></button>
     </div>
     <div class="cat-body" id="catBody" hidden>
-      <p class="cat-hint">Search UCLA&rsquo;s catalog by title, author or ISBN. The default answers the question asked at the desk all day &mdash; <b>the newest edition of this book, in this building</b> &mdash; so results are scoped to Biomed and ordered newest-first, and widen to the rest of UCLA only if Biomed has nothing. Copies in the <b>Biomed stacks</b> are resolved to an actual shelf you can walk to. The catalog itself returns hits in alphabetical order with no relevance ranking and no spelling correction, so both are done here: a typo of a word or two still finds the book.</p>
+      <p class="cat-hint">Everything goes in <b>the one box at the top</b>: a call number goes to the shelf map, anything else comes here, to UCLA&rsquo;s catalog. The default answers the question asked at the desk all day &mdash; <b>the newest edition of this book, in this building</b> &mdash; so results are scoped to <b>whichever library you say you&rsquo;re at</b> and ordered newest-first, widening to the rest of UCLA only if your library has nothing. All 21 UCLA libraries can be searched this way; copies in the <b>Biomed stacks</b> additionally resolve to an actual shelf you can walk to, because Biomed is the only one with a shelf map. The catalog itself returns hits in alphabetical order with no relevance ranking and no spelling correction, so both are done here: a typo of a word or two still finds the book.</p>
       <div class="cat-scope" role="group" aria-label="Where to search">
-        <span class="sect-label">Where:</span>
-        <button class="pill active" type="button" data-scope="biomed" aria-pressed="true">Biomed</button>
+        <label class="sect-label" for="catLibrary">I&rsquo;m at:</label>
+        <select id="catLibrary" aria-label="Which library you are working at">
+          <option value="biomed">Biomed Library</option>
+          <option value="yrl">Young Research Library</option>
+          <option value="powell">Powell Library</option>
+          <option value="sel">Science &amp; Engineering &middot; SEL/EMS</option>
+          <option value="geology">SEL &middot; Geology</option>
+          <option value="arts">Arts Library</option>
+          <option value="music">Music Library</option>
+          <option value="law">Law Library</option>
+          <option value="eal">East Asian Library</option>
+          <option value="management">Management Library</option>
+          <option value="clark">Clark Library</option>
+          <option value="lsc">Library Special Collections</option>
+          <option value="ftva">Film &amp; Television Archive</option>
+          <option value="iml">Instructional Media Laboratory</option>
+          <option value="csrc">Chicano Studies Research Center</option>
+          <option value="aisc">American Indian Studies Center</option>
+          <option value="aasc">Asian American Studies Center</option>
+          <option value="err">English Reading Room</option>
+          <option value="ethno">Ethnomusicology Archive</option>
+          <option value="labschool">UCLA Lab School Library</option>
+          <option value="srlf">SRLF &middot; offsite storage</option>
+        </select>
+        <span class="sect-label">Search:</span>
+        <button class="pill active" type="button" data-scope="here" aria-pressed="true">Biomed</button>
         <button class="pill" type="button" data-scope="stacks" aria-pressed="false">Walkable stacks</button>
         <button class="pill" type="button" data-scope="ucla" aria-pressed="false">All of UCLA</button>
       </div>
+      <div class="cat-libnote" id="catLibNote" hidden></div>
       <div class="cat-modes" role="group" aria-label="Search field">
         <span class="sect-label">Search by:</span>
         <button class="pill active" type="button" data-mode="kw" aria-pressed="true">Keyword</button>
         <button class="pill" type="button" data-mode="title" aria-pressed="false">Title</button>
         <button class="pill" type="button" data-mode="author" aria-pressed="false">Author</button>
         <button class="pill" type="button" data-mode="isbn" aria-pressed="false">ISBN</button>
-      </div>
-      <div class="cat-form">
-        <label class="sr-only" for="catQ">Search the catalog</label>
-        <input id="catQ" placeholder="harrison's principles of internal medicine" autocomplete="off" enterkeyhint="search" spellcheck="false">
-        <button class="btn" type="button" id="catGo">Search</button>
-        <button class="btn ghost" type="button" id="catClear">Clear</button>
       </div>
       <div class="cat-opts">
         <label class="chk" for="catSort">Sort:
@@ -332,7 +383,7 @@
           </select>
         </label>
         <label class="chk"><input type="checkbox" id="catGroupEd" checked> Group editions <span class="chk-note">(newest on top)</span></label>
-        <label class="chk"><input type="checkbox" id="catBiomed"> Biomed copies only</label>
+        <label class="chk"><input type="checkbox" id="catBiomed"> Only my library</label>
         <label class="chk"><input type="checkbox" id="catCovers" checked> Show covers <span class="chk-note">(sends the ISBN to openlibrary.org)</span></label>
       </div>
 
@@ -411,7 +462,7 @@
           <div><code>type:</code> <code>format:</code></div><div>book &middot; journal &middot; video &middot; audio &middot; music &middot; score &middot; map &middot; software &middot; manuscript &middot; image &middot; archive</div>
           <div><code>material:</code> <code>item:</code></div><div>Item type on the shelf: book &middot; issue &middot; dvd &middot; cdrom &middot; microform &middot; score &middot; map</div>
           <div><code>loc:</code></div><div>One exact Biomed location code. <code>loc:birf</code></div>
-          <div><code>at:</code> <code>in:</code></div><div>Scope, overriding the pills: biomed &middot; stacks &middot; reference &middot; desk &middot; ucla</div>
+          <div><code>at:</code> <code>in:</code></div><div>Where to search, overriding the pills. Any library &mdash; <code>at:yrl</code>, <code>at:powell</code>, <code>at:law</code>, <code>at:sel</code>, <code>at:arts</code>, <code>at:music</code>, <code>at:clark</code>, <code>at:srlf</code>&hellip; &mdash; or <code>at:here</code> for the one you picked, <code>at:stacks</code> for Biomed&rsquo;s walkable shelves, <code>at:ucla</code> for everywhere.</div>
           <div><code>sort:</code></div><div>best &middot; newest &middot; oldest &middot; title &middot; author &middot; shelf</div>
           <div><code>word*</code></div><div>Trailing truncation, in the free text or in any phrase field. <code>cardio*</code> catches cardiology and cardiovascular. Only at the end of a word &mdash; <code>*word</code> is ignored and <code>car*logy</code> matches nothing.</div>
           <div class="cheat-h">Two words, both required</div><div class="cheat-h">Free text uses the <code>all</code> relation: every word must appear somewhere in the record. Quote a phrase to require the words together.</div>
@@ -440,11 +491,11 @@
 
   <div class="route" id="route">
     <div class="route-head" id="routeHead">
-      <h2>Plan a pickup walk<span class="tag">beta</span></h2>
+      <h2>Plan a pickup walk</h2>
       <button class="btn ghost" type="button"><span class="tgl">Open</span></button>
     </div>
     <div class="route-body" id="routeBody" hidden>
-      <p class="route-hint">Upload photos of ILL slips or a pull list (JPEG/PNG) and the call numbers are read for you &mdash; or just type them in. Then we build the shortest walk: start at the highest floor, take the stairs <b>down one floor at a time</b>, and use the elevator only to skip floors or go up. Text recognition runs in your browser and is imperfect (especially handwriting), so check the list before building.</p>
+      <p class="route-hint">Upload photos of ILL slips or a pull list (JPEG/PNG) and the call numbers are read for you &mdash; or just type them in. Then we build the shortest walk: start at the highest floor, take the stairs <b>down one floor at a time</b>, and use the elevator to skip floors or go up. <b>More than five books is a truck trip</b> &mdash; then it is the elevator between every floor, because nobody walks a loaded truck down a stairwell. Text recognition runs in your browser and is imperfect (especially handwriting), so check the list before building.</p>
       <div class="drop" id="drop">
         <input type="file" id="files" accept="image/*,.heic,.heif" multiple hidden>
         <input type="file" id="camera" accept="image/*" capture="environment" hidden>
@@ -588,6 +639,129 @@ const k=(lvl,id,side)=>`${lvl}|${id}|${side}`;
 
 let level=3, selected=null, flashId=null;
 
+/* == walk-core:start ==
+   Where the walk physically goes.
+
+   The itinerary already knew the *order* of the faces. It never knew the *floor*, so it said
+   "index 6 · top · right" and left you to work out which side of which aisle that is while
+   pushing a cart. This turns an ordered list of stops into a path: which aisle you stand in,
+   which way you turn into it, and which hand the shelf is on.
+
+   Two coordinate systems, kept apart on purpose:
+   * **Column units** — the same 0..16 index the shelf ids already use. Everything below is
+     computed in column units and stays free of pixels, so the Swift port in
+     `ios/BiomedShelfScanner/Models/WalkPath.swift` is a transcription rather than a second
+     opinion. Anything that has to agree across the two apps lives here.
+   * **Plan pixels** — `colX()` and `LANE_Y` map into the floor-plan viewBox. Only renderers
+     touch those.
+
+   **You do not stand at the column, you stand beside it.** A full shelf is two faces back to
+   back: the `left` face's readable surface points west, the `right` face's points east, and
+   you cannot read a face from inside the shelf. So a stop sits in the aisle at `index - 0.5`
+   for a left face and `index + 0.5` for a right one. Half shelves are right-side-only and
+   take the same `+0.5`. Two stops on the same column are therefore often two different
+   places to stand, and one aisle usually serves two faces — the right face of shelf 6 and
+   the left face of shelf 7 are the same spot, and the path must not leave and re-enter it.
+
+   **Which hand.** Aisles run north–south; the corridor between the rows runs east–west.
+   Walking into a top-row aisle you face north, so east is on your right; into a bottom-row
+   aisle you face south and east is on your left. The shelf you want is on the side its face
+   points away from, which flips with the row — hence `handFor`. Getting this backwards is
+   worse than saying nothing at all: a reader who trusts it turns to a shelf of unrelated
+   call numbers and concludes the map is broken. */
+const PLAN={startX:20, slotW:40, topY:46, topH:140, botY:232, botH:140};
+const colX = x => PLAN.startX + x*PLAN.slotW + PLAN.slotW/2;
+const LANE_Y = {
+  top:      PLAN.topY + PLAN.topH*0.52,
+  corridor: (PLAN.topY + PLAN.topH + PLAN.botY)/2,
+  bottom:   PLAN.botY + PLAN.botH*0.48
+};
+/* Aisle you stand in to read this face, in column units. Always a half-integer. */
+const standX = st => st.side==='left' ? st.x-0.5 : st.x+0.5;
+const laneOf  = st => st.row==='top' ? 'top' : 'bottom';
+const handFor = (row,side) => side==='left' ? (row==='top'?'right':'left')
+                                            : (row==='top'?'left':'right');
+/* Heading is east(+1)/west(-1) along the corridor; the row decides which way you pivot. */
+function turnFor(head,row){
+  if(!head) return 'ahead';
+  return head>0 ? (row==='top'?'left':'right') : (row==='top'?'right':'left');
+}
+function aisleLabel(sx){
+  const a=Math.floor(sx), b=a+1;
+  if(a<0)  return 'the west wall, before shelf 0';
+  if(b>16) return 'the east end, past shelf 16';
+  return `the aisle between ${a} and ${b}`;
+}
+/* The same name with the words taken out, for a line that has to fit everything about one stop. */
+function aisleShort(sx){
+  const a=Math.floor(sx), b=a+1;
+  if(a<0)  return 'west wall';
+  if(b>16) return 'east end';
+  return `aisle ${a}·${b}`;
+}
+/* The same walk as prose: one numbered instruction per stop. `shelves` counts the shelves you
+   pass along the corridor, which is the unit you can actually count while walking. Stop to stop
+   it is a whole number, because every standing position is a half-integer; the first move is
+   measured from a door and can land on a half, so callers state that one differently. */
+function walkSteps(stops, entryX, exitX){
+  let from=entryX;
+  const out=stops.map((st,i)=>{
+    const sx=standX(st), delta=sx-from;
+    const step={ n:i+1, head:(delta>0?1:delta<0?-1:0), shelves:Math.abs(delta), x:sx,
+                 aisle:aisleLabel(sx), turn:turnFor(delta, st.row),
+                 hand:handFor(st.row, st.side), row:st.row||'bottom', side:st.side,
+                 index:st.x, cns:st.cns||[], range:st.d };
+    from=sx; return step;
+  });
+  out.exitShelves = Math.abs(exitX-from);
+  return out;
+}
+/* ── Doors ────────────────────────────────────────────────────────────────────────────────
+   A stairwell is not a point, and neither is an elevator. You come out of one at a particular
+   edge, and which edge decides which way you set off — so a map that starts and ends every
+   floor at the same dot is not just imprecise, it points you the wrong way half the time.
+
+   * **Elevator** — door in the middle of the south edge, opening onto the floor south of the
+     block.
+   * **West stairwell** (the one behind the elevator) — you walk *down* from its west edge and
+     arrive on the floor below at its east edge. Entry and exit are on opposite sides, so a
+     descent through it also moves you across the block.
+   * **East stairwell** — you walk *down* from its north edge, which is on the corridor between
+     the rows, and arrive on the floor below at its south edge.
+
+   `via` is the side the door faces. Only the captions use it now; it decides where a label can
+   sit without landing inside the block it belongs to.
+
+   **The floor is walkable all the way round.** Both rows are islands: there is open floor north
+   of the top row, south of the bottom row, and at both ends, and every aisle is a passage with
+   two open ends rather than a dead end. An earlier version had the bottom row sealed except for
+   the gaps either side of the elevator block, which made a door on the south side expensive to
+   leave and sent the routing to the wrong stairwell. There are no forced detours: the cost of
+   reaching a column from a door is how far along you have to walk, plus how far in from the
+   corridor the door is set. */
+function planDoors(){
+  const {startX,slotW,botY,botH}=PLAN;
+  const ax=i=>startX+i*slotW;
+  const eLeft=ax(5), eW=ax(9)-ax(5), stairsH=Math.round(botH*0.38), inset=18;
+  const wsY=botY+stairsH/2, esX=(ax(13)+(startX+14*slotW+slotW/2-2))/2;
+  return {
+    elevator: {x:eLeft+eW/2,      y:botY+botH, via:'lobby',    name:'elevator'},
+    wsDown:   {x:eLeft+inset,     y:wsY,       via:'west',     name:'west stairwell'},
+    wsUp:     {x:eLeft+eW-inset,  y:wsY,       via:'east',     name:'west stairwell'},
+    esDown:   {x:esX,             y:botY,      via:'corridor', name:'east stairwell'},
+    esUp:     {x:esX,             y:botY+botH, via:'lobby',    name:'east stairwell'}
+  };
+}
+/* Which column you are standing at when you come through a door. */
+const doorCol = d => (d.x - PLAN.startX - PLAN.slotW/2)/PLAN.slotW;
+/* How far the door is set back from the corridor the stops are reached from, in columns, so it
+   can be added to a distance measured along that corridor. The elevator is a full row's depth
+   away; the east stairwell's north door is already on it. */
+const doorDrop = d => Math.abs(d.y - LANE_Y.corridor)/PLAN.slotW;
+/* What it costs to get between a door and a column of the stacks. */
+const doorCost = (d,col) => Math.abs(doorCol(d)-col) + doorDrop(d);
+/* == walk-core:end == */
+
 /* ===== floor plan ===== */
 const groupColor={green:'var(--green)',orange:'var(--orange)',black:'var(--char)',slate:'var(--slate)'};
 const groupSoft ={green:'var(--green-soft)',orange:'var(--orange-soft)',black:'var(--char-soft)',slate:'var(--slate-soft)'};
@@ -606,23 +780,41 @@ function renderPlan(){
     plan.setAttribute('viewBox','0 0 720 230');
     return;
   }
-  const startX=20, slotW=40, topY=46, topH=140, botY=232, botH=140;
-  const cx=i=>startX+i*slotW+slotW/2;
+  const {botY,botH}=PLAN;
+  let svg=planShelves(level,null,true)+planFeatures();
+  plan.innerHTML=svg; plan.setAttribute('viewBox',`0 0 720 ${botY+botH+16}`);
+}
+
+/* The stacks themselves. Drawn by the big floor plan and by the small per-floor walk maps, so
+   the two are the same picture rather than two drawings of the same building — same frames,
+   same L/R face letters, same em dash for a face with no range mapped, same index ruler.
+
+   `tint(shelf, side, hasRange)` overrides a face's fill; return null for the standard treatment
+   (its shelf-group colour when a range is mapped, empty when not). The walk map uses it to
+   colour the faces it is sending you to. `interactive` adds the click handlers, which only the
+   big plan wants. */
+function planShelves(lvl, tint, interactive){
+  const {startX,topY,topH,botY,botH}=PLAN;
+  const cx=colX;
+  const fillOf=(s,side,has)=>{
+    const t = tint ? tint(s,side,has) : null;
+    if(t) return t;
+    return has ? groupColor[s.group] : 'transparent';
+  };
   let svg='';
   SHELVES.forEach(s=>{
-    const present=existsOnLevel(s,level);
+    const present=existsOnLevel(s,lvl);
     const y=s.row==='top'?topY:botY, h=s.row==='top'?topH:botH, c=cx(s.index);
-    let cls='shelf'+(present?'':' absent')+(selected===s.id?' sel':'')+(flashId===s.id?' flash':'');
-    const click=present?` onclick="pick('${s.id}')"`:'';
+    let cls='shelf'+(present?'':' absent')
+      +(interactive&&selected===s.id?' sel':'')+(interactive&&flashId===s.id?' flash':'');
+    const click=(interactive&&present)?` onclick="pick('${s.id}')"`:'';
     let inner='';
     if(s.type==='full'){
       const w=14;
-      const lFill = present && filled(level,s.id,'left');
-      const rFill = present && filled(level,s.id,'right');
-      const lf = lFill ? groupColor[s.group] : 'transparent';
-      const rf = rFill ? groupColor[s.group] : 'transparent';
-      inner+=`<rect x="${c-w}" y="${y}" width="${w}" height="${h}" fill="${lf}"/>`;
-      inner+=`<rect x="${c}" y="${y}" width="${w}" height="${h}" fill="${rf}"/>`;
+      const lFill = present && filled(lvl,s.id,'left');
+      const rFill = present && filled(lvl,s.id,'right');
+      inner+=`<rect x="${c-w}" y="${y}" width="${w}" height="${h}" fill="${fillOf(s,'left',lFill)}"/>`;
+      inner+=`<rect x="${c}" y="${y}" width="${w}" height="${h}" fill="${fillOf(s,'right',rFill)}"/>`;
       inner+=`<line x1="${c}" y1="${y+5}" x2="${c}" y2="${y+h-5}" stroke="var(--line)" stroke-width="0.8"/>`;
       inner+=`<rect class="frame" x="${c-w}" y="${y}" width="${w*2}" height="${h}" rx="3"/>`;
       if(present){
@@ -633,10 +825,9 @@ function renderPlan(){
       }
     } else {
       const w=9;
-      const sFill = present && filled(level,s.id,'single');
-      const sf = sFill ? groupColor[s.group] : 'transparent';
+      const sFill = present && filled(lvl,s.id,'single');
       // half shelves are right-side only: start at cx (not cx-w)
-      inner+=`<rect x="${c}" y="${y}" width="${w*2}" height="${h}" fill="${sf}"/>`;
+      inner+=`<rect x="${c}" y="${y}" width="${w*2}" height="${h}" fill="${fillOf(s,'single',sFill)}"/>`;
       inner+=`<rect class="frame" x="${c}" y="${y}" width="${w*2}" height="${h}" rx="3"/>`;
       if(present){
         inner+=`<text class="face" x="${c+w}" y="${y+h-6}" text-anchor="middle">R</text>`;
@@ -650,10 +841,18 @@ function renderPlan(){
   const rlbl=`text-anchor="start" font-family="var(--mono)" font-size="11" fill="var(--ink-soft)" letter-spacing="0.6"`;
   svg+=`<text x="${startX+2}" y="16" ${rlbl}>top row · index 0–16</text>`;
   svg+=`<text x="${startX+2}" y="${botY-7}" ${rlbl}>bottom row · index 0–16</text>`;
+  return svg;
+}
 
-  /* ── Architectural features (elevator + stairs) — same on every floor ── */
+/* Architectural features (elevator + stairs) — identical on every floor, and drawn by both the
+   big floor plan and the small per-floor walk maps. One function so the two cannot drift: the
+   walk path is routed to these coordinates, so a map whose elevator sat elsewhere would put the
+   start of the walk in the wrong place. */
+function planFeatures(){
+  const {startX,slotW,botY,botH}=PLAN;
   const ax=i=>startX+i*slotW;       // left edge of slot i
   const fstroke=`stroke="var(--ink)" stroke-width="1.3"`;
+  let svg='';
 
   // ── Block 1: Elevator + Stairs (indices 5–8, bottom row) ──
   const eLeft=ax(5), eW=(ax(9)-ax(5));
@@ -674,8 +873,7 @@ function renderPlan(){
   const s2Left=ax(13), s2Right=startX+14*slotW+slotW/2-2, s2W=s2Right-s2Left;
   svg+=`<rect x="${s2Left}" y="${botY}" width="${s2W}" height="${botH}" rx="4" fill="var(--orange)" ${fstroke}/>`;
   svg+=`<text x="${s2Left+s2W/2}" y="${botY+botH/2+5}" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--paper)" letter-spacing="1.5">STAIRS</text>`;
-
-  plan.innerHTML=svg; plan.setAttribute('viewBox',`0 0 720 ${botY+botH+16}`);
+  return svg;
 }
 
 /* ===== section pills + level sync ===== */
@@ -804,10 +1002,54 @@ document.getElementById('footer').innerHTML=
 
 /* ===== init ===== */
 renderCoverage(); renderLevels(); renderPlan(); renderDetail();
-document.getElementById('go').onclick=locate;
-document.getElementById('clear').onclick=()=>{document.getElementById('q').value='';document.getElementById('result').innerHTML='';selected=null;flashId=null;setCollection('stacks');renderPlan();renderDetail();};
-document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')locate();});
-document.querySelectorAll('.examples b').forEach(b=>b.onclick=()=>{setCollection('stacks');document.getElementById('q').value=b.dataset.q;locate();});
+/* ===== one box =====
+   Two searches used to sit on this page with a box each, and you had to know which question
+   you were asking before you could ask it. There is now one field, and it decides: anything
+   shaped like a call number goes to the shelf map, anything else goes to the catalog. The
+   decision is always shown, and always reversible in one click — guessing wrong silently
+   would be worse than not guessing.
+
+   "Shaped like a call number" is deliberately narrow: class letters followed by a number, or
+   the W1-series form. A title is almost never either. A `field:value` filter token and a bare
+   ISBN are sent to the catalog outright. */
+function looksLikeCallNumber(t){
+  const s=(t||'').trim();
+  if(!s || s.length>48) return false;
+  if(/\s/.test(s)===false && s.length<3) return false;
+  if(/[A-Za-z]{2,}:/.test(s)) return false;                       // mesh:, title:, at: …
+  const digits=s.replace(/[^0-9Xx]/g,'');
+  if(/^[0-9][0-9Xx-]{8,}$/.test(s) && (digits.length===10||digits.length===13)) return false;
+  if(/^W[1-4][A-Z]{0,2}\s*[A-Z]/i.test(s)) return true;           // W1 AM477
+  if(/^[A-Z]{1,3}\s*\d{1,4}(?:\.\d+)?\b/i.test(s)) return true;   // WM 100, QL737.C22, BF 400
+  return false;
+}
+function showRouted(kind,typed){
+  const el=document.getElementById('routed');
+  if(!el) return;
+  if(!kind){ el.hidden=true; el.innerHTML=''; return; }
+  el.hidden=false;
+  el.innerHTML = kind==='shelf'
+    ? 'Read as a <b>call number</b> and looked up on the shelf map. '+
+      '<button type="button" class="linky" id="routeToCat">Search the catalog for this instead</button>'
+    : 'Searched the <b>catalog</b>. '+
+      '<button type="button" class="linky" id="routeToShelf">Treat it as a call number instead</button>';
+  const a=document.getElementById('routeToCat');
+  if(a) a.onclick=()=>{ showRouted('catalog'); if(window.catalogSearch) window.catalogSearch(); };
+  const b=document.getElementById('routeToShelf');
+  if(b) b.onclick=()=>{ showRouted('shelf'); locate(); };
+}
+function unifiedSearch(){
+  const t=document.getElementById('q').value.trim();
+  if(!t){ showRouted(''); document.getElementById('result').innerHTML=''; return; }
+  // The section pills are an explicit instruction about the shelf map; honour them.
+  if(collection!=='stacks' || looksLikeCallNumber(t)){ showRouted('shelf',t); locate(); return; }
+  showRouted('catalog',t);
+  if(window.catalogSearch) window.catalogSearch();
+}
+document.getElementById('go').onclick=unifiedSearch;
+document.getElementById('clear').onclick=()=>{document.getElementById('q').value='';document.getElementById('result').innerHTML='';showRouted('');selected=null;flashId=null;setCollection('stacks');renderPlan();renderDetail();if(window.catalogClear)window.catalogClear();};
+document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')unifiedSearch();});
+document.querySelectorAll('.examples b').forEach(b=>b.onclick=()=>{document.getElementById('q').value=b.dataset.q;if(looksLikeCallNumber(b.dataset.q))setCollection('stacks');unifiedSearch();});
 
 /* ===== Smart paste: accept full UCLA catalog Ctrl+A text =====
    Looks for the location line pattern: "Biomed Library ; W3 JA271 1977"
@@ -833,7 +1075,7 @@ document.getElementById('q').addEventListener('paste',e=>{
       const inp=document.getElementById('q');
       inp.value=cn;
       inp.dispatchEvent(new Event('input'));
-      setTimeout(locate,60);
+      setTimeout(unifiedSearch,60);
     }
   }
 });
@@ -849,7 +1091,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     selected=null; flashId=null;
     renderLevels(); renderPlan(); renderDetail();
     // If there's a query in the box, re-run locate so the result panel updates
-    if(document.getElementById('q').value.trim()) locate();
+    if(document.getElementById('q').value.trim()) unifiedSearch();
   };
 });
 
@@ -1055,46 +1297,216 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     located.forEach(it=>{ (byLvl[it.hit.lvl]=byLvl[it.hit.lvl]||[]).push(it); });
     const levels=Object.keys(byLvl).map(Number).sort((a,b)=>b-a);   // top floor first
 
-    let entry=ELEV_X, html='', stairs=0, skips=0;
+    /* **Over five books is a truck trip.** You are not carrying nine books down a stairwell, so
+       past that point the stairs stop being an option at all and every floor change is the
+       elevator. The threshold is a load, not a distance, which is why it overrides the routing
+       maths rather than being folded into it as a cost. */
+    const truck = located.length>5;
+
+    let entryKind='elevator', html='', stairs=0, lifts=0;
     html+=transit('el',`Take the <b>elevator</b> to <b>Level ${levels[0]}</b> to start.`);
     for(let i=0;i<levels.length;i++){
       const lvl=levels[i], stops=groupStops(byLvl[lvl]);
       const xs=stops.map(s=>s.x), L=Math.min(...xs), R=Math.max(...xs);
-      let exit=ELEV_X, nextTransit='', nextEntry=ELEV_X;
+      const entryCol=doorCol(doorFor(entryKind,'in'));
+      let nextTransit='', exitKind='done', nextKind='elevator';
       if(i<levels.length-1){
         const nlvl=levels[i+1], gap=lvl-nlvl;
-        if(gap===1){
-          const ns=groupStops(byLvl[nlvl]), nc=ns.reduce((a,s)=>a+s.x,0)/ns.length;
+        const ns=groupStops(byLvl[nlvl]);
+        const nc=ns.reduce((a,st)=>a+standX(st),0)/ns.length;
+        if(gap===1 && !truck){
+          /* Which stairwell is cheaper is a question about doors, not columns. The west
+             stairwell's landing is behind the elevator block: reaching it means walking out to
+             the gap at column 4 and back in, and you arrive on the floor below on its *far*
+             side. The east stairwell opens straight onto the corridor going down, but drops you
+             into the south lobby coming out. Costing them as two bare x-positions gets this
+             backwards on exactly the floors where it matters, so both legs are measured along
+             the paths that will actually be drawn. */
           let best=null;
-          [['west',STAIR_W],['east',STAIR_E]].forEach(([nm,x])=>{ const sc=sweep(L,R,entry,x).cost+Math.abs(x-nc); if(!best||sc<best.sc) best={nm,x,sc}; });
-          exit=best.x; nextEntry=best.x; stairs++;
-          nextTransit=transit('st',`Take the <b>${best.nm} stairwell</b> down one floor to <b>Level ${nlvl}</b>.`);
+          ['west stairs','east stairs'].forEach(kind=>{
+            const out=doorFor(kind,'out'), back=doorFor(kind,'in');
+            const sc=sweep(L,R,entryCol,doorCol(out)).cost + doorDrop(out) + doorCost(back,nc);
+            if(!best||sc<best.sc) best={kind,sc};
+          });
+          exitKind=nextKind=best.kind; stairs++;
+          nextTransit=transit('st',`Take the <b>${best.kind.replace(' stairs','')} stairwell</b> down one floor to <b>Level ${nlvl}</b>.`);
         } else {
-          exit=ELEV_X; nextEntry=ELEV_X; skips++;
-          nextTransit=transit('el',`Take the <b>elevator</b> down to <b>Level ${nlvl}</b> (skips ${gap-1} floor${gap-1===1?'':'s'}).`);
+          exitKind=nextKind='elevator'; lifts++;
+          const why = truck && gap===1 ? ' (truck trip &mdash; no stairs)'
+                    : gap>1 ? ` (skips ${gap-1} floor${gap-1===1?'':'s'})` : '';
+          nextTransit=transit('el',`Take the <b>elevator</b> down to <b>Level ${nlvl}</b>${why}.`);
         }
       }
-      const dir=sweep(L,R,entry,exit).dir;
+      const outDoor=exitKind==='done'?null:doorFor(exitKind,'out');
+      const exitCol=outDoor?doorCol(outDoor):entryCol;
+      const dir=sweep(L,R,entryCol,exitCol).dir;
       stops.sort((a,b)=> dir==='LR' ? (a.x-b.x)||(rowOrd(a)-rowOrd(b)) : (b.x-a.x)||(rowOrd(a)-rowOrd(b)));
-      html+=floorCard(lvl,stops);
-      html+=nextTransit; entry=nextEntry;
+      html+=floorCard(lvl,stops,entryKind,exitKind);
+      html+=nextTransit; entryKind=nextKind;
     }
     const books=located.length, fl=levels.length;
     let plan;
-    if(stairs===0 && skips===0){ plan=`All on Level ${levels[0]} — take the elevator there.`; }
-    else { plan=`Elevator to Level ${levels[0]}, then ${stairs} stair descent${stairs===1?'':'s'}`+(skips?` and ${skips} elevator skip${skips===1?'':'s'}.`:'.'); }
+    if(fl===1){ plan=`All on Level ${levels[0]} — take the elevator there.`; }
+    else if(truck){ plan=`Over five books, so this is a truck trip: the elevator between every floor (${lifts} move${lifts===1?'':'s'}).`; }
+    else { plan=`Elevator to Level ${levels[0]}, then ${stairs} stair descent${stairs===1?'':'s'}`+(lifts?` and ${lifts} elevator move${lifts===1?'':'s'}.`:'.'); }
     const sum=`<b>${books}</b> book${books===1?'':'s'} across <b>${fl}</b> floor${fl===1?'':'s'}. ${plan}`;
     html=`<div class="itin-summary">${sum}</div>`+html;
     if(missing.length) html+=miss(missing);
     itin.innerHTML=html;
   }
   function transit(kind,txt){ const cls=kind==='st'?'st':'el', ic=kind==='st'?'↓':'⇅'; return `<div class="itin-transit"><span class="ic ${cls}">${ic}</span><span>${txt}</span></div>`; }
-  function floorCard(lvl,stops){
+  /* ── Order as colour ──────────────────────────────────────────────────────────────────
+     A number badge tells you where a stop sits in the sequence, but only if you read every
+     badge. A colour ramp tells you the *shape* of the walk in one glance — where it starts,
+     which way it sweeps, how far it has to go. So order is encoded twice: the badge is exact,
+     the ramp is instant, and neither is load-bearing alone (colour-blind readers keep the
+     badges; a photocopy keeps the numbers).
+
+     Cool-to-warm, four anchors, because a single-hue light-to-dark ramp loses its middle at
+     the small sizes these maps render at, and because "blue is early, red is late" is the one
+     ramp convention nobody has to be taught. The anchors sit in a narrow luminance band so
+     white badge text stays legible at every position. */
+  const RAMP=[[3,105,161],[46,125,91],[198,138,30],[179,64,26]];
+  function orderColor(i,n){
+    if(n<=1) return `rgb(${RAMP[0].join(',')})`;
+    const t=i/(n-1), seg=Math.min(Math.floor(t*(RAMP.length-1)), RAMP.length-2),
+          f=t*(RAMP.length-1)-seg, a=RAMP[seg], b=RAMP[seg+1];
+    return `rgb(${a.map((v,j)=>Math.round(v+(b[j]-v)*f)).join(',')})`;
+  }
+
+  function floorCard(lvl,stops,entryKind,exitKind){
     const total=stops.reduce((a,s)=>a+s.cns.length,0);
-    let h=`<div class="itin-floor"><div class="itin-floor-h" onclick="routeShow(${lvl},'${stops[0].id}')"><span class="lv">Level ${lvl}</span><span class="ct">${total} book${total===1?'':'s'} · tap to show on map</span></div>`;
-    const sn={left:'Left',right:'Right',single:'Single (R)'};
-    stops.forEach(s=>{ h+=`<div class="itin-stop"><span class="loc">index ${s.x} · ${s.row||'—'} · ${sn[s.side]||s.side}</span><span class="cns">${s.cns.join(', ')}</span><span class="rng">${s.d.start} → ${s.d.end}</span></div>`; });
+    let h=`<div class="itin-floor"><div class="itin-floor-h" onclick="routeShow(${lvl},'${stops[0].id}')"><span class="lv">Level ${lvl}</span><span class="ct">${total} book${total===1?'':'s'} · ${stops.length} stop${stops.length===1?'':'s'} · tap to open the big map</span></div>`;
+    const m=walkMap(lvl,stops,entryKind,exitKind);
+    h+=m.html;
+    h+=walkList(stops,m.entryCol,m.exitCol,m.inDoor,m.outDoor);
     return h+'</div>';
+  }
+
+  /* `entryKind`/`exitKind` name the stairwell or the elevator; `planDoors()` turns that into the
+     edge you actually come through, and `doorCol`/`doorCost` say what it costs to get from there
+     to the stacks. Which edge is not cosmetic: descending the west stairwell puts you out on its
+     far side, so the same descent that ended "at the stairs" starts you facing the other way on
+     the floor below. */
+  function doorFor(kind,dir){
+    const D=planDoors();
+    if(kind==='elevator') return D.elevator;
+    if(kind==='west stairs') return dir==='out'?D.wsDown:D.wsUp;
+    if(kind==='east stairs') return dir==='out'?D.esDown:D.esUp;
+    return null;
+  }
+  /* ── The map ──────────────────────────────────────────────────────────────────────────
+     One SVG per floor, built from the same `planShelves()` and `planFeatures()` as the big floor
+     plan, so it is that drawing with the walk marked on it rather than a second, different
+     picture of the same building.
+
+     **There is no drawn route.** There was, and it did not survive contact with the building: an
+     aisle is a twelve-pixel gap, a sweep doubles back down the corridor it came along, and every
+     device for keeping those legs apart — offset tracks, rounded corners, arrowheads — added more
+     ink to a picture that was already too busy to read. What a route line was carrying is order,
+     and order fits in the two things already on the map: the face you are going to, tinted, and a
+     numbered badge in the aisle you read it from. Colour gives you the shape of the walk at a
+     glance; the number settles any ambiguity. Neither can overlap anything, because neither is a
+     line.
+
+     Faces you are not visiting keep their shelf-group colour at soft strength, so the floor still
+     reads as the floor. */
+  function walkMap(lvl,stops,entryKind,exitKind){
+    const n=stops.length;
+    const inDoor=doorFor(entryKind,'in'), outDoor=doorFor(exitKind,'out');
+    const entryCol=doorCol(inDoor), exitCol=outDoor?doorCol(outDoor):entryCol;
+
+    const visited={}; stops.forEach((st,i)=>{ visited[st.id+'|'+st.side]=i; });
+    let s=planShelves(lvl,(sh,side,has)=>{
+      const key=sh.id+'|'+side;
+      if(key in visited) return orderColor(visited[key],n);
+      return has ? groupSoft[sh.group] : null;
+    },false);
+    s+=planFeatures();
+
+    /* Where you come in and where you leave. On a truck trip both are the same elevator door, so
+       two captions would land on one point and interleave into gibberish; say it once. */
+    const sameDoor = outDoor && outDoor.x===inDoor.x && outDoor.y===inDoor.y;
+    s+=endCap(inDoor, sameDoor?'START / EXIT':'START', entryKind);
+    if(outDoor && !sameDoor) s+=endCap(outDoor,'EXIT',exitKind);
+
+    /* Badges sit in the aisle you stand in, beside the face they belong to. Two faces read from
+       one aisle are one place to stand, so their badges would land on each other — they get
+       spread along the aisle instead of stacked. */
+    const at={};
+    stops.forEach((st,i)=>{
+      const lane=laneOf(st), x=colX(standX(st)), slot=x+'|'+lane;
+      const k=(at[slot]=(at[slot]||0)+1)-1;
+      const y=LANE_Y[lane]+(k ? (k%2?1:-1)*Math.ceil(k/2)*26 : 0);
+      const col=orderColor(i,n);
+      s+=`<circle cx="${x}" cy="${y}" r="11.5" fill="${col}" stroke="var(--paper)" stroke-width="2.2"/>`;
+      s+=`<text x="${x}" y="${y+4}" text-anchor="middle" font-family="var(--mono)" font-size="12" font-weight="700" fill="#fff">${i+1}</text>`;
+    });
+
+    const h=PLAN.botY+PLAN.botH+30;   // room for the caption under a door on a south edge
+    const html=`<div class="walkwrap"><svg class="walkmap" viewBox="0 0 720 ${h}" role="img" `
+      + `aria-label="Level ${lvl} walking route: ${n} stop${n===1?'':'s'} in order">${s}</svg></div>`
+      + rampLegend(n);
+    return {html, entryCol, exitCol, inDoor, outDoor};
+  }
+  /* The cap sits on the door, in the door's own colour — orange for stairs, blue for the lift,
+     matching the blocks they are drawn on. The caption goes wherever the open floor is, which
+     is the direction the door faces: a caption placed by habit above the door lands inside the
+     orange stairs block, orange on orange, and half of it disappears. */
+  function endCap(door,label,kind){
+    const c=/stairs/.test(kind)?'var(--orange)':'var(--accent)';
+    const {x,y}=door;
+    let t;
+    if(door.via==='lobby')         t=`x="${x+12}" y="${y+16}" text-anchor="start"`;
+    else if(door.via==='corridor') t=`x="${x}" y="${y-13}" text-anchor="middle"`;
+    /* A door on a side edge is approached along its own row, so the caption goes above it —
+       level with it would sit on the line that arrives there. */
+    else if(door.via==='west')     t=`x="${x-2}" y="${y-13}" text-anchor="end"`;
+    else                           t=`x="${x+2}" y="${y-13}" text-anchor="start"`;
+    /* The route line is drawn before this and passes through several of these positions, so the
+       caption carries its own paper-coloured outline rather than relying on finding a clear
+       spot on every floor. */
+    return `<circle cx="${x}" cy="${y}" r="7.5" fill="var(--paper)" stroke="${c}" stroke-width="3"/>`
+         + `<text ${t} font-family="var(--mono)" font-size="9" letter-spacing="1" `
+         + `stroke="var(--paper)" stroke-width="3" paint-order="stroke" fill="${c}">${label}</text>`;
+  }
+  /* Reading key for the ramp. Without it the colours are just pretty; with it they are a scale. */
+  function rampLegend(n){
+    let bar='';
+    for(let i=0;i<24;i++) bar+=`<span style="background:${orderColor(i,24)}"></span>`;
+    return `<div class="ramp"><span class="rl">first stop</span><span class="bar">${bar}</span>`
+         + `<span class="rl">last stop (${n})</span></div>`;
+  }
+
+  /* ── The same walk in words ────────────────────────────────────────────────────────────
+     The map answers "where"; this answers "what do I do next", which is the question you have
+     while walking and not looking at a screen. Distances count shelves passed along the
+     corridor, because that is the unit that is painted on the floor in front of you.
+
+     The first move is measured from a door rather than from another aisle, so it can land on a
+     half shelf; it is stated as a direction rather than a count. Every later move is aisle to
+     aisle and comes out whole. */
+  function walkList(stops,entry,exit,inDoor,outDoor){
+    const steps=walkSteps(stops,entry,exit), n=stops.length, arrow={1:'→','-1':'←',0:'↳'};
+    const face={left:'L',right:'R',single:'R'};
+    let h='<ol class="itin-steps">';
+    steps.forEach((st,i)=>{
+      const whole=Number.isInteger(st.shelves);
+      const move = st.shelves===0 ? 'same aisle'
+                 : (i===0 || !whole) ? `head ${st.head>0?'east':'west'} from the ${inDoor.name}`
+                 : `${st.shelves} ${st.shelves===1?'shelf':'shelves'} ${st.head>0?'east':'west'}`;
+      const turn = st.turn==='ahead' ? '' : `, turn ${st.turn}`;
+      h+=`<li><span class="sn" style="background:${orderColor(st.n-1,n)}">${st.n}</span>`
+       + `<span class="sd"><b>${arrow[st.head]} ${move}</b> → ${aisleShort(st.x)}${turn}</span>`
+       + `<span class="sat">shelf <b>${st.index}${face[st.side]||''}</b>, ${st.row} row — on your <b>${st.hand}</b></span>`
+       + `<span class="scn">${st.cns.join(' · ')}</span>`
+       + `<span class="srng">${st.range.start} → ${st.range.end}</span></li>`;
+    });
+    if(outDoor){
+      h+=`<li class="out"><span class="sn out">↺</span><span class="sd">Back to the `
+       + `<b>${outDoor.name}</b> to leave this floor.</span></li>`;
+    }
+    return h+'</ol>';
   }
   function miss(arr){ return `<div class="itin-miss"><b>Not located (${arr.length}):</b> ${arr.join(' · ')}<br>These may be mis-read by OCR, shelved in Reference (Floor 4), or outside the mapped ranges. Fix the spelling above and rebuild, or look them up one at a time.</div>`; }
 
@@ -1122,9 +1534,13 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
 (function(){
   const $=id=>document.getElementById(id);
   const root=$('cat'); if(!root) return;
-  const head=$('catHead'), toggle=$('catToggle'), body=$('catBody'), input=$('catQ'),
+  // One box for the whole page. The catalog module does not own an input any more; it reads
+  // the field at the top, and the router there decides whether a query belongs to the shelf
+  // map or to here.
+  const head=$('catHead'), toggle=$('catToggle'), body=$('catBody'), input=$('q'),
         statusEl=$('catStatus'), out=$('catResults'), biomedOnly=$('catBiomed'), covers=$('catCovers'),
-        groupEd=$('catGroupEd'), sortSel=$('catSort'), applied=$('catApplied'), filtForm=$('catFilters');
+        groupEd=$('catGroupEd'), sortSel=$('catSort'), applied=$('catApplied'), filtForm=$('catFilters'),
+        libSel=$('catLibrary');
 
   const SRU='https://ucla.alma.exlibrisgroup.com/view/sru/01UCS_LAL';
   const MARC='http://www.loc.gov/MARC21/slim';
@@ -1210,17 +1626,30 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     const lib=(ava.b||'').toUpperCase(), j=(ava.j||'').toLowerCase();
     if(PHANTOM_LIB[lib]) return {kind:'phantom', here:false, code:j,
                                  label:'Request only \u00b7 not held at UCLA', note:PHANTOM_LIB[lib]};
+    /* Biomed is the only library with a shelf map, so it is the only one whose holdings can
+       reach `kind:'stacks'` — the gate `resolve` opens to hand out an aisle. Everything below
+       that is presentation. */
     if(lib==='BIOMED'){
       const known=BIOMED_LOC[j];
-      if(known) return Object.assign({here:true, code:j}, known);
-      return {kind:'unknown', here:true, code:j,
+      if(known) return Object.assign({here:hereLib==='BIOMED', code:j}, known);
+      return {kind:'unknown', here:hereLib==='BIOMED', code:j,
               label:ava.c||('Biomed \u00b7 location code '+(j||'unknown')),
               note:'This Biomed location is not in the routing table yet \u2014 ask at the desk rather than walking the stacks.'};
     }
+    const known=LIB_BY_CODE[lib];
+    /* The reader's own library, when it is not Biomed. It is in this building and worth
+       showing first, but there is no per-shelf map for it, and saying so is the whole point —
+       the alternative is a blank space where an aisle would be. */
+    if(lib && lib===hereLib) return {kind:'here', here:true, code:j,
+            label:ava.c||ava.q||(known?known.name:lib),
+            note:'In this building \u2014 shelved by call number. There is no per-shelf map for '+
+                 esc0(known?known.name:lib)+' yet, so the call number is as precise as this gets.'};
     return {kind:'away', here:false, code:j,
             label:ava.q||ava.c||lib||'Another UCLA library',
-            note:OFFSITE[j]||('Held at '+(ava.c||lib||'another UCLA library')+' \u2014 not in this building.')};
+            note:OFFSITE[j]||('Held at '+(ava.c||(known?known.name:lib)||'another UCLA library')+' \u2014 not in this building.')};
   }
+  // The core block has no DOM; this is only here so a library name cannot smuggle markup in.
+  const esc0=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
   // Shelf faces whose mapped range contains this call number. Level 9 is excluded:
   // Special Collections has its own routing and must never be reached from a stacks code.
@@ -1333,25 +1762,88 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
   }
   const carrierLabel=c=>(CARRIER[c]||CARRIER.print).label;
 
-  /* ---- scopes ----
-     `alma.permanentPhysicalLocation` is the only index that actually filters by where a
-     copy sits: every library-shaped index (itemLibrary, holding_Library, rep_Library)
-     returns 0 for BIOMED in this tenant, probed. So a scope is a set of $j codes and
-     nothing else, which is fine — the same nine codes the routing table already knows. */
-  const SCOPE={
-    biomed:{codes:['bi','biper','biprwt','bian','birf','birs','bicidperm','bicimm','biherb'],
-            label:'Biomed \u2014 any location', short:'Biomed'},
-    stacks:{codes:['bi','biper','biprwt','bian'],
-            label:'Biomed \u2014 shelves you can walk to', short:'Walkable stacks'},
-    ref:   {codes:['birf'], label:'Biomed Reference \u00b7 Floor 4', short:'Reference'},
-    desk:  {codes:['birs','bicidperm','bicimm','biherb'],
-            label:'Biomed service desks (reserves, media, herbarium)', short:'At the desk'},
-    ucla:  {codes:null, label:'Every UCLA library', short:'All of UCLA'}
+  /* ---- libraries and scopes ----
+     `alma.permanentPhysicalLocation` is the only index that filters by where a copy sits.
+     Every library-shaped index — `itemLibrary`, `holding_Library`, `rep_Library`,
+     `current_Library` — returns zero for every spelling of every library name, probed. So
+     "which building" has to be asked as "which location codes", and those are per-shelf, not
+     per-library.
+
+     What makes that workable is that UCLA's location codes are prefixed by library, and the
+     index honours **trailing truncation under the `all` relation** (`=` with a star returns
+     zero, which is the usual silent-failure trap here). One clause per library:
+
+         alma.permanentPhysicalLocation all "bi*"
+
+     A prefix beats the enumerated list the Biomed routing table carries: it returned 83 more
+     records than the nine known `bi*` codes, i.e. sublocations nobody has catalogued here yet,
+     and those still land honestly on the "not in the routing table" path rather than vanishing.
+
+     All 22 prefixes below were checked for leakage against a 40-holding sample each: every one
+     resolves to exactly one library, none bleeds into another. `code` is the AVA `$b`. */
+  const LIBRARY={
+    biomed:    {pre:'bi',  code:'BIOMED',     name:'Biomed Library',                    short:'Biomed', mapped:true},
+    yrl:       {pre:'yr',  code:'YRL',        name:'Young Research Library',            short:'YRL'},
+    powell:    {pre:'cl',  code:'POWELL',     name:'Powell Library',                    short:'Powell'},
+    arts:      {pre:'ar',  code:'ARTS',       name:'Arts Library',                      short:'Arts'},
+    music:     {pre:'mu',  code:'MUSIC',      name:'Music Library',                     short:'Music'},
+    law:       {pre:'lw',  code:'LAW',        name:'Law Library',                       short:'Law'},
+    eal:       {pre:'ea',  code:'EAL',        name:'East Asian Library',                short:'East Asian'},
+    sel:       {pre:'sm',  code:'SEL_EMS',    name:'Science & Engineering · SEL/EMS',    short:'SEL/EMS'},
+    geology:   {pre:'sg',  code:'SEL_GEO',    name:'SEL · Geology',                      short:'SEL/Geology'},
+    clark:     {pre:'ck',  code:'CLARK',      name:'Clark Library',                     short:'Clark'},
+    lsc:       {pre:'ls',  code:'LSC',        name:'Library Special Collections',       short:'Special Collections'},
+    ftva:      {pre:'ft',  code:'FTVA',       name:'Film & Television Archive',         short:'FTVA'},
+    management:{pre:'mg',  code:'MANAGEMENT', name:'Management Library',                short:'Management'},
+    csrc:      {pre:'cs',  code:'CSRC',       name:'Chicano Studies Research Center',   short:'CSRC'},
+    aisc:      {pre:'ai',  code:'AISC',       name:'American Indian Studies Center',    short:'AISC'},
+    aasc:      {pre:'aa',  code:'AASC',       name:'Asian American Studies Center',     short:'AASC'},
+    iml:       {pre:'il',  code:'IML',        name:'Instructional Media Laboratory',    short:'IML'},
+    err:       {pre:'err', code:'ERR',        name:'English Reading Room',              short:'English RR'},
+    ethno:     {pre:'et',  code:'ETHNOMUS',   name:'Ethnomusicology Archive',           short:'Ethnomusicology'},
+    labschool: {pre:'ue',  code:'LABS',       name:'UCLA Lab School Library',           short:'Lab School'},
+    srlf:      {pre:'sr',  code:'SRLF',       name:'SRLF — offsite storage',             short:'SRLF', offsite:true},
+    ucla:      {pre:null,  code:'',           name:'Every UCLA library',                short:'All of UCLA'}
   };
-  const SCOPE_ALIAS={biomed:'biomed', bio:'biomed', here:'biomed', building:'biomed',
-    stacks:'stacks', walkable:'stacks', shelf:'stacks', shelves:'stacks',
-    ref:'ref', reference:'ref', desk:'desk', reserves:'desk', reserve:'desk',
-    ucla:'ucla', all:'ucla', any:'ucla', anywhere:'ucla', everywhere:'ucla'};
+  const LIB_BY_CODE=(function(){ const m={}; for(const k in LIBRARY) if(LIBRARY[k].code) m[LIBRARY[k].code]=LIBRARY[k]; return m; })();
+
+  // Sub-scopes. Only Biomed has a shelf map, so only Biomed has a "walkable" subset.
+  const SUBSCOPE={
+    stacks:{codes:['bi','biper','biprwt','bian'], lib:'biomed',
+            label:'Biomed \u2014 shelves you can walk to', short:'Walkable stacks'},
+    ref:   {codes:['birf'], lib:'biomed', label:'Biomed Reference \u00b7 Floor 4', short:'Reference'},
+    desk:  {codes:['birs','bicidperm','bicimm','biherb'], lib:'biomed',
+            label:'Biomed service desks (reserves, media, herbarium)', short:'At the desk'}
+  };
+  // One scope key is either a LIBRARY key or a SUBSCOPE key. This resolves either.
+  function SCOPE(key){
+    if(SUBSCOPE[key]) return SUBSCOPE[key];
+    const L=LIBRARY[key]||LIBRARY.ucla;
+    return {pre:L.pre, lib:key, label:L.name, short:L.short};
+  }
+  /* Which library the reader is standing in. It changes what counts as "here" — grouping,
+     the copies-only filter and the ranking nudge — but never what may be given a shelf: the
+     shelf map covers Biomed and nothing else, so `resolve` still refuses everywhere else. */
+  let hereLib='BIOMED';
+  const setHereLib=c=>{ hereLib=String(c||'BIOMED').toUpperCase(); };
+  const SCOPE_ALIAS=(function(){
+    const m={ bio:'biomed', building:'biomed',
+      stacks:'stacks', walkable:'stacks', shelf:'stacks', shelves:'stacks',
+      ref:'ref', reference:'ref', desk:'desk', reserves:'desk', reserve:'desk',
+      ucla:'ucla', all:'ucla', any:'ucla', anywhere:'ucla', everywhere:'ucla',
+      young:'yrl', research:'yrl', sciences:'sel', engineering:'sel', boelter:'sel',
+      geo:'geology', geology:'geology', special:'lsc', specialcollections:'lsc',
+      film:'ftva', television:'ftva', mgmt:'management', anderson:'management',
+      eastasian:'eal', chicano:'csrc', offsite:'srlf', storage:'srlf', labschool:'labschool' };
+    for(const k in LIBRARY) m[k]=k;         // every library key is its own alias
+    return m;
+  })();
+  // `at:here` means wherever the reader said they are, not a fixed building.
+  const resolveScopeAlias=(v,current)=>{
+    const k=String(v||'').toLowerCase().replace(/[^a-z]/g,'');
+    if(k==='here'||k==='mine'||k==='thislibrary') return current||'biomed';
+    return SCOPE_ALIAS[k]||'';
+  };
 
   /* ---- the filter vocabulary ----
      Each entry is one index probed live against this endpoint on 2026-08-05. Nothing is
@@ -1504,8 +1996,8 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
   /* Parse the whole box into: free text, server clauses, client-side predicates, sort and
      scope. `notes` records every decision in words so the UI can show what it did — an
      advanced filter that narrows silently is indistinguishable from a catalogue gap. */
-  function parseQuery(s){
-    const p={text:'', pos:[], neg:[], local:{}, sort:'', scope:'', notes:[], errors:[]};
+  function parseQuery(s,here){
+    const p={text:'', pos:[], neg:[], local:{}, sort:'', scope:'', here:here||'', notes:[], errors:[]};
     const free=[];
     tokenize(s).forEach(tk=>{
       if(!tk.field){ free.push(tk.neg?'-'+tk.val:tk.val); return; }
@@ -1515,9 +2007,9 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       if(!v){ p.errors.push('\u201c'+tk.field+':\u201d was given no value, so it was ignored.'); return; }
 
       if(spec.kind==='scope'){
-        const k=SCOPE_ALIAS[v.toLowerCase()];
-        if(!k) p.errors.push('Unknown scope \u201c'+v+'\u201d. Try biomed, stacks, reference, desk or ucla.');
-        else { p.scope=k; p.notes.push('scope: '+SCOPE[k].label); }
+        const k=resolveScopeAlias(v,p.here);
+        if(!k) p.errors.push('Unknown place \u201c'+v+'\u201d. Try a library (biomed, yrl, powell, arts, music, law, sel, clark\u2026), or stacks, reference, desk, ucla.');
+        else { p.scope=k; p.notes.push('scope: '+SCOPE(k).label); }
         return;
       }
       if(spec.kind==='sort'){
@@ -1622,8 +2114,9 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     // A scope is a narrowing of somebody's question, never a question of its own: with
     // nothing else asked for it would return the entire Biomed collection.
     if(!lead.length && !rest.length && !parsed.neg.length) return '';
-    const sc=SCOPE[scopeKey];
-    if(sc && sc.codes) rest.push(orGroup(sc.codes.map(c=>'alma.permanentPhysicalLocation='+c)));
+    const sc=SCOPE(scopeKey);
+    if(sc.codes)      rest.push(orGroup(sc.codes.map(c=>'alma.permanentPhysicalLocation='+c)));
+    else if(sc.pre)   rest.push('alma.permanentPhysicalLocation all "'+sc.pre+'*"');
     let q=lead.concat(rest).filter(Boolean).join(' and ');
     if(!q) return '';
     parsed.neg.forEach(c=>{ q+=' not '+c; });
@@ -1782,7 +2275,8 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
        almost nothing, and the ceiling is never reached abruptly. */
     const extra=Math.max(0,fullW.length-qw.length);
     s-=26*(extra/(extra+7));
-    if(rec.hasBiomed) s+=12;               // a tiebreak, not an override: walkable copies first
+    // A copy in the building you are standing in. A tiebreak, not an override.
+    if(rec.hasHere===undefined?rec.hasBiomed:rec.hasHere) s+=12;
     if(rec.hasShelf)  s+=6;                // …and a copy that resolved to an actual shelf face
     /* At a physical library desk the unqualified question is about a book. A 2022 audiobook is
        not a newer edition of a 1957 novel, it is a different object; without this the year
@@ -1791,6 +2285,124 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     if(rec.carrier==='print') s+=10;
     return s;
   }
+
+  /* ---- typo repair ----
+     Dropping a word only works when the words that survive are distinctive. "wtlas shrugged"
+     survives it, because "shrugged" is rare enough that the right book comes back and the
+     local scorer recognises "wtlas" as one edit from "atlas". "atlas shurgged" does not:
+     drop the broken word and what is left is "atlas", which matches 23 314 records at UCLA,
+     none of them the novel. The query has to be *repaired*, not shortened.
+
+     There is no spelling dictionary in this app, but there is a catalogue, and
+     `maximumRecords=0` returns a count in well under a tenth of a second once the connection
+     is warm. So the catalogue is the dictionary: generate the edit-1 variants of the dead
+     word, substitute each back into the whole query, and ask how many records it matches.
+     "atlas shurgged" is repaired to "atlas shrugged" by the third probe, in about 200 ms.
+
+     Transpositions and deletions only. Substitution ("wtlas" for "atlas") needs 25 variants
+     per character, and it is precisely the case the drop-a-word pass below already handles.
+     Insertion is not covered by either, and is the known gap. */
+  function wordRepairs(w){
+    const out=[];
+    for(let i=0;i<w.length-1;i++){                 // two letters the wrong way round
+      if(w.charAt(i)===w.charAt(i+1)) continue;
+      out.push(w.slice(0,i)+w.charAt(i+1)+w.charAt(i)+w.slice(i+2));
+    }
+    for(let i=0;i<w.length;i++){                   // one letter too many
+      const d=w.slice(0,i)+w.slice(i+1);
+      if(d.length>=3) out.push(d);
+    }
+    return out.filter((v,i,a)=>v!==w && a.indexOf(v)===i);
+  }
+  const substituteWord=(words,i,w)=>words.slice(0,i).concat([w],words.slice(i+1)).join(' ');
+
+  /* ---- the catalogue as a spelling dictionary ----
+     Guessing letters bounds repair to the typo classes whose variant set is small enough to
+     probe: transposition and deletion. It leaves three holes. Insertion and substitution each
+     need 25–26 variants per character. Worse, a **real-word typo** cannot be detected at all —
+     "principals" for "principles" is a word, the catalog has 2 800 records about principals,
+     so the liveness probe reports it alive and repair never even runs.
+
+     All three close without guessing a single letter. Every probe this app makes comes back
+     with records in it, and those records are made of words spelled the way the catalogue
+     spells them. Match the broken word against that vocabulary and the edit class stops
+     mattering: "wtlas" is one edit from "atlas", "principals" is two from "principles",
+     "shruged" is one from "shrugged". Nothing was enumerated; the words were simply read off
+     the results that were being fetched anyway. */
+  function harvestVocab(recs){
+    const n=Object.create(null);
+    (recs||[]).forEach(r=>{
+      normTitle(r.title||'').split(' ').concat(norm(r.author||'').split(' ')).forEach(w=>{
+        if(w.length>=3) n[w]=(n[w]||0)+1;
+      });
+    });
+    return n;
+  }
+  // Closest word in a harvested vocabulary. Ties go to the commoner one: the vocabulary is a
+  // sample of what the catalogue actually holds, so frequency is evidence.
+  function nearestWord(word,vocab,max){
+    let best=null;
+    for(const w in vocab){
+      if(w===word) continue;
+      const d=lev(word,w,max);
+      if(d>max) continue;
+      if(!best || d<best.d || (d===best.d && vocab[w]>best.n)) best={w:w, d:d, n:vocab[w]};
+    }
+    return best;
+  }
+  /* Prefix ladder for a truncation probe, used when a broken word has no surviving neighbours
+     distinctive enough to harvest from — "atlas shruged" drops to "atlas", which is 23 314
+     records of anatomy. `length - 2` is the right first rung: an insertion or a substitution
+     past that point leaves the prefix intact, and every character dropped from the prefix
+     dilutes the harvest with unrelated titles. Trailing `*` is the only truncation this
+     endpoint honours; leading is ignored and infix returns nothing. */
+  function prefixLadder(w){
+    const out=[];
+    [w.length-2, w.length-3, 3].forEach(L=>{ if(L>=3 && L<w.length && out.indexOf(L)<0) out.push(L); });
+    return out.map(L=>w.slice(0,L));
+  }
+  /* Edit-1 variants that the other passes cannot reach, cheapest-to-find first.
+     A missing letter at position 1 defeats everything above it: "srugged" for "shrugged"
+     shares no useful prefix ("atlas srug*" returns nothing), deleting from it never produces
+     the right word, and dropping it leaves "atlas" and 23 314 records of anatomy. Only
+     enumeration reaches it, and enumeration means 26 insertions per position plus 25
+     substitutions per character — 383 candidates for a seven-letter word.
+
+     383 probes would be absurd. 383 *clauses* are not: a top-level OR of keyword clauses is
+     accepted, 26 of them cost 1.1 s in one request, and any batch that matches something can
+     simply be read for its vocabulary. So the candidates are generated in position order —
+     earliest first, since late errors were already covered upstream — batched to a URL budget,
+     and the first batch that returns records is harvested rather than bisected. */
+  const ALPHA='abcdefghijklmnopqrstuvwxyz';
+  function wordGuesses(w){
+    const out=[], seen=Object.create(null);
+    const add=v=>{ if(v!==w && v.length>=3 && !seen[v]){ seen[v]=1; out.push(v); } };
+    for(let i=0;i<=w.length;i++){
+      for(let a=0;a<26;a++) add(w.slice(0,i)+ALPHA.charAt(a)+w.slice(i));     // a letter omitted
+      if(i<w.length) for(let a=0;a<26;a++) add(w.slice(0,i)+ALPHA.charAt(a)+w.slice(i+1)); // mistyped
+    }
+    return out;
+  }
+  // Group clauses into requests that stay well inside a sane URL length.
+  function batchClauses(clauses,budget){
+    const out=[]; let cur=[], len=0;
+    clauses.forEach(c=>{
+      if(cur.length && len+c.length>budget){ out.push(cur); cur=[]; len=0; }
+      cur.push(c); len+=c.length+4;
+    });
+    if(cur.length) out.push(cur);
+    return out;
+  }
+
+  // Which words of the original query a relaxation left behind.
+  function wordsMissing(all,kept){
+    const k=Object.create(null);
+    String(kept||'').split(' ').filter(Boolean).forEach(w=>{ k[w]=1; });
+    return all.filter(w=>!k[w]);
+  }
+  // How wrong a word may be and still be the same word, with at least one edit allowed for
+  // anything long enough to be worth repairing at all.
+  const repairBudget=w=>Math.max(1,slack(w));
 
   /* Spelling fallback. The endpoint has no fuzzy matching and no "did you mean", so when a
      query returns nothing, drop one word at a time — longest remaining query first — and let
@@ -2039,6 +2651,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       year:     (/^(1[5-9]\d{2}|20\d{2})$/.test(f008.substr(7,4)) ? +f008.substr(7,4)
                  : (pub.match(/(1[5-9]\d{2}|20\d{2})/)||[])[1] ? +pub.match(/(1[5-9]\d{2}|20\d{2})/)[1] : null),
       hasBiomed:holdings.some(h=>(h.ava.b||'').toUpperCase()==='BIOMED'),
+      hasHere:  holdings.some(h=>(h.ava.b||'').toUpperCase()===hereLib),
       hasShelf: holdings.some(h=>h.hits.length>0)
     };
   }
@@ -2161,16 +2774,17 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
 
   function holdingsHtml(rec){
     const keep=biomedOnly.checked
-      ? rec.holdings.filter(h=>(h.ava.b||'').toUpperCase()==='BIOMED')
+      ? rec.holdings.filter(h=>(h.ava.b||'').toUpperCase()===LIBRARY[library].code)
       : rec.holdings.slice();
     const groups={};
     keep.forEach(h=>{
       const lib=(h.ava.b||'').toUpperCase()||'OTHER';
       (groups[lib]=groups[lib]||{name:groupName(h.ava), here:h.route.here, rows:[]}).rows.push(h);
     });
-    // Group by library; Biomed first, everything else after, alphabetically.
+    // Group by library; the one you are standing in first, everything else alphabetically.
+    const HERE=LIBRARY[library].code;
     const order=Object.keys(groups).sort((a,b)=>
-      (a==='BIOMED'?-1:b==='BIOMED'?1:0) || (a<b?-1:a>b?1:0));
+      (a===HERE?-1:b===HERE?1:0) || (a<b?-1:a>b?1:0));
     let h='';
     order.forEach(lib=>{
       const g=groups[lib];
@@ -2188,7 +2802,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     }
     if(!keep.length && !rec.online.length)
       h+='<section class="lib away"><div class="hold"><span class="where">'+
-         (biomedOnly.checked?'No Biomed copy on this record \u2014 untick \u201cBiomed copies only\u201d to see where else it is held.'
+         (biomedOnly.checked?'No '+esc(LIBRARY[library].short)+' copy on this record \u2014 untick \u201conly my library\u201d to see where else it is held.'
                             :'No copies attached to this record.')+'</span></div></section>';
     return {html:h, kept:keep.length};
   }
@@ -2235,10 +2849,14 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
   /* ---- state / wiring ---- */
   const POOL=150, MAX_PAGES=3,   // rank over this many records before showing anything
         MAX_TRIES=8, PROBE=10, GOOD_ENOUGH=120,  // spelling retries, probe page size, score that ends the search
+        MAX_REPAIR_WORDS=6, MAX_REPAIRS=18, MIN_REPAIR_LEN=6,  // bounds on the typo-repair pass
+        HARVEST=50,                              // records pulled when mining the catalogue for a spelling
+        GUESS_URL=2600, MAX_GUESS_BATCHES=8,     // OR-batched edit-1 guessing: URL budget, and a hard stop
+        WEAK_GUESS=45,                           // below this, a recovered query is a guess and is labelled one
         WEAK=60, WIDEN_MARGIN=40; // "nothing here resembles the title" / "out there is clearly better"
-  let mode='kw', scope='biomed', ctl=null, seq=0,
+  let mode='kw', library='biomed', scopeMode='here', ctl=null, seq=0,
       loaded=[], total=0, lastQuery='', rankQuery='', relaxedTo='', usedScope='biomed',
-      widenReason='', parsed=null, ctx=null;
+      widenReason='', relaxedBy='', parsed=null, ctx=null, modeAuto=false;
 
   const MODE_FIELD={kw:'keyword', title:'title', author:'author', isbn:'isbn'};
 
@@ -2319,7 +2937,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     const cards=sortClusters(clusters,sortMode).map(clusterCard).filter(Boolean);
     if(!cards.length){
       out.innerHTML='<div class="cat-empty">None of the '+kept.length+' ranked records has a copy left to show. '+
-        '<b>Untick &ldquo;Biomed copies only&rdquo;</b> to see where else at UCLA they are held.</div>'+footer(hidden);
+        '<b>Untick &ldquo;only my library&rdquo;</b> to see where else at UCLA they are held.</div>'+footer(hidden);
       wireCards();
       return;
     }
@@ -2358,30 +2976,207 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     return {total:tot, records:recs};
   }
 
+  /* How many records a query matches, and nothing else. `maximumRecords=0` is answered in
+     70–100 ms once the connection is warm, which is the whole reason probing a dozen spelling
+     candidates is affordable. The sort clause is stripped — there is nothing to sort. */
+  async function countOnly(query,signal){
+    const r=await sru(query.replace(/ sortBy .*$/,''), 1, signal, 0);
+    return r.total;
+  }
+
+  /* Find the one word that is in no UCLA record and repair it. Three rungs, cheapest first,
+     each producing *candidates* rather than answers: a candidate that matches records is not
+     necessarily the right word. "srugged" is one deletion from "rugged", and "atlas rugged"
+     really does match eight records about the deserts of California — taking the first hit
+     answered the wrong question with total confidence. So every candidate that matches is
+     scored against what was actually typed, the best one wins, and the search stops early only
+     when a candidate is unambiguously right.
+
+     Returns the repaired query text, '' if nothing convincing was found, or null if the
+     search was superseded. */
+  async function repairQuery(p,field,wide,signal,mine){
+    const qw=norm(p.text).split(' ').filter(Boolean);
+    if(qw.length<2 || qw.length>MAX_REPAIR_WORDS) return '';
+    /* Only long words are candidates. A short broken word is cheap for the drop-a-word pass
+       to recover from — "wtlas shrugged" drops "wtlas", finds the book on "shrugged" and
+       stops — whereas repairing it would spend nine probes on variants that cannot be right,
+       because a five-letter word's plausible repairs are mostly other short words. Long words
+       are the opposite case: they are the distinctive half of the query, so losing one leaves
+       nothing to search with, which is the whole reason this pass exists. */
+    const dead=[];
+    for(let i=0;i<qw.length;i++){
+      if(qw[i].length<MIN_REPAIR_LEN) continue;
+      setStatus('Nothing matches “'+esc(p.text)+'” — checking “'+esc(qw[i])+'”…');
+      const n=await countOnly(buildCQL(Object.assign({},p,{text:qw[i]}),field,wide,'best'),signal);
+      if(mine!==seq) return null;
+      if(!n) dead.push(i);
+      if(dead.length>1) return '';       // two broken words at once is a different problem
+    }
+    if(dead.length!==1) return '';
+    const bad=qw[dead[0]];
+
+    let best=null, aborted=false;
+    // Score one candidate word against the query as the reader typed it. A candidate that
+    // matches nothing is worthless; a candidate that matches the wrong books is worse.
+    async function consider(word){
+      if(aborted || !word || word===bad) return false;
+      const text=substituteWord(qw,dead[0],word);
+      const pr=await sru(buildCQL(Object.assign({},p,{text}),field,wide,'best'),1,signal,PROBE);
+      if(mine!==seq){ aborted=true; return false; }
+      if(!pr.total) return false;
+      const s=bestScore(pr.records,p.text,null);
+      if(!best || s>best.s) best={text:text, word:word, s:s};
+      return s>=GOOD_ENOUGH;              // unambiguous: stop looking
+    }
+
+    /* Rung 1 — enumerate the two typo classes with a small variant set: two letters the wrong
+       way round, and one letter too many. Transpositions are generated first, so the commoner
+       typo is found first. */
+    const cands=wordRepairs(bad).slice(0,MAX_REPAIRS);
+    for(let k=0;k<cands.length && !aborted;k++){
+      setStatus('“'+esc(bad)+'” is in no UCLA record — trying “'+esc(cands[k])+'”…');
+      const n=await countOnly(buildCQL(Object.assign({},p,{text:substituteWord(qw,dead[0],cands[k])}),field,wide,'best'),signal);
+      if(mine!==seq) return null;
+      if(n && await consider(cands[k])) return best.text;
+    }
+    if(aborted) return null;
+
+    /* Rung 2 — ask the catalogue for its own spelling. Search whatever survived alongside a
+       truncated form of the broken word and read the real word out of the titles. This is the
+       rung that catches a letter missing or mistyped *late* in the word, where the prefix is
+       still intact. */
+    const others=qw.filter((w,k)=>k!==dead[0]).join(' ');
+    const ladder=prefixLadder(bad);
+    for(let k=0;k<ladder.length && !aborted;k++){
+      const probeText=(others?others+' ':'')+ladder[k]+'*';
+      setStatus('Looking up how the catalog spells “'+esc(bad)+'”…');
+      const pr=await sru(buildCQL(Object.assign({},p,{text:probeText}),field,wide,'best'),1,signal,HARVEST);
+      if(mine!==seq) return null;
+      if(!pr.total) continue;
+      // Only words that actually begin with the prefix; the rest of each title is noise here.
+      const all=harvestVocab(pr.records), pv=Object.create(null);
+      for(const w in all) if(w.indexOf(ladder[k])===0) pv[w]=all[w];
+      const near=nearestWord(bad,pv,repairBudget(bad));
+      if(near && await consider(near.w)) return best.text;
+    }
+    if(aborted) return null;
+
+    /* Rung 3 — the error is early in the word, where neither a shared prefix nor a deletion
+       can reach it: "srugged" for "shrugged" shares only "s", and "atlas srug*" returns
+       nothing. Enumerate every edit-1 variant and ask about them all at once, as a top-level
+       OR. 26 clauses cost one 1.1 s request, so a seven-letter word's 383 variants are seven
+       requests rather than 383. Any batch that matches is read for its vocabulary instead of
+       bisected. */
+    const spec=FIELD[field]||FIELD.keyword;
+    const clauses=wordGuesses(bad).map(g=>clause(spec,substituteWord(qw,dead[0],g)));
+    const batches=batchClauses(clauses,GUESS_URL).slice(0,MAX_GUESS_BATCHES);
+    for(let k=0;k<batches.length && !aborted;k++){
+      setStatus('Still nothing for “'+esc(bad)+'” — asking the catalog about '+
+                batches[k].length+' near-misses at once…');
+      const pr=await sru(batches[k].join(' or '),1,signal,HARVEST);
+      if(mine!==seq) return null;
+      if(!pr.total) continue;
+      const vocab=harvestVocab(pr.records);
+      // Verify the closest few: "srugged" is one edit from "rugged" as well as "shrugged".
+      for(let t=0;t<3 && !aborted;t++){
+        const near=nearestWord(bad,vocab,repairBudget(bad));
+        if(!near) break;
+        delete vocab[near.w];
+        if(await consider(near.w)) return best.text;
+      }
+    }
+    if(aborted) return null;
+    /* Nothing was unambiguous. Take the best candidate only if it actually looks like the
+       query — otherwise say nothing and let the drop-a-word pass answer, which at least
+       labels itself a guess. */
+    return (best && best.s>=WEAK_GUESS) ? best.text : '';
+  }
+
+  /* Run a query down the scope chain and return the scope that actually answers it.
+     Narrowest first, and the first scope with any records normally wins — but *any records*
+     is not the same as *the right records*. "atlas shrugged" matches exactly one Biomed
+     record, on a stray keyword rather than on the title, and taking that answers a question
+     nobody asked. So when the best thing in scope does not resemble the query at all, one
+     cheap page is spent on the widest scope and taken only if it is materially better.
+
+     Both the as-typed pass and the recovered-spelling pass go through here. When only the
+     first one did, a *corrected* query would narrow back down and settle for that same stray
+     Biomed hit — the search repaired "atlas shurgged" to "atlas shrugged" perfectly and then
+     showed one unrelated record. */
+  async function bestScope(pq,field,chain,sortMode,scoreAgainst,signal,mine){
+    let page=null, used=chain[0], why='';
+    for(let i=0;i<chain.length;i++){
+      setStatus('Searching '+esc(SCOPE(chain[i]).label)+'…');
+      const q=buildCQL(pq,field,chain[i],sortMode);
+      const r=await fetchPool(q,signal,mine);
+      if(r===null) return null;
+      used=chain[i]; page=r; lastQuery=q;
+      if(r.total){ if(i>0) why='empty'; break; }
+    }
+    const wide=chain[chain.length-1];
+    if(page && page.total && scoreAgainst && used!==wide){
+      const here=bestScore(page.records,scoreAgainst,null);
+      if(here<WEAK){
+        setStatus('Nothing in '+esc(SCOPE(used).short)+' looks like “'+esc(scoreAgainst)+'” — checking the rest of UCLA…');
+        const pr=await sru(buildCQL(pq,field,wide,sortMode),1,signal,PROBE);
+        if(mine!==seq) return null;
+        if(pr.total && bestScore(pr.records,scoreAgainst,null)>=here+WIDEN_MARGIN){
+          const q=buildCQL(pq,field,wide,sortMode);
+          const full=await fetchPool(q,signal,mine);
+          if(full===null) return null;
+          if(full.total){ page=full; used=wide; why='weak'; lastQuery=q; }
+        }
+      }
+    }
+    return {page, used, why};
+  }
+
+  // The scope the pills currently describe: your library, a sub-shelf of it, or everywhere.
+  const scopeNow=()=> scopeMode==='ucla' ? 'ucla' : (SUBSCOPE[scopeMode] ? scopeMode : library);
   const scopeChain=p=>{
     if(p.scope) return [p.scope];                     // an explicit at: is an instruction, not a hint
-    if(scope==='ucla') return ['ucla'];
-    return [scope,'ucla'];                            // Biomed first, the rest of UCLA only if empty
+    const k=scopeNow();
+    if(k==='ucla') return ['ucla'];
+    return [k,'ucla'];                                // your library first, the rest only if empty
   };
 
   async function run(reset){
     const eq=effectiveQuery();
-    const p=parseQuery(eq.full);
+    const p=parseQuery(eq.full,library);
     showApplied(p,eq.extra);
     const hasQuery=!!(p.text||p.pos.length||p.neg.length);
     if(!hasQuery){
       loaded=[]; total=0; out.innerHTML=''; parsed=p;
-      setStatus(p.errors.length?esc(p.errors.join(' ')):'Type a title, author or ISBN \u2014 or a filter such as <code>mesh:cardiology year:2015+</code>.',!!p.errors.length);
-      input.focus(); return;
+      setStatus(p.errors.length?esc(p.errors.join(' ')):'Type a title, author or ISBN in the box at the top \u2014 or a filter such as <code>mesh:cardiology year:2015+</code>.',!!p.errors.length);
+      return;
     }
     const mine=++seq;
     if(ctl) ctl.abort();
     ctl=new AbortController();
     const signal=ctl.signal;
     const sortMode=p.sort||(sortSel?sortSel.value:'best')||'best';
-    const autoMode=detectMode(p.text,mode)||mode;
-    if(autoMode!==mode){ setMode(autoMode,false); }
+    /* Typing a bare ISBN switches the mode for you. It has to switch *back*: the mode used to
+       stick, so the next title typed into the shared box was searched as an ISBN, stripped to
+       no digits at all, and sent as an empty query — which the endpoint answers with
+       "Invalid query". Only an automatic switch is ever undone; a mode the reader picked is
+       left alone. */
+    let autoMode=mode;
+    const det=detectMode(p.text,mode);
+    if(det){ autoMode=det; modeAuto=true; }
+    else if(modeAuto && mode!=='kw'){ autoMode='kw'; modeAuto=false; }
+    if(autoMode!==mode) setMode(autoMode,false);
     const field=MODE_FIELD[autoMode]||'keyword';
+
+    /* A query that compiles to nothing must never be sent. `alma.isbn=""` is not a search for
+       everything, it is a syntax error, and the reader would be told the catalog was
+       unreachable when the truth is that "atlas shrugged" has no digits in it. */
+    if(!buildCQL(p,field,scopeChain(p)[0],sortMode)){
+      loaded=[]; total=0; out.innerHTML='';
+      setStatus('\u201c'+esc(p.text||eq.typed)+'\u201d has nothing to search for as '+
+                esc((FIELD[field]||FIELD.keyword).label)+'. Pick a different <b>Search by</b> field \u2014 '+
+                '<b>Keyword</b> is the loosest.',true);
+      return;
+    }
 
     try{
       if(!reset){
@@ -2390,75 +3185,78 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
         if(mine!==seq) return;
         total=more.total; loaded=loaded.concat(more.records);
       } else {
-        loaded=[]; total=0; parsed=p; rankQuery=p.text||eq.typed; relaxedTo=''; ctx=null; widenReason='';
+        loaded=[]; total=0; parsed=p; rankQuery=p.text||eq.typed; relaxedTo=''; relaxedBy=''; ctx=null; widenReason='';
         const chain=scopeChain(p);
         const wide=chain[chain.length-1];
-        let page=null;
-        // Pass 1: the query as typed, narrowest scope first.
-        for(let i=0;i<chain.length;i++){
-          setStatus('Searching '+esc(SCOPE[chain[i]].label)+'\u2026');
-          lastQuery=buildCQL(p,field,chain[i],sortMode);
-          const r=await fetchPool(lastQuery,signal,mine);
-          if(r===null) return;
-          usedScope=chain[i];
-          if(r.total){ page=r; if(i>0) widenReason='empty'; break; }
-          page=r;
-        }
-        /* A scoped search that returns *something* has not necessarily returned the book.
-           "atlas shrugged" matches exactly one Biomed record \u2014 on a stray keyword, not on
-           the title \u2014 and that single hit would otherwise stop the widening dead and answer
-           a question nobody asked. So when the best thing in scope does not resemble the
-           title at all, spend one cheap page on the wider scope and take it only if it is
-           materially better. */
-        if(page && page.total && p.text && usedScope!==wide){
-          const here=bestScore(page.records,p.text,null);
-          if(here<WEAK){
-            setStatus('Nothing in '+esc(SCOPE[usedScope].short)+' looks like \u201c'+esc(p.text)+'\u201d \u2014 checking the rest of UCLA\u2026');
-            const pr=await sru(buildCQL(p,field,wide,sortMode),1,signal,PROBE);
-            if(mine!==seq) return;
-            if(pr.total && bestScore(pr.records,p.text,null)>=here+WIDEN_MARGIN){
-              lastQuery=buildCQL(p,field,wide,sortMode);
-              const full=await fetchPool(lastQuery,signal,mine);
-              if(full===null) return;
-              if(full.total){ page=full; usedScope=wide; widenReason='weak'; }
-            }
-          }
-        }
-        /* Pass 2: nothing matched as typed anywhere. The endpoint has no fuzzy search and no
-           "did you mean", so drop one word at a time and let the local scorer fuzzy-match
-           what comes back against the original spelling: "wtlas shrugged" -> search
-           "shrugged" -> Atlas Shrugged scores top because "wtlas" is one edit from "atlas". */
+        // Pass 1: the query exactly as typed.
+        let res=await bestScope(p,field,chain,sortMode,p.text,signal,mine);
+        if(res===null) return;
+        let page=res.page; usedScope=res.used; widenReason=res.why;
+
+        /* Nothing matched as typed anywhere. Two recovery passes, in this order, because the
+           first is both cheaper and far more precise than the second. */
         if(page && !page.total && p.text && autoMode!=='isbn'){
-          /* Try several relaxations with one cheap page each and keep the *best* one, judged
-             by how well its top hit scores against what was originally typed. Taking the first
-             retry that returns anything is worse than useless: "harrisons principals of
-             internal medicin" would settle for a single unrelated record. */
-          const alts=relaxations(p.text).slice(0,MAX_TRIES);
-          let best=null;
-          for(let i=0;i<alts.length;i++){
-            setStatus('Nothing matches \u201c'+esc(p.text)+'\u201d \u2014 trying \u201c'+esc(alts[i])+'\u201d\u2026');
-            const probe=Object.assign({},p,{text:alts[i]});
-            const pr=await sru(buildCQL(probe,field,wide,sortMode), 1, signal, PROBE);
-            if(mine!==seq) return;
-            if(!pr.total) continue;
-            const s=bestScore(pr.records,p.text,null);
-            if(!best || s>best.s) best={alt:alts[i], s};
-            if(s>=GOOD_ENOUGH) break;     // clearly the right book; stop spending requests
-          }
-          if(best){
-            relaxedTo=best.alt;
-            const relaxed=Object.assign({},p,{text:best.alt});
-            // Narrow it back down: a misspelt title whose book *is* at Biomed should still
-            // come back as a Biomed answer, not as an all-of-UCLA one.
-            for(let i=0;i<chain.length;i++){
-              setStatus('Ranking results for \u201c'+esc(best.alt)+'\u201d\u2026');
-              lastQuery=buildCQL(relaxed,field,chain[i],sortMode);
-              const full=await fetchPool(lastQuery,signal,mine);
-              if(full===null) return;
-              usedScope=chain[i];
-              page=full;
-              if(full.total){ widenReason=i>0?'empty':''; break; }
+          let recovered='', recoveredBy='';
+
+          /* Pass 2a: repair the broken word. See `wordRepairs` for why this exists — dropping
+             a word is useless when the word that survives is "atlas". */
+          const fixed=await repairQuery(p,field,wide,signal,mine);
+          if(fixed===null) return;
+          if(fixed){ recovered=fixed; recoveredBy='repair'; }
+
+          /* Pass 2b: drop a word, and read the dropped word's real spelling out of whatever
+             comes back. Two things happen per probe:
+
+             The reduced query is scored, and the *best* one is kept — not the first that
+             returns anything, which would let "harrisons principals of internal medicin"
+             settle for a single unrelated record.
+
+             And its records are harvested for vocabulary. This is what closes the two holes
+             letter-guessing leaves. A substitution ("wtlas") is unreachable by enumeration but
+             sits one edit from "atlas", which is in the title of every record the reduced
+             query "shrugged" returns. A **real-word typo** ("principals" for "principles") is
+             not detectable as a broken word at all — the liveness probe finds 2 800 records
+             about principals — but drop it, search "harrisons of internal medicine", and
+             "principles" is right there in the results, two edits away. Repairing the whole
+             query beats shortening it, so a correction that matches anything wins outright. */
+          if(!recovered){
+            const alts=relaxations(p.text).slice(0,MAX_TRIES);
+            const qwAll=norm(p.text).split(' ').filter(Boolean);
+            let best=null, repaired='';
+            for(let i=0;i<alts.length && !repaired;i++){
+              setStatus('Nothing matches \u201c'+esc(p.text)+'\u201d \u2014 trying \u201c'+esc(alts[i])+'\u201d\u2026');
+              const probe=Object.assign({},p,{text:alts[i]});
+              const pr=await sru(buildCQL(probe,field,wide,sortMode), 1, signal, PROBE);
+              if(mine!==seq) return;
+              if(!pr.total) continue;
+              const s=bestScore(pr.records,p.text,null);
+              if(!best || s>best.s) best={alt:alts[i], s};
+
+              const vocab=harvestVocab(pr.records), gone=wordsMissing(qwAll,alts[i]);
+              for(let g=0;g<gone.length && !repaired;g++){
+                const near=nearestWord(gone[g],vocab,repairBudget(gone[g]));
+                if(!near) continue;
+                const text=substituteWord(qwAll,qwAll.indexOf(gone[g]),near.w);
+                setStatus('\u201c'+esc(gone[g])+'\u201d looks like \u201c'+esc(near.w)+'\u201d \u2014 checking\u2026');
+                const n=await countOnly(buildCQL(Object.assign({},p,{text}),field,wide,'best'),signal);
+                if(mine!==seq) return;
+                if(n) repaired=text;
+              }
+              if(!repaired && s>=GOOD_ENOUGH) break;  // clearly the right book; stop spending requests
             }
+            if(repaired){ recovered=repaired; recoveredBy='repair'; }
+            else if(best){ recovered=best.alt; recoveredBy='drop'; }
+          }
+
+          if(recovered){
+            relaxedTo=recovered; relaxedBy=recoveredBy;
+            const relaxed=Object.assign({},p,{text:recovered});
+            /* Narrow it back down: a misspelt title whose book *is* at Biomed should come
+               back as a Biomed answer rather than an all-of-UCLA one. Scored against the
+               corrected spelling, because that is now the question being asked. */
+            const rr=await bestScope(relaxed,field,chain,sortMode,recovered,signal,mine);
+            if(rr===null) return;
+            if(rr.page){ page=rr.page; usedScope=rr.used; widenReason=rr.why; }
           }
         }
         if(!page) return;
@@ -2478,10 +3276,21 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       draw();
       const shown=Math.min(loaded.length,total);
       const bits=[];
-      if(relaxedTo) bits.push('No exact match for \u201c'+esc(rankQuery)+'\u201d \u2014 closest matches for \u201c'+esc(relaxedTo)+'\u201d.');
-      if(widenReason==='empty') bits.push('Nothing in '+esc(SCOPE[scope].short)+' \u2014 widened to '+esc(SCOPE[usedScope].label)+'.');
-      if(widenReason==='weak')  bits.push('Nothing in '+esc(SCOPE[scope].short)+' matched the title \u2014 widened to '+esc(SCOPE[usedScope].label)+'.');
-      bits.push(total+' record'+(total===1?'':'s')+' in '+esc(SCOPE[usedScope].label)+
+      /* A recovered search has to say what it actually searched for, and how sure it is.
+         A repaired spelling is a near-certainty; a dropped word is a guess, and when its best
+         hit does not even match a title it is a bad one — "atlas shurgged" used to present a
+         shelf full of anatomy atlases in the same confident tone as a direct hit. */
+      if(relaxedTo){
+        if(relaxedBy==='repair')
+          bits.push('\u201c'+esc(rankQuery)+'\u201d is in no UCLA record \u2014 corrected to \u201c'+esc(relaxedTo)+'\u201d.');
+        else if(bestScore(loaded,rankQuery,null)<WEAK_GUESS)
+          bits.push('No match for \u201c'+esc(rankQuery)+'\u201d. Nothing close was found either \u2014 these are simply the records for \u201c'+esc(relaxedTo)+'\u201d and are probably not the book you meant.');
+        else
+          bits.push('No exact match for \u201c'+esc(rankQuery)+'\u201d \u2014 closest matches for \u201c'+esc(relaxedTo)+'\u201d.');
+      }
+      if(widenReason==='empty') bits.push('Nothing in '+esc(SCOPE(scopeNow()).short)+' \u2014 widened to '+esc(SCOPE(usedScope).label)+'.');
+      if(widenReason==='weak')  bits.push('Nothing in '+esc(SCOPE(scopeNow()).short)+' matched the title \u2014 widened to '+esc(SCOPE(usedScope).label)+'.');
+      bits.push(total+' record'+(total===1?'':'s')+' in '+esc(SCOPE(usedScope).label)+
                 (shown<total?' \u00b7 newest '+shown+' ranked':''));
       setStatus(bits.join(' '));
     }catch(e){
@@ -2494,20 +3303,50 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
 
   function setMode(m,rerun){
     mode=m;
+    if(rerun) modeAuto=false;          // a deliberate choice is not undone later
     root.querySelectorAll('.cat-modes .pill').forEach(o=>{
       const on=o.dataset.mode===m; o.classList.toggle('active',on); o.setAttribute('aria-pressed',String(on));
     });
-    input.placeholder = m==='isbn' ? '9780071802154'
+    // The field is shared with the call-number lookup, so the hint has to stay true for both.
+    input.placeholder = m==='isbn'   ? '9780071802154'
                       : m==='author' ? 'longo, dan l.'
-                      : m==='title' ? "harrison's principles of internal medicine"
-                      : "harrison's principles of internal medicine";
+                      : m==='title'  ? "harrison's principles of internal medicine"
+                      : 'call number, book title, author, ISBN\u2026';
     if(rerun && input.value.trim()) run(true);
   }
-  function setScope(s,rerun){
-    scope=s;
+  function setScopeMode(m,rerun){
+    scopeMode=m;
     root.querySelectorAll('.cat-scope .pill').forEach(o=>{
-      const on=o.dataset.scope===s; o.classList.toggle('active',on); o.setAttribute('aria-pressed',String(on));
+      const on=o.dataset.scope===m; o.classList.toggle('active',on); o.setAttribute('aria-pressed',String(on));
     });
+    if(rerun && input.value.trim()) run(true);
+  }
+  /* Setting the library is the one piece of state worth remembering between visits: you work
+     where you work. The walkable-stacks pill only exists for Biomed, because Biomed is the
+     only library with a shelf map, and offering it elsewhere would promise an aisle that
+     cannot be computed. */
+  function setLibrary(k,rerun){
+    if(!LIBRARY[k]||k==='ucla') k='biomed';
+    library=k;
+    setHereLib(LIBRARY[k].code);
+    if(libSel && libSel.value!==k) libSel.value=k;
+    try{ localStorage.setItem('cat.library',k); }catch(e){}
+    const stacksPill=root.querySelector('.cat-scope .pill[data-scope="stacks"]');
+    if(stacksPill){
+      const ok=!!LIBRARY[k].mapped;
+      stacksPill.hidden=!ok;
+      if(!ok && scopeMode==='stacks') scopeMode='here';
+    }
+    const herePill=root.querySelector('.cat-scope .pill[data-scope="here"]');
+    if(herePill) herePill.textContent=LIBRARY[k].short;
+    const note=$('catLibNote');
+    if(note){
+      note.hidden=!!LIBRARY[k].mapped;
+      note.textContent=LIBRARY[k].mapped ? ''
+        : LIBRARY[k].name+' has no per-shelf map in this app \u2014 results are scoped and ranked for it, '+
+          'and each copy shows its call number, but only Biomed resolves to an actual aisle.';
+    }
+    setScopeMode(scopeMode,false);
     if(rerun && input.value.trim()) run(true);
   }
 
@@ -2522,17 +3361,24 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     p.addEventListener('click',e=>{ e.stopPropagation(); setMode(p.dataset.mode,true); });
   });
   root.querySelectorAll('.cat-scope .pill').forEach(p=>{
-    p.addEventListener('click',e=>{ e.stopPropagation(); setScope(p.dataset.scope,true); });
+    p.addEventListener('click',e=>{ e.stopPropagation(); setScopeMode(p.dataset.scope,true); });
   });
-  $('catGo').addEventListener('click',e=>{ e.stopPropagation(); run(true); });
-  $('catClear').addEventListener('click',e=>{
-    e.stopPropagation();
-    input.value=''; loaded=[]; total=0; parsed=null; ctx=null; out.innerHTML='';
+  if(libSel) libSel.addEventListener('change',e=>{ e.stopPropagation(); setLibrary(libSel.value,true); });
+  /* Driven from the page's single search field. `catalogSearch` opens the panel if it is
+     shut — a result nobody can see is not a result — and scrolls to it only when the reader
+     is not already looking at it. */
+  window.catalogSearch=function(){
+    if(body.hidden) head.click();
+    run(true);
+    const r=root.getBoundingClientRect();
+    if(r.top<0 || r.top>window.innerHeight*0.6) root.scrollIntoView({behavior:'smooth',block:'start'});
+  };
+  window.catalogClear=function(){
+    loaded=[]; total=0; parsed=null; ctx=null; out.innerHTML='';
     if(filtForm) filtForm.querySelectorAll('input,select').forEach(el=>{ if(el.type==='checkbox') el.checked=false; else el.value=''; });
     if(applied){ applied.innerHTML=''; applied.hidden=true; }
-    setStatus(''); input.focus();
-  });
-  input.addEventListener('keydown',e=>{ if(e.key==='Enter') run(true); });
+    setStatus('');
+  };
   biomedOnly.addEventListener('change',draw);
   covers.addEventListener('change',draw);
   if(groupEd) groupEd.addEventListener('change',draw);
@@ -2552,7 +3398,9 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     const btn=e.target.closest('.found');
     if(btn && window.routeShow) window.routeShow(+btn.dataset.lvl, btn.dataset.id);
   });
-  setScope('biomed',false);
+  let saved='biomed';
+  try{ saved=localStorage.getItem('cat.library')||'biomed'; }catch(e){}
+  setLibrary(saved,false);
 })();
 </script>
 </body>

@@ -6,16 +6,14 @@ import Foundation
 /// Movement model (unchanged from the web app):
 /// * Each stairwell descends **exactly one floor** — the quick move.
 /// * The elevator handles going up, and any descent that skips floors.
-/// * Two stairwells per floor: west ≈ column 6.5, east ≈ column 13.5. The elevator sits at the
-///   west block, column 6.5.
+/// * Two stairwells per floor, and an elevator. Each has doors on particular edges, and which
+///   edge you come out of decides which way you set off — see `WalkPath.Doors`.
 /// * Within a floor we sweep across the stacks once rather than backtracking.
+/// * **More than five books is a truck trip**: the stairs come off the table and every floor
+///   change is the elevator.
 struct Router {
 
     // MARK: Geometry
-
-    private static let elevatorX = 6.5
-    private static let stairWestX = 6.5
-    private static let stairEastX = 13.5
 
     // MARK: Models
 
@@ -28,6 +26,20 @@ struct Router {
         enum Row: String { case top, bottom }
         /// Top row precedes bottom row when two faces sit at the same column.
         var rowOrder: Int { row == .top ? 0 : 1 }
+
+        /// Three shelves in the building are half-depth and right-side-only, so they carry one
+        /// face rather than two. Named here rather than derived, because the exception is a fact
+        /// about the building.
+        var isHalf: Bool { id == "top-0" || id == "bot-0" || id == "bot-14" }
+        var sides: [String] { isHalf ? ["single"] : ["left", "right"] }
+
+        /// Colour groups carried over from the web locator so the map stays recognisable.
+        enum Group { case green, orange, char, slate }
+        var group: Group {
+            if id == "top-0" { return .orange }
+            if id == "bot-0" { return .slate }
+            return row == .top ? .green : .char
+        }
     }
 
     struct Hit {
@@ -59,10 +71,36 @@ struct Router {
         case stairs(Stairwell, to: Int)
     }
 
+    /// How a floor is entered and left. The route list only ever needed the *order* of the stops;
+    /// a map needs the doors too, because the walk starts where you stepped off the stairs and a
+    /// path drawn from the first shelf instead is a different, shorter, wrong route.
+    enum EndPoint: Equatable {
+        case elevator
+        case stairs(Stairwell)
+        /// The last floor of the trip: you stop here, so there is no exit to draw.
+        case none
+
+        var isStairs: Bool { if case .stairs = self { return true }; return false }
+
+        var label: String {
+            switch self {
+            case .elevator:       return "elevator"
+            case let .stairs(w):  return "\(w.rawValue) stairs"
+            case .none:           return ""
+            }
+        }
+    }
+
     struct FloorLeg {
         let level: Int
         let stops: [Stop]
         let direction: Direction
+        /// The columns you come in at and leave from, read off the doors themselves — not the
+        /// middle of the block they are cut into. See `WalkPath.column`.
+        let entryX: Double
+        let exitX: Double
+        let entry: EndPoint
+        let exit: EndPoint
     }
 
     enum Step {
@@ -76,7 +114,11 @@ struct Router {
         let unlocated: [String]
         let bookCount: Int
         let stairDescents: Int
-        let elevatorSkips: Int
+        /// Every ride between floors, whether it skipped floors or not.
+        let elevatorMoves: Int
+        /// More than five books: no stairs at all. See `buildRoute`.
+        let isTruckTrip: Bool
+        let floorCount: Int
     }
 
     // MARK: Shelf table
@@ -212,6 +254,20 @@ struct Router {
     /// Shelf geometry for display ("top row · index 5"), mirroring the web results.
     static func shelf(id: String) -> Shelf? { shelfByID[id] }
 
+    /// Faces that have a mapped range on a level, keyed `"shelfID|side"`.
+    ///
+    /// The map draws the stacks from this rather than from a hard-coded per-level table: which
+    /// shelves exist on a floor is already in the dataset, and a second copy of it would be a
+    /// second thing to get wrong.
+    func faces(onLevel level: Int) -> Set<String> {
+        let prefix = "\(level)|"
+        var out: Set<String> = []
+        for key in ranges.keys where key.hasPrefix(prefix) {
+            out.insert(String(key.dropFirst(prefix.count)))
+        }
+        return out
+    }
+
     // MARK: Sweep
 
     /// 1-D sweep: cover span [L, R] starting at `s`, ending at `e`. Returns the cheaper direction.
@@ -263,50 +319,69 @@ struct Router {
         }
         guard !located.isEmpty else {
             return Route(steps: [], unlocated: unlocated, bookCount: 0,
-                         stairDescents: 0, elevatorSkips: 0)
+                         stairDescents: 0, elevatorMoves: 0, isTruckTrip: false, floorCount: 0)
         }
 
         var byLevel: [Int: [(cn: CallNumber, hit: Hit)]] = [:]
         for it in located { byLevel[it.hit.level, default: []].append(it) }
         let levels = byLevel.keys.sorted(by: >)   // top floor first
 
+        /// **Over five books is a truck trip.** You are not carrying nine books down a stairwell,
+        /// so past that point the stairs stop being an option and every floor change is the
+        /// elevator. The threshold is a load, not a distance, which is why it overrides the
+        /// routing arithmetic instead of being folded into it as a cost.
+        let truck = located.count > 5
+
         var steps: [Step] = [.transit(.elevator(to: levels[0], skipping: 0))]
-        var entry = Self.elevatorX
+        var entryPoint = EndPoint.elevator
         var stairDescents = 0
-        var elevatorSkips = 0
+        var elevatorMoves = 0
 
         for (i, level) in levels.enumerated() {
             let stops = groupStops(byLevel[level]!)
             let xs = stops.map(\.x)
             let L = xs.min()!, R = xs.max()!
+            let entry = WalkPath.column(WalkPath.Doors.door(for: entryPoint, going: .in)!)
 
-            var exit = Self.elevatorX
-            var nextEntry = Self.elevatorX
             var nextTransit: Transit?
+            var exitPoint = EndPoint.none
+            var nextPoint = EndPoint.elevator
 
             if i < levels.count - 1 {
                 let next = levels[i + 1]
                 let gap = level - next
-                if gap == 1 {
-                    // Pick the stairwell that minimizes this floor's sweep plus the walk to the
-                    // next floor's centre of mass.
+                if gap == 1 && !truck {
+                    // Which stairwell is cheaper is a question about doors, not columns. The west
+                    // stairwell's landing sits behind the elevator block: reaching it means
+                    // walking out to the gap at column 4 and back in, and you arrive downstairs on
+                    // its far side. The east stairwell opens straight onto the corridor going
+                    // down, but drops you into the south lobby coming out. Costing them as two
+                    // bare x-positions gets this backwards on exactly the floors where it matters,
+                    // so both legs are measured along the paths that will actually be drawn.
                     let nextStops = groupStops(byLevel[next]!)
-                    let centroid = nextStops.map(\.x).reduce(0, +) / Double(nextStops.count)
-                    let options: [(Stairwell, Double)] = [(.west, Self.stairWestX), (.east, Self.stairEastX)]
-                    let best = options.min {
-                        Self.sweep(L, R, entry, $0.1).cost + abs($0.1 - centroid)
-                            < Self.sweep(L, R, entry, $1.1).cost + abs($1.1 - centroid)
-                    }!
-                    exit = best.1
-                    nextEntry = best.1
+                    let nc = nextStops.map(WalkPath.standX).reduce(0, +) / Double(nextStops.count)
+
+                    func score(_ well: Stairwell) -> Double {
+                        let out = WalkPath.Doors.door(for: .stairs(well), going: .out)!
+                        let back = WalkPath.Doors.door(for: .stairs(well), going: .in)!
+                        return Self.sweep(L, R, entry, WalkPath.column(out)).cost
+                            + WalkPath.depth(out) + WalkPath.cost(back, to: nc)
+                    }
+                    let best: Stairwell = score(.west) <= score(.east) ? .west : .east
                     stairDescents += 1
-                    nextTransit = .stairs(best.0, to: next)
+                    nextTransit = .stairs(best, to: next)
+                    exitPoint = .stairs(best)
+                    nextPoint = .stairs(best)
                 } else {
-                    elevatorSkips += 1
+                    elevatorMoves += 1
                     nextTransit = .elevator(to: next, skipping: gap - 1)
+                    exitPoint = .elevator
+                    nextPoint = .elevator
                 }
             }
 
+            let exit = WalkPath.Doors.door(for: exitPoint, going: .out)
+                .map(WalkPath.column) ?? entry
             let dir = Self.sweep(L, R, entry, exit).dir
             // Sort by column in sweep direction, then top row before bottom. The trailing index
             // tiebreak keeps this deterministic — Swift's sort is not stable, and the JS relied on
@@ -322,28 +397,35 @@ struct Router {
                 return a.offset < b.offset
             }.map(\.element)
 
-            steps.append(.floor(FloorLeg(level: level, stops: sorted, direction: dir)))
+            steps.append(.floor(FloorLeg(level: level, stops: sorted, direction: dir,
+                                         entryX: entry, exitX: exit,
+                                         entry: entryPoint, exit: exitPoint)))
             if let t = nextTransit { steps.append(.transit(t)) }
-            entry = nextEntry
+            entryPoint = nextPoint
         }
 
         return Route(steps: steps, unlocated: unlocated, bookCount: located.count,
-                     stairDescents: stairDescents, elevatorSkips: elevatorSkips)
+                     stairDescents: stairDescents, elevatorMoves: elevatorMoves,
+                     isTruckTrip: truck, floorCount: levels.count)
     }
 }
 
 // MARK: - Summary copy
 
 extension Router.Route {
-    /// One-line plan summary, e.g. "Elevator to Level 8, then 2 stair descents and 1 elevator skip."
+    /// One-line plan summary, e.g. "Elevator to Level 8, then 2 stair descents and 1 elevator move."
     func summary(levels topLevel: Int) -> String {
-        if stairDescents == 0 && elevatorSkips == 0 {
+        if floorCount <= 1 {
             return "All on Level \(topLevel) — take the elevator there."
+        }
+        if isTruckTrip {
+            return "Over five books, so this is a truck trip: the elevator between every floor "
+                 + "(\(elevatorMoves) move\(elevatorMoves == 1 ? "" : "s"))."
         }
         var s = "Elevator to Level \(topLevel), then \(stairDescents) stair descent"
             + (stairDescents == 1 ? "" : "s")
-        if elevatorSkips > 0 {
-            s += " and \(elevatorSkips) elevator skip" + (elevatorSkips == 1 ? "" : "s")
+        if elevatorMoves > 0 {
+            s += " and \(elevatorMoves) elevator move" + (elevatorMoves == 1 ? "" : "s")
         }
         return s + "."
     }

@@ -68,7 +68,8 @@ final class TripStore {
     private(set) var current = Trip()
     private(set) var history: [Trip] = []
 
-    private let router: Router
+    /// Not private: the walk map has to ask which faces exist on a floor to draw it.
+    let router: Router
     private let fileURL: URL
     private var saveTask: Task<Void, Never>?
 

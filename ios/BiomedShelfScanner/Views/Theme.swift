@@ -24,6 +24,45 @@ enum Theme {
         static let slate = Color(red: 0.42, green: 0.44, blue: 0.50)   // #6A7080
     }
 
+    /// Where a stop sits in the walk, as colour.
+    ///
+    /// A number badge is exact but only if you read every badge; the ramp gives you the *shape* of
+    /// the walk at a glance — where it starts, which way it sweeps, how far it has to go. Both are
+    /// drawn, and neither is load-bearing alone: colour-blind readers keep the numbers.
+    ///
+    /// Cool to warm, four anchors, matching the web app exactly. A single-hue light-to-dark ramp
+    /// loses its middle at this size, and "blue is early, red is late" is the one ramp convention
+    /// nobody has to be taught. The anchors sit in a narrow luminance band so white badge text
+    /// stays legible at every position.
+    private static let ramp: [(Double, Double, Double)] = [
+        (3, 105, 161), (46, 125, 91), (198, 138, 30), (179, 64, 26),
+    ]
+
+    static func order(_ i: Int, of n: Int) -> Color {
+        func rgb(_ c: (Double, Double, Double)) -> Color {
+            Color(red: c.0 / 255, green: c.1 / 255, blue: c.2 / 255)
+        }
+        guard n > 1 else { return rgb(ramp[0]) }
+        let t = Double(min(max(i, 0), n - 1)) / Double(n - 1)
+        let span = Double(ramp.count - 1)
+        let seg = min(Int(t * span), ramp.count - 2)
+        let f = t * span - Double(seg)
+        let a = ramp[seg], b = ramp[seg + 1]
+        return rgb((a.0 + (b.0 - a.0) * f, a.1 + (b.1 - a.1) * f, a.2 + (b.2 - a.2) * f))
+    }
+
+    /// The same colours the web map paints unvisited stacks in.
+    static func shelfGroup(_ g: Router.Shelf.Group, soft: Bool) -> Color {
+        let c: Color
+        switch g {
+        case .green:  c = ShelfGroup.green
+        case .orange: c = ShelfGroup.orange
+        case .char:   c = ShelfGroup.char
+        case .slate:  c = ShelfGroup.slate
+        }
+        return c.opacity(soft ? 0.22 : 1)
+    }
+
     // MARK: Motion
 
     /// One spring for the whole app. Unifying the rhythm is most of what makes motion feel

@@ -45,7 +45,9 @@ new Function('exports', `
     SCOPE, FIELD, TYPE, tokenize, yearClauses, parseQuery, buildCQL, orGroup,
     idfContext, runBonus, recordYear, passesLocal, shelfKey, cmpShelf,
     clusterKey, clusterRecords, sortClusters, detectMode,
-    carrierOf, carrierLabel, CARRIER, PHANTOM_LIB });
+    carrierOf, carrierLabel, CARRIER, PHANTOM_LIB, wordRepairs, substituteWord,
+    harvestVocab, nearestWord, prefixLadder, wordsMissing, repairBudget,
+    LIBRARY, LIB_BY_CODE, SUBSCOPE, setHereLib, resolveScopeAlias });
 `)(sandbox);
 
 const { splitCallNumber, yearOf, isLocatable, resolve, shelfHits, cmpCN, byYearDesc,
@@ -53,7 +55,9 @@ const { splitCallNumber, yearOf, isLocatable, resolve, shelfHits, cmpCN, byYearD
         SCOPE, tokenize, yearClauses, parseQuery, buildCQL, orGroup,
         idfContext, runBonus, recordYear, passesLocal, cmpShelf,
         clusterKey, clusterRecords, sortClusters, detectMode,
-        carrierOf, carrierLabel } = sandbox;
+        carrierOf, carrierLabel, wordRepairs, substituteWord,
+        harvestVocab, nearestWord, prefixLadder, wordsMissing, repairBudget,
+        LIBRARY, LIB_BY_CODE, setHereLib, resolveScopeAlias } = sandbox;
 
 /* ---- tiny assertion harness ---- */
 let pass = 0;
@@ -666,6 +670,129 @@ eq('RES_SHARE is not routed to a library',
 eq('RES_SHARE never gets a shelf', resolve({ b: 'RES_SHARE', j: 'OUT_RS_REQ', d: 'WB 115 H322 2018' }).hits.length, 0);
 ok('and says what it actually is',
    /request placeholder/.test(resolve({ b: 'RES_SHARE', j: 'OUT_RS_REQ', d: '' }).route.note));
+
+/* ================= 14. Typo repair ================= */
+// Dropping a word recovers "wtlas shrugged" because "shrugged" is distinctive. It cannot
+// recover "atlas shurgged": drop the broken word and what is left is "atlas", which matches
+// 23 314 records at UCLA and puts an anatomy atlas on top. The word has to be repaired.
+section('typo repair');
+
+const fixes = wordRepairs('shurgged');
+ok('the transposition that fixes it is generated', fixes.indexOf('shrugged') >= 0, fixes.join(' '));
+ok('and it comes from the transposition half, so it is found early',
+   fixes.indexOf('shrugged') < 'shurgged'.length, `at index ${fixes.indexOf('shrugged')}`);
+ok('the candidate set stays small', fixes.length <= 18, `${fixes.length} candidates`);
+ok('the word itself is never a candidate', fixes.indexOf('shurgged') < 0);
+eq('no duplicates', fixes.length, new Set(fixes).size);
+
+// A doubled letter is a deletion, which is the other half.
+ok('a doubled letter is repaired', wordRepairs('atlass').indexOf('atlas') >= 0);
+ok('a doubled letter mid-word too', wordRepairs('medicinne').indexOf('medicine') >= 0);
+ok('a transposed pair anywhere', wordRepairs('principels').indexOf('principles') >= 0);
+// Equal adjacent letters produce no transposition — swapping them changes nothing.
+eq('swapping identical neighbours is not offered', wordRepairs('aa').length, 0);
+ok('very short repairs are not offered', wordRepairs('abcd').every(w => w.length >= 3));
+
+// What repair deliberately does NOT cover, so the drop-a-word pass still has to exist.
+ok('a substituted letter is out of scope', wordRepairs('wtlas').indexOf('atlas') < 0);
+ok('a missing letter is out of scope', wordRepairs('shruged').indexOf('shrugged') < 0);
+
+eq('substitution puts the word back in place',
+   substituteWord(['atlas', 'shurgged'], 1, 'shrugged'), 'atlas shrugged');
+eq('and at the front', substituteWord(['atlass', 'shrugged'], 0, 'atlas'), 'atlas shrugged');
+eq('single-word queries survive it', substituteWord(['atlass'], 0, 'atlas'), 'atlas');
+
+/* ================= 15. Harvesting the catalogue's own spelling ================= */
+// Guessing letters cannot reach a substitution or an insertion, and cannot even *detect* a
+// real-word typo. Reading words out of records the catalogue already returned reaches all
+// three, because the edit class stops mattering once you have the right word in hand.
+section('vocabulary harvesting');
+
+const recsOf = (...titles) => titles.map(t => ({ title: t, author: '' }));
+
+const vocab = harvestVocab(recsOf('Atlas shrugged', 'Atlas shrugged : manifesto of the mind'));
+eq('words are counted, not just collected', vocab.atlas, 2);
+ok('short words are dropped', vocab.of === undefined);
+eq('nearest finds a substitution the enumerator cannot',
+   nearestWord('wtlas', vocab, 1).w, 'atlas');
+eq('nearest finds an insertion', nearestWord('shruged', vocab, 2).w, 'shrugged');
+eq('nothing close enough returns null', nearestWord('penguin', vocab, 2), null);
+// A word already in the vocabulary suggests nothing: it is skipped, and nothing else in this
+// tiny vocabulary is within two edits of it.
+eq('the word itself is never its own suggestion', nearestWord('atlas', vocab, 2), null);
+
+// The real-word typo. "principals" is a word; the catalog has 2 800 records about principals,
+// so the liveness probe reports it alive and the letter-guessing pass never runs at all.
+const harr = harvestVocab(recsOf("Harrison's principles of internal medicine"));
+eq('a real-word typo is corrected from context', nearestWord('principals', harr, 2).w, 'principles');
+ok('and letter-guessing could never have reached it', wordRepairs('principals').indexOf('principles') < 0);
+eq('two edits is the budget for a long word', repairBudget('principals'), 2);
+eq('one edit for a short one', repairBudget('wtlas'), 1);
+ok('never zero, however short', repairBudget('abc') >= 1);
+
+// Ties go to the commoner word: the harvest is a sample of what the catalogue holds.
+const tie = harvestVocab(recsOf('cat cat cat hat', 'cat'));
+eq('frequency breaks a distance tie', nearestWord('bat', tie, 1).w, 'cat');
+
+eq('the prefix ladder starts two characters short', prefixLadder('shruged')[0], 'shrug');
+eq('and steps down', prefixLadder('shruged'), ['shrug', 'shru', 'shr']);
+eq('a short word yields one rung', prefixLadder('atlas'), ['atl']);
+eq('nothing to truncate on a tiny word', prefixLadder('abc'), []);
+
+eq('missing words are what a relaxation dropped',
+   wordsMissing(['atlas', 'shrugged'], 'shrugged'), ['atlas']);
+eq('nothing missing when nothing was dropped',
+   wordsMissing(['atlas', 'shrugged'], 'atlas shrugged'), []);
+
+/* ================= 16. Any library, not just Biomed ================= */
+// Every library-shaped index returns zero in this tenant, so "which building" is asked as a
+// location-code prefix under the `all` relation. All 22 prefixes were checked for leakage.
+section('libraries');
+
+eq('every library has a code and a prefix',
+   Object.keys(LIBRARY).filter(k => k !== 'ucla' && !(LIBRARY[k].pre && LIBRARY[k].code)), []);
+eq('prefixes are unique',
+   Object.keys(LIBRARY).filter(k => LIBRARY[k].pre).length,
+   new Set(Object.keys(LIBRARY).filter(k => LIBRARY[k].pre).map(k => LIBRARY[k].pre)).size);
+eq('Biomed is the only one with a shelf map',
+   Object.keys(LIBRARY).filter(k => LIBRARY[k].mapped), ['biomed']);
+eq('codes index back to their library', LIB_BY_CODE.YRL.pre, 'yr');
+
+const QL = (q, sc) => buildCQL(parseQuery(q), 'keyword', sc, 'best');
+ok('a library scope is one truncated clause',
+   QL('cardiology', 'yrl').indexOf('alma.permanentPhysicalLocation all "yr*"') > 0, QL('cardiology', 'yrl'));
+ok('truncation needs the all relation — `=` with a star silently returns zero',
+   QL('cardiology', 'yrl').indexOf('permanentPhysicalLocation=yr*') < 0);
+ok('Biomed walkable stacks stay an enumerated OR group, because the shelf map is that list',
+   QL('cardiology', 'stacks').indexOf('(alma.permanentPhysicalLocation=bi or ') > 0);
+eq('all of UCLA adds no location clause', QL('cardiology', 'ucla').indexOf('permanentPhysicalLocation'), -1);
+ok('the keyword clause still leads, ahead of a second `all` clause',
+   QL('cardiology', 'law').indexOf('alma.all_for_ui all "cardiology"') === 0);
+
+eq('at: takes a library name', parseQuery('at:powell').scope, 'powell');
+eq('at: takes an alias', parseQuery('at:young').scope, 'yrl');
+eq('at:here means wherever you said you are', parseQuery('at:here', 'law').scope, 'law');
+eq('at:here falls back to Biomed when nothing is set', parseQuery('at:here').scope, 'biomed');
+eq('at:stacks is still the Biomed subset', parseQuery('at:stacks').scope, 'stacks');
+ok('an unknown place is refused', parseQuery('at:hogwarts').errors.length === 1);
+
+// Standing somewhere else changes what counts as "here" — but never what may get a shelf.
+try {
+  setHereLib('YRL');
+  const atYrl = resolve({ b: 'YRL', j: 'yr', d: 'PS3535 .A547 A94' });
+  eq('your own library is marked here', atYrl.route.here, true);
+  eq('but it is never a stacks lookup', atYrl.route.kind, 'here');
+  eq('so it never gets a shelf', atYrl.hits.length, 0);
+  ok('and it says why', /no per-shelf map/.test(atYrl.route.note), atYrl.route.note);
+
+  const biomedFromYrl = resolve({ b: 'BIOMED', j: 'bi', d: 'WB 115 H248p 1998' });
+  eq('Biomed is not "here" when you are at YRL', biomedFromYrl.route.here, false);
+  ok('yet a Biomed copy still resolves to its shelf', biomedFromYrl.hits.length > 0);
+} finally {
+  setHereLib('BIOMED');   // every later assertion assumes the default
+}
+eq('back at Biomed, a Biomed holding is here again',
+   resolve({ b: 'BIOMED', j: 'bi', d: 'WB 115 H248p 1998' }).route.here, true);
 
 /* ---- report ---- */
 console.log(`\n${pass} passed, ${failures.length} failed`);

@@ -6,6 +6,7 @@ struct RouteView: View {
 
     @Environment(TripStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let route: Router.Route
 
@@ -25,6 +26,8 @@ struct RouteView: View {
                     List {
                         Section { progressHeader.listRowSeparator(.hidden) }
 
+                        if let leg = currentLeg { liveMapSection(leg) }
+
                         // Every branch emits a Section. Mixing bare rows and Sections inside one
                         // List renders inconsistently — the bare row gets an implicit section of
                         // its own and the spacing goes wrong.
@@ -33,7 +36,8 @@ struct RouteView: View {
                             case let .transit(t):
                                 Section { TransitRow(transit: t) }
                             case let .floor(leg):
-                                FloorSection(leg: leg, kind: store.current.kind)
+                                FloorSection(leg: leg, kind: store.current.kind,
+                                             current: currentStopKey)
                             }
                         }
 
@@ -92,6 +96,61 @@ struct RouteView: View {
                 store.isStopComplete(key(leg.level, stop)) ? sum + stop.callNumbers.count : sum
             }
         }
+    }
+
+    // MARK: The live map
+
+    /// Every floor of the walk, in order.
+    private var legs: [Router.FloorLeg] {
+        route.steps.compactMap { if case let .floor(l) = $0 { return l } else { return nil } }
+    }
+
+    /// The stop you are walking to now: the first one not ticked off, in route order. Everything
+    /// on the map keys off this — which floor is shown, which badge wears the ring, how much of
+    /// the line has gone grey — so checking a stop off is the only input the map needs.
+    private var currentStopKey: String? {
+        for leg in legs {
+            for stop in leg.stops where !store.isStopComplete(key(leg.level, stop)) {
+                return key(leg.level, stop)
+            }
+        }
+        return nil
+    }
+
+    /// The floor that stop is on. When the walk is finished, stay on the last floor rather than
+    /// blanking the map.
+    private var currentLeg: Router.FloorLeg? {
+        guard let now = currentStopKey else { return legs.last }
+        return legs.first { leg in leg.stops.contains { key(leg.level, $0) == now } } ?? legs.first
+    }
+
+    @ViewBuilder
+    private func liveMapSection(_ leg: Router.FloorLeg) -> some View {
+        Section {
+            WalkMapView(
+                leg: leg,
+                faces: store.router.faces(onLevel: leg.level),
+                completed: store.current.completedStops,
+                current: currentStopKey,
+                onTap: { k in
+                    withAnimation(reduceMotion ? nil : Theme.spring) { store.toggleStop(k) }
+                }
+            )
+            .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
+        } header: {
+            HStack {
+                Text("Level \(leg.level)")
+                Spacer()
+                Text(mapCaption(leg)).foregroundStyle(.secondary)
+            }
+        } footer: {
+            Text("Tap a numbered stop to tick it off. The map follows you to the next floor.")
+        }
+    }
+
+    private func mapCaption(_ leg: Router.FloorLeg) -> String {
+        let done = leg.stops.filter { store.isStopComplete(key(leg.level, $0)) }.count
+        return "\(done) of \(leg.stops.count) stops done"
     }
 
     private var progressHeader: some View {
@@ -181,13 +240,29 @@ struct FloorSection: View {
     @Environment(TripStore.self) private var store
     let leg: Router.FloorLeg
     let kind: TripKind
+    let current: String?
+
+    /// One instruction per stop, in the same order as the rows. Computed once for the floor rather
+    /// than per row — the distance in each step is measured from the previous stop, so a row
+    /// cannot work it out alone.
+    private var steps: [WalkPath.Step] {
+        WalkPath.steps(stops: leg.stops, entry: leg.entryX, exit: leg.exitX).steps
+    }
+
+    private var doorName: String {
+        WalkPath.Doors.door(for: leg.entry, going: .in)?.name ?? "lift"
+    }
 
     var body: some View {
         Section {
             // Keyed by Stop.id ("shelfID|side") — a double-sided shelf puts two stops at the same
             // column, so shelfID alone collides.
-            ForEach(leg.stops) { stop in
-                StopRow(stop: stop, level: leg.level, kind: kind)
+            ForEach(Array(leg.stops.enumerated()), id: \.element.id) { i, stop in
+                StopRow(stop: stop, level: leg.level, kind: kind,
+                        step: i < steps.count ? steps[i] : nil,
+                        stopCount: leg.stops.count,
+                        doorName: doorName,
+                        isCurrent: current == "\(leg.level)|\(stop.shelfID)|\(stop.side)")
             }
         } header: {
             HStack {
@@ -212,6 +287,13 @@ struct StopRow: View {
     let stop: Router.Stop
     let level: Int
     let kind: TripKind
+    /// nil only if the step list and the stop list ever disagree in length, which they should not.
+    let step: WalkPath.Step?
+    /// Stops on this floor — the denominator of the order ramp, so the badge here is the same
+    /// colour as the badge on the map.
+    let stopCount: Int
+    let doorName: String
+    let isCurrent: Bool
 
     private var key: String { "\(level)|\(stop.shelfID)|\(stop.side)" }
     private var done: Bool { store.isStopComplete(key) }
@@ -226,14 +308,33 @@ struct StopRow: View {
                     .foregroundStyle(done ? Theme.located : Color.secondary)
 
                 VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 6) {
-                        Text("Index \(stop.x, format: .number)")
-                            .font(.subheadline.weight(.semibold))
-                            .monospacedDigit()
-                        Text("·").foregroundStyle(.secondary)
-                        Text(rowLabel).font(.subheadline).foregroundStyle(.secondary)
-                        Text("·").foregroundStyle(.secondary)
-                        Text(sideLabel).font(.subheadline).foregroundStyle(.secondary)
+                    // One phrasing per stop. This used to print the location twice — a header
+                    // reading "Index 9 · top · Right" and then a sentence saying the same thing in
+                    // words underneath it.
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        if let step {
+                            Text("\(step.n)")
+                                .font(.caption.weight(.bold).monospacedDigit())
+                                .foregroundStyle(.white)
+                                .frame(width: 19, height: 19)
+                                .background(Theme.order(step.n - 1, of: stopCount), in: Circle())
+                                .accessibilityHidden(true)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            if let step {
+                                Text(step.movement(fromDoor: step.n == 1, doorName: doorName))
+                                    .font(.subheadline.weight(.semibold))
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Text(step.target)
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            } else {
+                                Text("Index \(stop.x, format: .number) · \(rowLabel) · \(sideLabel)")
+                                    .font(.subheadline.weight(.semibold))
+                                    .monospacedDigit()
+                            }
+                        }
                     }
 
                     ForEach(stop.callNumbers, id: \.raw) { cn in
@@ -256,6 +357,7 @@ struct StopRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .listRowBackground(isCurrent && !done ? Theme.accent.opacity(0.07) : nil)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(done ? [.isSelected] : [])
         .accessibilityHint(done ? "Double tap to mark not done" : "Double tap to mark \(kind.pastVerb.lowercased())")

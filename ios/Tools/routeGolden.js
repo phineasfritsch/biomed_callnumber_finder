@@ -1,8 +1,33 @@
 // Emit route golden vectors using the EXACT algorithm from index.html's buildRoute,
 // for validating the Swift Router port.
-const fs=require('fs');
+//
+//   node ios/Tools/routeGolden.js biomed-shelf-ranges.json ios/Tests/RouteGolden.json
+//
+// The aisle and door geometry is **extracted** from the built index.html rather than re-typed
+// here. It used to be a copy, and the copy drifted: the level-9 exclusion was fixed in the app
+// and in the Swift port but never here, so regenerating would have produced vectors the shipping
+// code fails. Anything that can be pulled out of the built file is pulled.
+const fs=require('fs'), path=require('path');
 const DATA=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
-const ELEV_X=6.5, STAIR_W=6.5, STAIR_E=13.5;
+const HTML=fs.readFileSync(path.join(__dirname,'..','..','index.html'),'utf8');
+(function(){
+  const START='/* == walk-core:start ==', END='/* == walk-core:end == */';
+  const a=HTML.indexOf(START), b=HTML.indexOf(END,a);
+  if(a<0||b<0) throw new Error('walk-core markers not found in index.html');
+  const core=HTML.slice(a+START.length,b).replace(/^[\s\S]*?\*\//,'');
+  const ex={};
+  new Function('exports',core+
+    '\nObject.assign(exports,{PLAN,colX,LANE_Y,standX,planDoors,doorCol,doorDrop,doorCost});')(ex);
+  Object.assign(global,ex);
+})();
+
+function doorFor(kind,dir){
+  const D=planDoors();
+  if(kind==='elevator') return D.elevator;
+  if(kind==='west stairs') return dir==='out'?D.wsDown:D.wsUp;
+  if(kind==='east stairs') return dir==='out'?D.esDown:D.esUp;
+  return null;
+}
 
 function parseCN(raw){
   let s=(raw||'').toUpperCase().replace(/\*/g,'');
@@ -31,8 +56,13 @@ function cmpSeg(a,b){ if(!a) return -1; if(!b) return 1;
 function cmpCN(x,y){ const a=parseCN(x), b=parseCN(y), n=Math.max(a.length,b.length);
   for(let i=0;i<n;i++){const c=cmpSeg(a[i],b[i]); if(c!==0) return c<0?-1:1;} return 0; }
 function scheme(cn){ return /^\s*W[1-4]([A-Z]|\b)/i.test(cn||'') ? 'w1' : 'nlm'; }
+// Level 9 is Special Collections: a parallel sequence running A..ZWZ 330 that contains almost
+// every call number in the building, so including it routes every level 10/11 book to level 9.
+// Excluded in the app and in the Swift port; it was never excluded here.
 function routeLocate(cn){ const qs=scheme(cn), hits=[];
-  for(const key in DATA){ const d=DATA[key]; if(!d.start||!d.end) continue; if(scheme(d.start)!==qs) continue;
+  for(const key in DATA){ const d=DATA[key]; if(!d.start||!d.end) continue;
+    if(key.charAt(0)==='9' && key.charAt(1)==='|') continue;
+    if(scheme(d.start)!==qs) continue;
     if(cmpCN(cn,d.start)>=0 && cmpCN(cn,d.end)<=0){ const [lvl,id,side]=key.split('|'); hits.push({lvl:+lvl,id,side,d}); } }
   hits.sort((a,b)=>a.lvl-b.lvl); return hits; }
 
@@ -62,37 +92,51 @@ function buildRoute(want){
   want=[...new Set(want)];
   const located=[], missing=[];
   want.forEach(cn=>{ const h=routeLocate(cn); if(h.length) located.push({cn,hit:h[0]}); else missing.push(cn); });
-  if(!located.length) return {steps:[],unlocated:missing,bookCount:0,stairs:0,skips:0};
+  if(!located.length) return {steps:[],unlocated:missing,bookCount:0,stairs:0,lifts:0,truck:false};
   const byLvl={};
   located.forEach(it=>{ (byLvl[it.hit.lvl]=byLvl[it.hit.lvl]||[]).push(it); });
   const levels=Object.keys(byLvl).map(Number).sort((a,b)=>b-a);
 
-  let entry=ELEV_X, stairs=0, skips=0;
+  // Over five books is a truck trip: no stairs at all.
+  const truck=located.length>5;
+  let entryKind='elevator', stairs=0, lifts=0;
   const steps=[{type:'transit',kind:'elevator',to:levels[0],skipping:0}];
   for(let i=0;i<levels.length;i++){
     const lvl=levels[i], stops=groupStops(byLvl[lvl]);
     const xs=stops.map(s=>s.x), L=Math.min(...xs), R=Math.max(...xs);
-    let exit=ELEV_X, nextTransit=null, nextEntry=ELEV_X;
+    const entryCol=doorCol(doorFor(entryKind,'in'));
+    let nextTransit=null, exitKind='done', nextKind='elevator';
     if(i<levels.length-1){
       const nlvl=levels[i+1], gap=lvl-nlvl;
-      if(gap===1){
-        const ns=groupStops(byLvl[nlvl]), nc=ns.reduce((a,s)=>a+s.x,0)/ns.length;
+      const ns=groupStops(byLvl[nlvl]);
+      const nc=ns.reduce((a,st)=>a+standX(st),0)/ns.length;
+      if(gap===1 && !truck){
+        // Cost the doors, not two bare x-positions: you walk down the west stairwell on one
+        // side and arrive on the floor below on the other, and the east one opens straight onto
+        // the corridor going down but a row deeper coming out.
         let best=null;
-        [['west',STAIR_W],['east',STAIR_E]].forEach(([nm,x])=>{ const sc=sweep(L,R,entry,x).cost+Math.abs(x-nc); if(!best||sc<best.sc) best={nm,x,sc}; });
-        exit=best.x; nextEntry=best.x; stairs++;
-        nextTransit={type:'transit',kind:'stairs',well:best.nm,to:nlvl};
+        ['west stairs','east stairs'].forEach(kind=>{
+          const out=doorFor(kind,'out'), back=doorFor(kind,'in');
+          const sc=sweep(L,R,entryCol,doorCol(out)).cost + doorDrop(out) + doorCost(back,nc);
+          if(!best||sc<best.sc) best={kind,sc};
+        });
+        exitKind=nextKind=best.kind; stairs++;
+        nextTransit={type:'transit',kind:'stairs',well:best.kind.replace(' stairs',''),to:nlvl};
       } else {
-        exit=ELEV_X; nextEntry=ELEV_X; skips++;
+        exitKind=nextKind='elevator'; lifts++;
         nextTransit={type:'transit',kind:'elevator',to:nlvl,skipping:gap-1};
       }
     }
-    const dir=sweep(L,R,entry,exit).dir;
+    const outDoor=exitKind==='done'?null:doorFor(exitKind,'out');
+    const exitCol=outDoor?doorCol(outDoor):entryCol;
+    const dir=sweep(L,R,entryCol,exitCol).dir;
     stops.sort((a,b)=> dir==='LR' ? (a.x-b.x)||(rowOrd(a)-rowOrd(b)) : (b.x-a.x)||(rowOrd(a)-rowOrd(b)));
-    steps.push({type:'floor',level:lvl,direction:dir,stops:stops.map(s=>({id:s.id,side:s.side,x:s.x,cns:s.cns}))});
+    steps.push({type:'floor',level:lvl,direction:dir,entryX:entryCol,exitX:exitCol,
+                stops:stops.map(s=>({id:s.id,side:s.side,x:s.x,cns:s.cns}))});
     if(nextTransit) steps.push(nextTransit);
-    entry=nextEntry;
+    entryKind=nextKind;
   }
-  return {steps,unlocated:missing,bookCount:located.length,stairs,skips};
+  return {steps,unlocated:missing,bookCount:located.length,stairs,lifts,truck};
 }
 
 // Deterministic sample trips exercising: single floor, adjacent floors (stairs),
@@ -108,7 +152,7 @@ const out=trips.map(t=>({name:t.name, input:t.cns, expected:buildRoute(t.cns)}))
 fs.writeFileSync(process.argv[3], JSON.stringify(out,null,1));
 for(const t of out){
   const s=t.expected;
-  console.log(`${t.name.padEnd(16)} books=${s.bookCount} steps=${s.steps.length} stairs=${s.stairs} skips=${s.skips} unlocated=${s.unlocated.length}`);
+  console.log(`${t.name.padEnd(16)} books=${s.bookCount} steps=${s.steps.length} stairs=${s.stairs} lifts=${s.lifts}${s.truck?' TRUCK':''} unlocated=${s.unlocated.length}`);
   s.steps.forEach(st=>{
     if(st.type==='transit') console.log(`   transit: ${st.kind}${st.well?'/'+st.well:''} -> L${st.to}${st.skipping?` (skip ${st.skipping})`:''}`);
     else console.log(`   floor L${st.level} dir=${st.direction} stops=${st.stops.map(x=>x.id+'/'+x.side).join(', ')}`);

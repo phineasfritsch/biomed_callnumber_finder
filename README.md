@@ -16,6 +16,14 @@ browser talking straight to UCLA's Alma SRU endpoint, which needs no key.
 
 ---
 
+## One box
+
+There is a single search field at the top of the page, and it decides where a query belongs:
+anything shaped like a call number (class letters then a number, or the W1-series form) goes to
+the shelf map; anything else — a title, an author, an ISBN, a `field:value` filter — goes to
+the catalog. The decision is stated under the box and reversible in one click, because guessing
+wrong silently would be worse than not guessing.
+
 ## What it does
 
 ### 1. Locate a call number
@@ -41,12 +49,53 @@ detected call numbers, and you correct it before building. Then the app locates 
 produces a **strategic, ordered walk** that minimizes how far you travel:
 
 - It groups your books **by floor** and orders the floors **top-down**.
-- **Stairs go down exactly one floor** (there are two stairwells per floor — west ≈ column 6.5,
-  east ≈ column 13.5) — so descending one level at a time uses the nearer stairwell, the quick move.
+- **Stairs go down exactly one floor** — the quick move — and there are two stairwells per floor.
 - For any other vertical move (going up, or skipping floors) the **elevator** is fastest.
-- Within each floor it sweeps across the stacks once instead of backtracking, entering/leaving near
-  the stairwell or elevator you'll actually use (a 1-D interval-cover from the entry portal to the
-  exit portal).
+- **More than five books is a truck trip.** Past that the stairs come off the table entirely and
+  every floor change is the elevator, because nobody walks a loaded truck down a stairwell. It is a
+  threshold on the load, not on distance, so it overrides the routing arithmetic rather than being
+  folded into it as a cost.
+- Within each floor it sweeps across the stacks once instead of backtracking, entering and leaving
+  at the doors you'll actually use (a 1-D interval-cover from entry to exit).
+
+**A stairwell is not a point, and neither is an elevator.** You come out of one at a particular
+edge, and which edge decides which way you set off. The elevator's door is the middle of its south
+side, opening into the floor south of the block. You walk *down* the west stairwell — the one behind
+the elevator — from its west edge and arrive on the floor below at its **east** edge, so the same
+descent also moves you across the block. The east stairwell's north edge opens straight onto the
+corridor between the rows, and its south edge onto the open floor below it.
+
+The floor is **walkable all the way round**: both rows are islands, there is open floor north of
+the top row, south of the bottom row and at both ends, and every aisle is a passage with two open
+ends. So there are no forced detours — reaching a shelf from a door costs how far along you have to
+walk, plus how far in from the corridor the door is set.
+
+That is not decoration — **which stairwell is cheaper is a question about doors, not columns.** The
+choice used to be costed as two bare x-positions, which gets it backwards on exactly the floors
+where it matters: the west stairwell looks adjacent to the elevator and is actually behind it, and
+the east one is a step off the corridor going down but a full row deeper coming out. Both legs are
+now measured from the doors themselves, on both floors.
+
+**Reading the walk.** Each floor gets its own map, drawn from the same code as the big floor plan
+so it is that picture with the walk marked on it. The faces you are going to are filled along a
+cool-to-warm ramp — blue first, red last — and each carries a numbered badge in the aisle you read
+it from; every other shelf keeps its group colour at soft strength so the floor still reads as the
+floor. Colour gives you the shape of the walk at a glance and the numbers settle any ambiguity, so
+neither is load-bearing alone: a colour-blind reader keeps the numbers and a photocopy keeps both.
+
+There is deliberately **no drawn route line**. There was one, and it did not survive contact with
+the building: an aisle is a twelve-pixel gap, a sweep doubles back along the corridor it came down,
+and every device for keeping those legs apart — offset tracks, rounded corners, arrowheads — added
+ink to a picture already too busy to read. All the line was carrying was order, and order fits in
+the tint and the badge, neither of which can overlap anything.
+
+Underneath each map is the same walk in words, one instruction per stop: how many **shelves** east
+or west, which way you turn, and **which hand the shelf is on**. That last one flips with the row
+and is the most reversible fact in the file — facing into a top-row aisle you look north, so east is
+on your right, while a bottom-row aisle faces you south and east is on your left. Getting it
+backwards would be worse than saying nothing, because a reader who trusts it turns to a shelf of
+unrelated call numbers and concludes the map is broken. It is asserted from both sides in
+[`Tools/walk.test.js`](Tools/walk.test.js) and again in the iOS port's tests.
 
 **Special Collections is not in the walk.** Level 9 is a second, parallel sequence whose
 seventeen shelf faces run `A` to `ZWZ 330`, so it contains nearly every call number in the
@@ -89,10 +138,20 @@ that didn't fully parse** — a wrong aisle is worse than no aisle, so the app s
 mapped* instead.
 
 **The default is the desk question: the newest edition of this book, in this building.**
-A bare search is scoped to Biomed's nine location codes and sorted newest-first *by the
-server*, then ranked and grouped here. It widens to the rest of UCLA only when Biomed has
-nothing — or when what Biomed has clearly isn't the book, which is a different failure and
-gets a different message. The status line always names the scope the answer came from.
+A bare search is scoped to the library you say you're at and sorted newest-first *by the
+server*, then ranked and grouped here. It widens to the rest of UCLA only when your library has
+nothing — or when what it has clearly isn't the book, which is a different failure and gets a
+different message. The status line always names the scope the answer came from.
+
+**Any of UCLA's 21 libraries.** Pick where you're working and it's remembered; that sets which
+scope is searched first, which holdings sort to the top, and what "only my library" means.
+`at:yrl`, `at:powell`, `at:law`, `at:here` do the same from the query box. Every library-shaped
+index in Alma returns zero for every library name, so this works off location-code prefixes
+under the `all` relation (`permanentPhysicalLocation all "yr*"`) — all 22 prefixes were sampled
+and checked for cross-library leakage. **Only Biomed has a shelf map**, so only Biomed copies
+resolve to an aisle; everywhere else you get the scoping, ranking and call number, and the app
+says plainly that there's no per-shelf map rather than leaving a gap. A Biomed copy keeps its
+aisle even when you're standing in the Law Library.
 
 **The catalog itself ranks nothing.** Alma SRU returns hits in filing-title order, so a search
 for *atlas shrugged* comes back with *The American Bible* first and the actual book fourth.
@@ -117,11 +176,21 @@ nothing about the query.) So the app does its own:
   edition-cluster key — so the recording is listed beside the novel rather than on top of it,
   and `carrier:print` excludes it. (`type:book` does not; it asks Alma about the leader, which
   is the field that is wrong.)
-- **Typos survive.** Word matching tolerates edits scaled to word length, and a query that
-  returns nothing is retried with words dropped — one at a time, then in pairs — keeping the
-  *best* retry rather than the first one that returns anything, and then narrowing it back to
-  Biomed. `wtlas shrugged` finds Atlas Shrugged; `harrisons principals of internal medicin`
-  finds the 20th edition of Harrison's on level 10.
+- **Typos survive, three different ways.** A query that returns nothing is first *repaired*:
+  each long word is probed on its own, and one that appears in no UCLA record at all is a typo,
+  so its edit-1 variants are substituted back into the query until one matches. The catalogue
+  is the dictionary — a count-only probe answers in about 80 ms, so a dozen candidates cost a
+  second. If that finds nothing, words are *dropped* instead — one at a time, then in pairs —
+  keeping the best retry rather than the first that returns anything. Either way the result is
+  narrowed back to Biomed. The two cover opposite failures: `wtlas shrugged` recovers by
+  dropping a word, because "shrugged" is distinctive; `atlas shurgged` cannot, because dropping
+  the broken word leaves "atlas" and 23 314 records, so it is repaired to `atlas shrugged`
+  instead. And when neither works, the words in the records that *did* come back are harvested
+  and matched against the broken one — which is what catches a **real-word typo**, the case
+  nothing else can even detect: `principals` is a word, so it is never flagged, but drop it and
+  `principles` is right there in the results. `harrisons principals of internal medicine` is
+  corrected in place and still finds the 20th edition on level 10. When the answer is only a
+  guess, the status line says so rather than presenting it as a hit.
 
 **Filters for anything the endpoint can answer.** The same box takes `field:value` tokens —
 `mesh:neoplasms year:2020+ type:book shelf:yes`, `cn:"WM 100" at:stacks sort:shelf`,
@@ -161,7 +230,8 @@ and every way the shelf lookup refuses — is written up in [`CATALOG.md`](CATAL
 | [`Instructions.txt`](Instructions.txt) | The mapping handbook: dataset format, comparator, shelf physics. |
 | [`CATALOG.md`](CATALOG.md) | What the Alma SRU endpoint actually does, and how the catalog→shelf join refuses. |
 | `fixtures/` | Saved live SRU responses used as the offline test corpus (not deployed). |
-| [`Tools/catalog.test.js`](Tools/catalog.test.js) | `node Tools/catalog.test.js` — 341 assertions against those fixtures. |
+| [`Tools/catalog.test.js`](Tools/catalog.test.js) | `node Tools/catalog.test.js` — 396 assertions against those fixtures. |
+| [`Tools/walk.test.js`](Tools/walk.test.js) | `node Tools/walk.test.js` — 59 assertions on the walking geometry, pulled out of the built `index.html`. |
 | `Floors/` | Raw shelf-end photos, grouped by level (not deployed). |
 | [`wrangler.jsonc`](wrangler.jsonc) | Cloudflare Workers config (static-assets / SPA mode). |
 | [`.assetsignore`](.assetsignore) | What Cloudflare must *not* upload (raw photos, JSON, tooling). |
