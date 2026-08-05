@@ -146,9 +146,9 @@ HTML = r"""<!DOCTYPE html>
   .itin-steps li:first-child{border-top:0}
   .itin-steps .sn{flex:none; width:21px; height:21px; border-radius:99px; color:#fff; font-family:var(--mono); font-size:11px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; align-self:flex-start}
   .itin-steps .sn.out{background:var(--slate)}
-  .itin-steps .sd{flex:0 0 auto; min-width:190px; font-size:12px; line-height:1.6; color:var(--ink-soft)}
+  .itin-steps .sd{flex:0 0 auto; min-width:170px; font-size:12px; line-height:1.6; color:var(--ink-soft)}
   .itin-steps .sd b{color:var(--ink)}
-  .itin-steps .sat{flex:0 0 auto; min-width:150px; font-size:12px; line-height:1.6; color:var(--ink-soft)}
+  .itin-steps .sat{flex:0 0 auto; min-width:80px; font-size:12px; line-height:1.6; color:var(--ink-soft)}
   .itin-steps .sat b{color:var(--ink)}
   .itin-steps .scn{flex:1 1 auto; font-family:var(--mono); font-size:11.5px; color:var(--accent)}
   /* The shelf-end label is what you check when you get there, so it goes last and gives way
@@ -677,12 +677,14 @@ let level=3, selected=null, flashId=null;
    places to stand, and one aisle usually serves two faces — the right face of shelf 6 and
    the left face of shelf 7 are the same spot, and the path must not leave and re-enter it.
 
-   **Which hand.** Aisles run north–south; the corridor between the rows runs east–west.
-   Walking into a top-row aisle you face north, so east is on your right; into a bottom-row
-   aisle you face south and east is on your left. The shelf you want is on the side its face
-   points away from, which flips with the row — hence `handFor`. Getting this backwards is
-   worse than saying nothing at all: a reader who trusts it turns to a shelf of unrelated
-   call numbers and concludes the map is broken. */
+   **No left and right.** There was an egocentric model here — which hand the shelf is on,
+   which way you pivot into the aisle — and it was wrong three times running, each time for a
+   different reason: it assumed you were already walking when you were still stepping out of a
+   lift, it assumed one corridor when the floor has three, and once both were fixed the answer
+   still depended on where the reader pictured themselves standing. None of that ambiguity is
+   in the coordinates. East and west are the arrow, north and south are the row, and which of
+   the two faces in an aisle is the `L` or `R` on the label. The reader can orient themselves;
+   the app cannot do it for them, and getting it wrong is worse than not saying it. */
 const PLAN={startX:20, slotW:40, topY:46, topH:140, botY:232, botH:140};
 const colX = x => PLAN.startX + x*PLAN.slotW + PLAN.slotW/2;
 const LANE_Y = {
@@ -693,13 +695,16 @@ const LANE_Y = {
 /* Aisle you stand in to read this face, in column units. Always a half-integer. */
 const standX = st => st.side==='left' ? st.x-0.5 : st.x+0.5;
 const laneOf  = st => st.row==='top' ? 'top' : 'bottom';
-const handFor = (row,side) => side==='left' ? (row==='top'?'right':'left')
-                                            : (row==='top'?'left':'right');
-/* Heading is east(+1)/west(-1) along the corridor; the row decides which way you pivot. */
-function turnFor(head,row){
-  if(!head) return 'ahead';
-  return head>0 ? (row==='top'?'left':'right') : (row==='top'?'right':'left');
-}
+/* ── Absolute, not egocentric ─────────────────────────────────────────────────────────────
+   There was a left/right model here — which hand the shelf is on, which way you pivot into the
+   aisle. It was wrong three times in a row, and each time for a different reason: it assumed you
+   were already walking when you were still stepping out of a lift, it assumed one corridor when
+   the floor has three, and even once both were fixed the answer still depended on where the
+   reader imagined themselves standing.
+
+   None of that ambiguity exists in the coordinates. East and west are the arrow, north and south
+   are the row, and which of the two faces in an aisle is the `L`/`R` on the label. So the walk is
+   stated in those and the reader orients themselves, which they can do and the app cannot. */
 function aisleLabel(sx){
   const a=Math.floor(sx), b=a+1;
   if(a<0)  return 'the west wall, before shelf 0';
@@ -722,8 +727,7 @@ function walkSteps(stops, entryX, exitX){
   const out=stops.map((st,i)=>{
     const sx=standX(st), delta=sx-from;
     const step={ n:i+1, head:(delta>0?1:delta<0?-1:0), shelves:Math.abs(delta), x:sx,
-                 aisle:aisleLabel(sx), turn:turnFor(delta, st.row),
-                 hand:handFor(st.row, st.side), row:st.row||'bottom', side:st.side,
+                 aisle:aisleLabel(sx), row:st.row||'bottom', side:st.side,
                  index:st.x, cns:st.cns||[], range:st.d };
     from=sx; return step;
   });
@@ -1500,26 +1504,26 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
      The first move is measured from a door rather than from another aisle, so it can land on a
      half shelf; it is stated as a direction rather than a count. Every later move is aisle to
      aisle and comes out whole. */
-  /* One row per stop, and as few words in it as the instruction can survive.
-     Anything the reader already has is left out: the transit line above already named the door,
-     the arrow already gives the direction, and "row" and "face" and "shelf" are the only kinds of
-     thing these numbers could be. What is left is what changes between one stop and the next. */
+  /* One row per stop, in absolute terms. East and west are the arrow, north and south are the
+     row, and which face in the aisle is the L or R on the label — so nothing here depends on
+     which way the reader happens to be pointing. Anything they already have is left out: the
+     transit line above named the door, and "shelf" and "row" and "face" are the only kinds of
+     thing these numbers could be. */
   function walkList(stops,entry,exit,inDoor,outDoor){
-    const steps=walkSteps(stops,entry,exit), n=stops.length, arrow={1:'→','-1':'←',0:'↳'};
+    const steps=walkSteps(stops,entry,exit), n=stops.length;
+    const arrow={1:'→','-1':'←',0:'↳'};
     const face={left:'L',right:'R',single:'R'};
     const shortDoor = d => d.name.replace('stairwell','stairs');
     let h='<ol class="itin-steps">';
-    steps.forEach((st,i)=>{
-      const whole=Number.isInteger(st.shelves);
-      /* A move from a door is measured from the middle of a block and can land on half a shelf,
-         so it gives the direction and skips the count. */
+    steps.forEach(st=>{
+      /* A move off a door is measured from the middle of a block and can land on half a shelf, so
+         it gives the direction and skips the count. Every later move is aisle to aisle and whole. */
       const move = st.shelves===0 ? 'same aisle'
-                 : (i===0 || !whole) ? `from ${shortDoor(inDoor)}`
-                 : `${st.shelves} ${st.shelves===1?'shelf':'shelves'}`;
-      const turn = st.turn==='ahead' ? '' : `, turn ${st.turn}`;
+                 : Number.isInteger(st.shelves) ? `${st.shelves} ${st.shelves===1?'shelf':'shelves'}`
+                 : (st.head>0?'east':'west');
       h+=`<li><span class="sn" style="background:${orderColor(st.n-1,n)}">${st.n}</span>`
-       + `<span class="sd"><b>${arrow[st.head]} ${move}</b> ${aisleShort(st.x)}${turn}</span>`
-       + `<span class="sat"><b>${st.index}${face[st.side]||''}</b> ${st.row} · on your <b>${st.hand}</b></span>`
+       + `<span class="sd"><b>${arrow[st.head]} ${move}</b> to ${aisleShort(st.x)}</span>`
+       + `<span class="sat"><b>${st.index}${face[st.side]||''}</b> ${st.row}</span>`
        + `<span class="scn">${st.cns.join(' · ')}</span>`
        + `<span class="srng">${st.range.start} → ${st.range.end}</span></li>`;
     });

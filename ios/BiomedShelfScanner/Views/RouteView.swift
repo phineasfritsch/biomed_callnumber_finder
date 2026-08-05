@@ -249,11 +249,6 @@ struct FloorSection: View {
         WalkPath.steps(stops: leg.stops, entry: leg.entryX, exit: leg.exitX).steps
     }
 
-    private var doorName: String {
-        (WalkPath.Doors.door(for: leg.entry, going: .in)?.name ?? "lift")
-            .replacingOccurrences(of: "stairwell", with: "stairs")
-    }
-
     var body: some View {
         Section {
             // Keyed by Stop.id ("shelfID|side") — a double-sided shelf puts two stops at the same
@@ -262,7 +257,6 @@ struct FloorSection: View {
                 StopRow(stop: stop, level: leg.level, kind: kind,
                         step: i < steps.count ? steps[i] : nil,
                         stopCount: leg.stops.count,
-                        doorName: doorName,
                         isCurrent: current == "\(leg.level)|\(stop.shelfID)|\(stop.side)")
             }
         } header: {
@@ -293,7 +287,6 @@ struct StopRow: View {
     /// Stops on this floor — the denominator of the order ramp, so the badge here is the same
     /// colour as the badge on the map.
     let stopCount: Int
-    let doorName: String
     let isCurrent: Bool
 
     private var key: String { "\(level)|\(stop.shelfID)|\(stop.side)" }
@@ -323,7 +316,8 @@ struct StopRow: View {
                         }
                         VStack(alignment: .leading, spacing: 2) {
                             if let step {
-                                Text(step.movement(fromDoor: step.n == 1, doorName: doorName))
+                                Label(step.movement, systemImage: step.symbol)
+                                    .labelStyle(.titleAndIcon)
                                     .font(.subheadline.weight(.semibold))
                                     .fixedSize(horizontal: false, vertical: true)
                                 Text(step.target)

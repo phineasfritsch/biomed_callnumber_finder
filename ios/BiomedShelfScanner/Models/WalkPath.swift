@@ -54,30 +54,16 @@ enum WalkPath {
         stop.row == .top ? .top : .bottom
     }
 
-    enum Hand: String { case left, right }
-
-    /// Which hand the shelf is on once you have turned into the aisle.
+    /// **No left and right.** There was an egocentric model here — which hand the shelf is on,
+    /// which way you pivot into the aisle — and it was wrong three times running, each time for a
+    /// different reason: it assumed you were already walking when you were still stepping out of a
+    /// lift, it assumed one corridor when the floor has three, and once both were fixed the answer
+    /// still depended on where the reader pictured themselves standing.
     ///
-    /// Facing into a top-row aisle you look north, so east is on your right; into a bottom-row
-    /// aisle you look south and east is on your left. The shelf is on the side its face points
-    /// *away* from, so the same `side` swaps hands between the rows.
-    ///
-    /// This is the most reversible line in the file and the one a reader will trust without
-    /// checking. Getting it backwards is worse than saying nothing: they turn to a shelf of
-    /// unrelated call numbers and conclude the map is broken.
-    static func hand(row: Router.Shelf.Row?, side: String) -> Hand {
-        let top = (row ?? .bottom) == .top
-        return side == "left" ? (top ? .right : .left) : (top ? .left : .right)
-    }
-
-    enum Turn: String { case left, right, ahead }
-
-    /// Which way you pivot off the corridor. `heading` is east(+)/west(−).
-    static func turn(heading: Double, row: Router.Shelf.Row?) -> Turn {
-        guard heading != 0 else { return .ahead }
-        let top = (row ?? .bottom) == .top
-        return heading > 0 ? (top ? .left : .right) : (top ? .right : .left)
-    }
+    /// None of that ambiguity is in the coordinates. East and west are the arrow, north and south
+    /// are the row, and which of the two faces in an aisle is the `L` or `R` on the label. The
+    /// reader can orient themselves; the app cannot do it for them, and getting it wrong is worse
+    /// than not saying it.
 
     static func aisleLabel(_ sx: Double) -> String {
         let a = Int(floor(sx)), b = a + 1
@@ -109,8 +95,6 @@ enum WalkPath {
         let shelves: Double
         let x: Double
         let aisle: String
-        let turn: Turn
-        let hand: Hand
         let row: Router.Shelf.Row?
         let side: String
         let index: Double
@@ -132,8 +116,6 @@ enum WalkPath {
                 shelves: abs(delta),
                 x: sx,
                 aisle: aisleLabel(sx),
-                turn: turn(heading: delta, row: st.row),
-                hand: hand(row: st.row, side: st.side),
                 row: st.row,
                 side: st.side,
                 index: st.x
@@ -266,36 +248,32 @@ enum WalkPath {
 
 extension WalkPath.Step {
 
-    /// "1 shelf west → aisle 9·10, turn right"
+    /// "4 shelves to aisle 10·11"
     ///
-    /// Everything about a stop used to be printed twice — once as an instruction and again as a
-    /// location line saying the same thing in other words. One phrasing, kept short enough that
-    /// the move and the target sit on one row together.
-    ///
-    /// `fromDoor` is the first step of a floor, measured from a door rather than from another
-    /// aisle: it can land on half a shelf, so it gives a direction instead of a count.
-    func movement(fromDoor: Bool, doorName: String) -> String {
+    /// A move off a door is measured from the middle of a block and can land on half a shelf, so
+    /// it gives the direction and skips the count. Every later move is aisle to aisle and whole.
+    var movement: String {
         let move: String
         if shelves == 0 {
             move = "Same aisle"
-        } else if fromDoor || shelves != shelves.rounded() {
-            move = "\(heading > 0 ? "East" : "West") from \(doorName)"
+        } else if shelves != shelves.rounded() {
+            move = heading > 0 ? "East" : "West"
         } else {
-            move = "\(Int(shelves)) \(shelves == 1 ? "shelf" : "shelves") \(heading > 0 ? "east" : "west")"
+            move = "\(Int(shelves)) \(shelves == 1 ? "shelf" : "shelves")"
         }
-        let short = WalkPath.aisleShort(x)
-        return turn == .ahead ? "\(move) · \(short)" : "\(move) · \(short), turn \(turn.rawValue)"
+        return "\(move) to \(WalkPath.aisleShort(x))"
     }
 
-    /// "11L bottom · on your left". Anything the reader already has is left out — the transit row
-    /// above named the door, and "row" and "face" and "shelf" are the only kinds of thing these
-    /// numbers could be.
+    /// "11L bottom". The face letter picks which of the two faces in that aisle; the row says
+    /// which side of the floor. Nothing the reader already has: the transit row above named the
+    /// door, and "shelf" and "row" and "face" are the only kinds of thing these numbers could be.
     var target: String {
         let rowName = row.map { $0 == .top ? "top" : "bottom" } ?? "—"
         let faceLetter = side == "left" ? "L" : "R"
-        return "\(Int(index))\(faceLetter) \(rowName) · on your \(hand.rawValue)"
+        return "\(Int(index))\(faceLetter) \(rowName)"
     }
 
+    /// East or west, which is the only direction the walk commits to.
     var symbol: String {
         switch heading {
         case 1:  return "arrow.right"

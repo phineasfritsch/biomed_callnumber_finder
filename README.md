@@ -89,13 +89,20 @@ and every device for keeping those legs apart — offset tracks, rounded corners
 ink to a picture already too busy to read. All the line was carrying was order, and order fits in
 the tint and the badge, neither of which can overlap anything.
 
-Underneath each map is the same walk in words, one instruction per stop: how many **shelves** east
-or west, which way you turn, and **which hand the shelf is on**. That last one flips with the row
-and is the most reversible fact in the file — facing into a top-row aisle you look north, so east is
-on your right, while a bottom-row aisle faces you south and east is on your left. Getting it
-backwards would be worse than saying nothing, because a reader who trusts it turns to a shelf of
-unrelated call numbers and concludes the map is broken. It is asserted from both sides in
-[`Tools/walk.test.js`](Tools/walk.test.js) and again in the iOS port's tests.
+Underneath each map is the same walk in words, one line per stop: how many **shelves** east or west,
+which aisle, and which face — `4 shelves to aisle 10·11 · 11L bottom`, then the call numbers and the
+shelf-end label you check when you get there.
+
+**It is stated absolutely, not from the reader's point of view.** There was a left/right model
+here — which hand the shelf is on, which way you pivot into the aisle — and it was wrong three
+times running, each time for a different reason: it assumed you were already walking when you were
+still stepping out of a lift; it assumed one corridor when the floor has three; and once both of
+those were fixed, the answer still depended on where the reader pictured themselves standing. None
+of that ambiguity is in the coordinates. East and west are the arrow, north and south are the row,
+and which of the two faces in an aisle is the `L` or `R` on the label. The reader can orient
+themselves and the app cannot do it for them, and a confident wrong hand is worse than no hand at
+all — someone who trusts it turns to a shelf of unrelated call numbers and concludes the map is
+broken.
 
 **Special Collections is not in the walk.** Level 9 is a second, parallel sequence whose
 seventeen shelf faces run `A` to `ZWZ 330`, so it contains nearly every call number in the
@@ -231,7 +238,7 @@ and every way the shelf lookup refuses — is written up in [`CATALOG.md`](CATAL
 | [`CATALOG.md`](CATALOG.md) | What the Alma SRU endpoint actually does, and how the catalog→shelf join refuses. |
 | `fixtures/` | Saved live SRU responses used as the offline test corpus (not deployed). |
 | [`Tools/catalog.test.js`](Tools/catalog.test.js) | `node Tools/catalog.test.js` — 396 assertions against those fixtures. |
-| [`Tools/walk.test.js`](Tools/walk.test.js) | `node Tools/walk.test.js` — 59 assertions on the walking geometry, pulled out of the built `index.html`. |
+| [`Tools/walk.test.js`](Tools/walk.test.js) | `node Tools/walk.test.js` — 52 assertions on the walking geometry, pulled out of the built `index.html`. |
 | `Floors/` | Raw shelf-end photos, grouped by level (not deployed). |
 | [`wrangler.jsonc`](wrangler.jsonc) | Cloudflare Workers config (static-assets / SPA mode). |
 | [`.assetsignore`](.assetsignore) | What Cloudflare must *not* upload (raw photos, JSON, tooling). |

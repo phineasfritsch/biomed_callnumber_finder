@@ -27,11 +27,11 @@ const core = between('/* == walk-core:start ==', '/* == walk-core:end == */', 'w
 const sandbox = {};
 new Function('exports', `
   ${core}
-  Object.assign(exports, { PLAN, colX, LANE_Y, standX, laneOf, handFor, turnFor,
+  Object.assign(exports, { PLAN, colX, LANE_Y, standX, laneOf,
     aisleLabel, aisleShort, walkSteps, planDoors, doorCol, doorDrop, doorCost });
 `)(sandbox);
 
-const { PLAN, colX, LANE_Y, standX, laneOf, handFor, turnFor,
+const { PLAN, colX, LANE_Y, standX, laneOf,
         aisleLabel, aisleShort, walkSteps, planDoors, doorCol, doorDrop, doorCost } = sandbox;
 
 /* ---- tiny assertion harness (same shape as catalog.test.js) ---- */
@@ -71,33 +71,24 @@ eq('bottom row stops are in the bottom lane', laneOf(stop('bot-3', 'left', 3, 'b
 eq('an unknown row falls back to the bottom, matching the x:8 fallback in groupStops',
    laneOf(stop('??', 'left', 8, '')), 'bottom');
 
-/* ================= 2. Which hand ================= */
-// Aisles run north-south. Facing INTO a top-row aisle you look north, so east is on your right;
-// into a bottom-row aisle you look south and east is on your left. The shelf is on the side its
-// face points away from — so the same `side` flips hands between the rows. This is the single
-// most reversible thing in the file and the one a reader will trust blindly.
-section('which hand the shelf is on');
+/* ================= 2. No left and right ================= */
+// An egocentric model lived here and was wrong three times running: it assumed you were already
+// walking when you were still stepping out of a lift, it assumed one corridor when the floor has
+// three, and once both were fixed the answer still depended on where the reader pictured
+// themselves standing. The walk is stated in absolute terms instead, and the assertion that
+// matters is that nothing egocentric came back.
+section('no left and right');
 
-eq('top row, left face — the shelf is east of you, which is your right', handFor('top', 'left'), 'right');
-eq('top row, right face — the shelf is west of you, your left', handFor('top', 'right'), 'left');
-eq('bottom row, left face — east is now your left', handFor('bottom', 'left'), 'left');
-eq('bottom row, right face — west is now your right', handFor('bottom', 'right'), 'right');
-eq('a half shelf faces east like any right face', handFor('bottom', 'single'), 'right');
-ok('the hand flips between rows for the same face',
-   handFor('top', 'left') !== handFor('bottom', 'left'));
+ok('the walk exposes no hand', typeof sandbox.handFor === 'undefined');
+ok('and no turn', typeof sandbox.turnFor === 'undefined');
+const oneStep = walkSteps([stop('top-6', 'right', 6, 'top')], 2.5, 2.5)[0];
+ok('a step carries no hand', !('hand' in oneStep));
+ok('nor a turn', !('turn' in oneStep));
+ok('what it does carry orients you absolutely',
+   ['head', 'row', 'side', 'index', 'x'].every(k => k in oneStep),
+   Object.keys(oneStep).join(','));
 
-/* ================= 3. Which way you turn ================= */
-// Walking east the top row is on your left; walking west it is on your right.
-section('turning into the aisle');
-
-eq('heading east, the top row is a left turn', turnFor(1, 'top'), 'left');
-eq('heading east, the bottom row is a right turn', turnFor(1, 'bottom'), 'right');
-eq('heading west, the top row is a right turn', turnFor(-1, 'top'), 'right');
-eq('heading west, the bottom row is a left turn', turnFor(-1, 'bottom'), 'left');
-eq('no movement means no turn to describe', turnFor(0, 'top'), 'ahead');
-ok('magnitude does not matter, only sign', turnFor(9, 'top') === turnFor(1, 'top'));
-
-/* ================= 4. Naming the aisle ================= */
+/* ================= 3. Naming the aisle ================= */
 section('aisle labels');
 
 eq('a normal aisle is named by the shelves either side', aisleLabel(6.5), 'the aisle between 6 and 7');
@@ -111,23 +102,19 @@ eq('at either end', aisleShort(16.5), 'east end');
 ok('every aisle in the building has a short name',
    Array.from({length: 18}, (_, i) => aisleShort(i - 0.5)).every(t => t.length > 0 && t.length <= 12));
 
-/* ================= 5. The path in words ================= */
+/* ================= 4. The path in words ================= */
 section('turn-by-turn');
 
 const steps = walkSteps(
   [stop('top-2', 'left', 2, 'top'), stop('bot-11', 'right', 11, 'bottom')], 6.5, 13.5);
 eq('distances count shelves passed, which is what you can count', steps.map(s => s.shelves).join(','), '5,10');
 eq('heading is signed', steps.map(s => s.head).join(','), '-1,1');
-eq('first stop: walking west into the top row is a right turn', steps[0].turn, 'right');
-eq('and the shelf is on your right', steps[0].hand, 'right');
-eq('second stop: walking east into the bottom row is a right turn', steps[1].turn, 'right');
-eq('with the shelf on your right too', steps[1].hand, 'right');
 eq('the walk back to the stairwell is counted', steps.exitShelves, 2);
 eq('numbering is 1-based and matches the map badges', steps.map(s => s.n).join(','), '1,2');
 
 const same = walkSteps([stop('top-6', 'right', 6, 'top')], 6.5, 6.5);
 eq('a stop in the aisle you arrived in has no distance', same[0].shelves, 0);
-eq('and no turn to give', same[0].turn, 'ahead');
+eq('and no direction to give', same[0].head, 0);
 eq('nor any walk back out', same.exitShelves, 0);
 
 // Bays are always whole: both endpoints are half-integers, so their difference is an integer.
@@ -137,7 +124,7 @@ const spread = walkSteps(
 ok('every distance is a whole number', spread.every(s => Number.isInteger(s.shelves)),
    spread.map(s => s.shelves).join(','));
 
-/* ================= 6. Plan coordinates ================= */
+/* ================= 5. Plan coordinates ================= */
 // The map draws in the floor plan's own viewBox, so a stop lands on the picture the app already
 // shows. If these drift the walk is drawn over the wrong shelves.
 section('plan coordinates');
@@ -154,7 +141,7 @@ ok('the top lane sits inside the top row',
 ok('the bottom lane sits inside the bottom row',
    LANE_Y.bottom > PLAN.botY && LANE_Y.bottom < PLAN.botY + PLAN.botH);
 
-/* ================= 7. Doors ================= */
+/* ================= 6. Doors ================= */
 // A stairwell is not a point. You walk down the west one from its west edge and arrive on the
 // floor below at its EAST edge, so the same descent also carries you across the block — a router
 // that treats both as one x-position picks the wrong stairwell on exactly the floors where the

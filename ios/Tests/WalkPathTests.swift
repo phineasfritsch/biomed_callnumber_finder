@@ -46,37 +46,23 @@ final class WalkPathTests: XCTestCase {
                        "an unknown row falls back to the bottom, matching groupStops")
     }
 
-    // MARK: Which hand
+    // MARK: No left and right
 
-    /// Aisles run north–south. Facing into a top-row aisle you look north, so east is on your
-    /// right; into a bottom-row aisle you look south and east is on your left. The shelf is on the
-    /// side its face points away from — so the same `side` flips hands between the rows. This is
-    /// the single most reversible thing in the file and the one a reader trusts blindly.
-    func testWhichHand() {
-        XCTAssertEqual(WalkPath.hand(row: .top, side: "left"), .right,
-                       "top row, left face — the shelf is east of you, which is your right")
-        XCTAssertEqual(WalkPath.hand(row: .top, side: "right"), .left)
-        XCTAssertEqual(WalkPath.hand(row: .bottom, side: "left"), .left,
-                       "bottom row — east is now your left")
-        XCTAssertEqual(WalkPath.hand(row: .bottom, side: "right"), .right)
-        XCTAssertEqual(WalkPath.hand(row: .bottom, side: "single"), .right,
-                       "a half shelf faces east like any right face")
-        XCTAssertNotEqual(WalkPath.hand(row: .top, side: "left"),
-                          WalkPath.hand(row: .bottom, side: "left"),
-                          "the hand flips between rows for the same face")
-    }
-
-    // MARK: Turning
-
-    func testTurns() {
-        XCTAssertEqual(WalkPath.turn(heading: 1, row: .top), .left)
-        XCTAssertEqual(WalkPath.turn(heading: 1, row: .bottom), .right)
-        XCTAssertEqual(WalkPath.turn(heading: -1, row: .top), .right)
-        XCTAssertEqual(WalkPath.turn(heading: -1, row: .bottom), .left)
-        XCTAssertEqual(WalkPath.turn(heading: 0, row: .top), .ahead,
-                       "no movement means no turn to describe")
-        XCTAssertEqual(WalkPath.turn(heading: 9, row: .top), WalkPath.turn(heading: 1, row: .top),
-                       "magnitude does not matter, only sign")
+    /// An egocentric model lived here and was wrong three times running: it assumed you were
+    /// already walking when you were still stepping out of a lift, it assumed one corridor when
+    /// the floor has three, and once both were fixed the answer still depended on where the reader
+    /// pictured themselves standing. The walk is absolute now, and the thing worth asserting is
+    /// that nothing egocentric came back.
+    func testNoHandOrTurn() {
+        let step = WalkPath.steps(stops: [stop("top-6", "right", 6, .top)],
+                                  entry: 2.5, exit: 2.5).steps[0]
+        XCTAssertEqual(step.heading, 1, "east and west are the only direction it commits to")
+        XCTAssertEqual(step.row, .top, "north and south come from the row")
+        XCTAssertEqual(step.side, "right", "and the face is the L or R on the label")
+        XCTAssertEqual(step.target, "6R top")
+        XCTAssertFalse(step.movement.lowercased().contains("left"))
+        XCTAssertFalse(step.movement.lowercased().contains("right"))
+        XCTAssertFalse(step.target.lowercased().contains("your"))
     }
 
     func testAisleLabels() {
@@ -93,17 +79,13 @@ final class WalkPathTests: XCTestCase {
             entry: 6.5, exit: 13.5)
         XCTAssertEqual(steps.map(\.shelves), [5, 10], "distances count shelves passed")
         XCTAssertEqual(steps.map(\.heading), [-1, 1])
-        XCTAssertEqual(steps[0].turn, .right, "walking west into the top row is a right turn")
-        XCTAssertEqual(steps[0].hand, .right)
-        XCTAssertEqual(steps[1].turn, .right, "walking east into the bottom row is a right turn")
-        XCTAssertEqual(steps[1].hand, .right)
         XCTAssertEqual(exitShelves, 2)
         XCTAssertEqual(steps.map(\.n), [1, 2], "numbering is 1-based and matches the map badges")
 
         let (same, sameExit) = WalkPath.steps(
             stops: [stop("top-6", "right", 6, .top)], entry: 6.5, exit: 6.5)
         XCTAssertEqual(same[0].shelves, 0)
-        XCTAssertEqual(same[0].turn, .ahead)
+        XCTAssertEqual(same[0].heading, 0, "and no direction to give")
         XCTAssertEqual(sameExit, 0)
     }
 
