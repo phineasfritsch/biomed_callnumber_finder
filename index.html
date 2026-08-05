@@ -132,9 +132,9 @@
   .itin-steps li:first-child{border-top:0}
   .itin-steps .sn{flex:none; width:21px; height:21px; border-radius:99px; color:#fff; font-family:var(--mono); font-size:11px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; align-self:flex-start}
   .itin-steps .sn.out{background:var(--slate)}
-  .itin-steps .sd{flex:0 0 auto; min-width:230px; font-size:12px; line-height:1.6; color:var(--ink-soft)}
+  .itin-steps .sd{flex:0 0 auto; min-width:190px; font-size:12px; line-height:1.6; color:var(--ink-soft)}
   .itin-steps .sd b{color:var(--ink)}
-  .itin-steps .sat{flex:0 0 auto; min-width:210px; font-size:12px; line-height:1.6; color:var(--ink-soft)}
+  .itin-steps .sat{flex:0 0 auto; min-width:150px; font-size:12px; line-height:1.6; color:var(--ink-soft)}
   .itin-steps .sat b{color:var(--ink)}
   .itin-steps .scn{flex:1 1 auto; font-family:var(--mono); font-size:11.5px; color:var(--accent)}
   /* The shelf-end label is what you check when you get there, so it goes last and gives way
@@ -1486,25 +1486,32 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
      The first move is measured from a door rather than from another aisle, so it can land on a
      half shelf; it is stated as a direction rather than a count. Every later move is aisle to
      aisle and comes out whole. */
+  /* One row per stop, and as few words in it as the instruction can survive.
+     Anything the reader already has is left out: the transit line above already named the door,
+     the arrow already gives the direction, and "row" and "face" and "shelf" are the only kinds of
+     thing these numbers could be. What is left is what changes between one stop and the next. */
   function walkList(stops,entry,exit,inDoor,outDoor){
     const steps=walkSteps(stops,entry,exit), n=stops.length, arrow={1:'→','-1':'←',0:'↳'};
     const face={left:'L',right:'R',single:'R'};
+    const shortDoor = d => d.name.replace('stairwell','stairs');
     let h='<ol class="itin-steps">';
     steps.forEach((st,i)=>{
       const whole=Number.isInteger(st.shelves);
+      /* A move from a door is measured from the middle of a block and can land on half a shelf,
+         so it gives the direction and skips the count. */
       const move = st.shelves===0 ? 'same aisle'
-                 : (i===0 || !whole) ? `head ${st.head>0?'east':'west'} from the ${inDoor.name}`
-                 : `${st.shelves} ${st.shelves===1?'shelf':'shelves'} ${st.head>0?'east':'west'}`;
+                 : (i===0 || !whole) ? `from ${shortDoor(inDoor)}`
+                 : `${st.shelves} ${st.shelves===1?'shelf':'shelves'}`;
       const turn = st.turn==='ahead' ? '' : `, turn ${st.turn}`;
       h+=`<li><span class="sn" style="background:${orderColor(st.n-1,n)}">${st.n}</span>`
-       + `<span class="sd"><b>${arrow[st.head]} ${move}</b> → ${aisleShort(st.x)}${turn}</span>`
-       + `<span class="sat">shelf <b>${st.index}${face[st.side]||''}</b>, ${st.row} row — on your <b>${st.hand}</b></span>`
+       + `<span class="sd"><b>${arrow[st.head]} ${move}</b> ${aisleShort(st.x)}${turn}</span>`
+       + `<span class="sat"><b>${st.index}${face[st.side]||''}</b> ${st.row} · on your <b>${st.hand}</b></span>`
        + `<span class="scn">${st.cns.join(' · ')}</span>`
        + `<span class="srng">${st.range.start} → ${st.range.end}</span></li>`;
     });
     if(outDoor){
-      h+=`<li class="out"><span class="sn out">↺</span><span class="sd">Back to the `
-       + `<b>${outDoor.name}</b> to leave this floor.</span></li>`;
+      h+=`<li class="out"><span class="sn out">↺</span>`
+       + `<span class="sd">back to the <b>${shortDoor(outDoor)}</b></span></li>`;
     }
     return h+'</ol>';
   }

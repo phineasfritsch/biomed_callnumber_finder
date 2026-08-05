@@ -279,19 +279,21 @@ extension WalkPath.Step {
         if shelves == 0 {
             move = "Same aisle"
         } else if fromDoor || shelves != shelves.rounded() {
-            move = "Head \(heading > 0 ? "east" : "west") from the \(doorName)"
+            move = "\(heading > 0 ? "East" : "West") from \(doorName)"
         } else {
             move = "\(Int(shelves)) \(shelves == 1 ? "shelf" : "shelves") \(heading > 0 ? "east" : "west")"
         }
         let short = WalkPath.aisleShort(x)
-        return turn == .ahead ? "\(move) → \(short)" : "\(move) → \(short), turn \(turn.rawValue)"
+        return turn == .ahead ? "\(move) · \(short)" : "\(move) · \(short), turn \(turn.rawValue)"
     }
 
-    /// "shelf 11L, bottom row — on your left"
+    /// "11L bottom · on your left". Anything the reader already has is left out — the transit row
+    /// above named the door, and "row" and "face" and "shelf" are the only kinds of thing these
+    /// numbers could be.
     var target: String {
         let rowName = row.map { $0 == .top ? "top" : "bottom" } ?? "—"
         let faceLetter = side == "left" ? "L" : "R"
-        return "shelf \(Int(index))\(faceLetter), \(rowName) row — on your \(hand.rawValue)"
+        return "\(Int(index))\(faceLetter) \(rowName) · on your \(hand.rawValue)"
     }
 
     var symbol: String {

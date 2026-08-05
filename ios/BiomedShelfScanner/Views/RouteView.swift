@@ -250,7 +250,8 @@ struct FloorSection: View {
     }
 
     private var doorName: String {
-        WalkPath.Doors.door(for: leg.entry, going: .in)?.name ?? "lift"
+        (WalkPath.Doors.door(for: leg.entry, going: .in)?.name ?? "lift")
+            .replacingOccurrences(of: "stairwell", with: "stairs")
     }
 
     var body: some View {
