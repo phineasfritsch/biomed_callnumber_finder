@@ -14,9 +14,27 @@ biomed-shelf-ranges.json
 # Instruction docs
 Instructions.txt
 SHELF-MAPPING-INSTRUCTIONS.md
+CATALOG.md
+
+# Test corpus + harness (saved SRU responses; the app never reads these at runtime)
+fixtures/
+Tools/
 
 # Git internals (CF was choking on the 991 MB pack file)
 .git/
+
+# Local tooling state. "assets.directory" is the repo root, so anything not listed here is
+# served publicly — .wrangler/cache/wrangler-account.json carries the account id and the
+# account's email address, and both of these once shipped by accident. Not credentials
+# (the OAuth token lives outside the repo), but not for publication either.
+.wrangler/
+.claude/
+.gitattributes
+.assetsignore
+
+# Source, not site
+ios/
+README.md
 
 # Misc downloads that ended up in the repo
 *.exe
@@ -24,3 +42,6 @@ SHELF-MAPPING-INSTRUCTIONS.md
 *.msix
 *.xz
 *.tar
+# Scans and other documents that landed here — the app serves index.html, not paperwork,
+# and "assets.directory" is the repo root, so anything not listed here is published.
+*.pdf

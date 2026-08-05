@@ -67,8 +67,13 @@ struct ManualEntryView: View {
         if text.trimmingCharacters(in: .whitespaces).isEmpty {
             Text("Type it exactly as printed on the spine.")
         } else if let cn = CallNumber.parse(text), let hit = router.locate(cn) {
+            // Serial runs match several faces; hiding that made the single answer read as
+            // "wrong shelf". Route still targets the first face — same as the website.
+            let matches = router.search(cn).count
             Label(
-                "Level \(hit.level) · \(hit.shelfID) · \(hit.side)",
+                matches > 1
+                    ? "Level \(hit.level) · \(hit.shelfID) · \(hit.side) — \(matches) shelves match (serial run; check volume/year)"
+                    : "Level \(hit.level) · \(hit.shelfID) · \(hit.side)",
                 systemImage: "checkmark.circle.fill"
             )
             .foregroundStyle(Theme.located)

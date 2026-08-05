@@ -13,6 +13,7 @@ struct TripSheet: View {
 
     @State private var editing: TripItem?
     @State private var showManualEntry = false
+    @State private var showSearch = false
     @State private var showHistory = false
     @State private var showDiagnostics = false
     @State private var showRoute = false
@@ -53,6 +54,9 @@ struct TripSheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {
+                        Button { showSearch = true } label: {
+                            Label("Find a shelf", systemImage: "magnifyingglass")
+                        }
                         Button { showManualEntry = true } label: {
                             Label("Type a call number", systemImage: "keyboard")
                         }
@@ -89,6 +93,9 @@ struct TripSheet: View {
                     guard let cn = CallNumber.parse(text) else { return }
                     store.add(cn, hit: router.locate(cn), typed: true)
                 }
+            }
+            .sheet(isPresented: $showSearch) {
+                SearchView(router: router)
             }
             .sheet(isPresented: $showHistory) {
                 HistoryView()

@@ -14,9 +14,11 @@ final class CallNumberTests: XCTestCase {
     struct Golden: Decodable {
         struct Hit: Decodable { let lvl: Int; let id: String; let side: String }
         struct Locate: Decodable { let cn: String; let hit: Hit? }
+        struct Search: Decodable { let cn: String; let hits: [Hit] }
         struct Pair: Decodable { let a: String; let b: String; let cmp: Int }
         let sortedOrder: [String]
         let locates: [Locate]
+        let searches: [Search]
         let pairs: [Pair]
     }
 
@@ -55,6 +57,20 @@ final class CallNumberTests: XCTestCase {
             XCTAssertEqual(hit?.level, c.hit?.lvl, "level for \(c.cn)")
             XCTAssertEqual(hit?.shelfID, c.hit?.id, "shelf for \(c.cn)")
             XCTAssertEqual(hit?.side, c.hit?.side, "side for \(c.cn)")
+        }
+    }
+
+    /// The website's SEARCH (index.html `locate()`) is a different operation from routing:
+    /// every matching face, level-ascending, Level 9 excluded. 263 of 653 real queries match
+    /// more than one face (serial runs) — showing only the first was the "search is completely
+    /// wrong" field bug. Order matters and is asserted exactly.
+    func testSearchMatchesWebsite() throws {
+        let router = try Router(bundledRanges: "biomed-shelf-ranges")
+        for c in golden.searches {
+            guard let cn = CallNumber.parse(c.cn) else { return XCTFail("parse failed: \(c.cn)") }
+            let got = router.search(cn).map { "\($0.level)|\($0.shelfID)|\($0.side)" }
+            let want = c.hits.map { "\($0.lvl)|\($0.id)|\($0.side)" }
+            XCTAssertEqual(got, want, "search(\(c.cn))")
         }
     }
 

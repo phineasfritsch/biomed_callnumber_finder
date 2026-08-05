@@ -52,10 +52,15 @@ function cmpCN(x, y) {
   return 0;
 }
 const scheme = cn => /^\s*W[1-4]([A-Z]|\b)/i.test(cn || '') ? 'w1' : 'nlm';
+// Level 9 is Special Collections: seventeen faces running `A` to `ZWZ 330`, so it
+// contains almost every call number in the building. Including it here and then taking
+// the lowest level routed every level-10 and level-11 book to level 9 -- all of both
+// floors. It is excluded from routing, exactly as the catalog lookup already excluded it.
 function locate(cn) {
   const hits = [];
   for (const key in DATA) {
     const d = DATA[key];
+    if (key.startsWith('9|')) continue;
     if (!d.start || !d.end || scheme(d.start) !== scheme(cn)) continue;
     if (cmpCN(cn, d.start) >= 0 && cmpCN(cn, d.end) <= 0) {
       const [lvl, id, side] = key.split('|');
@@ -91,9 +96,11 @@ add(all.find(c => /\d\.\d/.test(c)), 'decimal class number');
 //  * Degenerate endpoints like the bare "A" must not land in the happy-path group — they belong
 //    in the reject group below.
 //  * The level a call number is *stored under* is not necessarily the level `locate` returns.
-//    `locate` yields the LOWEST matching floor, and plenty of ranges repeat across floors, so a
-//    label sourced from level 11 can legitimately resolve to level 9. Label the card with the
-//    resolved level or the sheet tells you to expect the wrong answer.
+//    `locate` yields the LOWEST matching floor and ranges do repeat across floors, mostly at
+//    seams, so label the card with the resolved level or the sheet tells you to expect the
+//    wrong answer. This used to say a level-11 label could "legitimately resolve to level 9";
+//    it could not. That was the Special Collections bug — level 9 spans the whole alphabet and
+//    swallowed every level-10 and level-11 book — and `locate` now excludes it.
 const seenResolved = new Set();
 const bySourceLevel = {};
 for (const [key, v] of Object.entries(DATA)) {

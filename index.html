@@ -85,14 +85,14 @@
   .legend span{display:inline-flex; align-items:center; gap:6px}
   .sw{width:11px; height:11px; border-radius:3px; display:inline-block; border:1px solid rgba(0,0,0,.12)}
 
-  /* ── route planner ── */
-  .route{margin:18px 0 6px; background:var(--card); border:1px solid var(--line); border-radius:var(--r); overflow:hidden}
-  .route-head{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 16px; cursor:pointer}
-  .route-head h2{font-family:var(--disp); font-size:17px; font-weight:600; margin:0; display:flex; align-items:center}
-  .route-head .tag{font-size:9.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--accent); background:var(--orange-soft); padding:2px 7px; border-radius:99px; margin-left:9px}
-  .route-body{padding:0 16px 16px; border-top:1px solid var(--line)}
-  .route-hint{font-size:12px; color:var(--ink-soft); line-height:1.65; margin:13px 0}
-  .route-hint b{color:var(--ink)}
+  /* ── collapsible panels (route planner, catalog search) ── */
+  .route,.cat{margin:18px 0 6px; background:var(--card); border:1px solid var(--line); border-radius:var(--r); overflow:hidden}
+  .route-head,.cat-head{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 16px; cursor:pointer}
+  .route-head h2,.cat-head h2{font-family:var(--disp); font-size:17px; font-weight:600; margin:0; display:flex; align-items:center}
+  .route-head .tag,.cat-head .tag{font-size:9.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--accent); background:var(--orange-soft); padding:2px 7px; border-radius:99px; margin-left:9px}
+  .route-body,.cat-body{padding:0 16px 16px; border-top:1px solid var(--line)}
+  .route-hint,.cat-hint{font-size:12px; color:var(--ink-soft); line-height:1.65; margin:13px 0}
+  .route-hint b,.cat-hint b{color:var(--ink)}
   .drop{display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:16px; border:1.5px dashed var(--line); border-radius:10px; background:var(--paper); transition:.15s}
   .drop.over{border-color:var(--accent); background:var(--orange-soft)}
   .drop-hint{font-size:11px; color:var(--ink-soft)}
@@ -122,6 +122,106 @@
   .itin-miss{font-size:12px; color:var(--accent); background:var(--orange-soft); border:1px solid var(--line); border-radius:8px; padding:9px 12px; margin-top:10px; line-height:1.65}
   .itin-miss b{color:var(--accent)}
 
+  /* ── catalog search (Alma SRU) ── */
+  .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0}
+  .cat-form{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:12px 0 0}
+  .cat-form input{flex:1 1 240px; min-width:0; font-family:var(--mono); font-size:15px; padding:11px 13px; border:1px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink)}
+  .cat-form input:focus-visible,.cat-form input:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft)}
+  .cat-modes{display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin:13px 0 0}
+  .cat-opts{display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin:11px 0 0}
+  .chk{display:inline-flex; align-items:center; gap:7px; font-size:12px; color:var(--ink-soft); cursor:pointer; min-height:32px}
+  .chk input{width:16px; height:16px; accent-color:var(--accent); cursor:pointer}
+  .cat-status{font-size:12px; color:var(--ink-soft); min-height:18px; margin:11px 2px 0; line-height:1.65}
+  .cat-status.err{color:var(--accent)}
+  .cat-results{margin-top:10px}
+
+  .chk-note{color:var(--ink-faint)}
+  .work{border:1px solid var(--line); border-radius:10px; overflow:hidden; margin:9px 0; background:var(--paper)}
+  .work-h{display:flex; gap:12px; align-items:flex-start; padding:10px 13px; background:var(--paper-2); border-bottom:1px solid var(--line)}
+  .work-t{flex:1 1 auto; min-width:0}
+  /* Reserve the box before the image lands so results don't jump as covers stream in. */
+  .cover{flex:none; width:96px; height:144px; object-fit:contain; object-position:top;
+    border:1px solid var(--line); border-radius:5px; background:var(--card)}
+  .work-h .ti{font-family:var(--disp); font-size:15px; font-weight:600; line-height:1.28}
+  .work-h .by{font-size:11.5px; color:var(--ink-soft); margin-top:3px; line-height:1.5}
+  .work-h .tags{display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin-top:8px}
+  .work-h .ed{display:inline-block; font-size:9.5px; text-transform:uppercase; letter-spacing:1px; color:var(--accent); background:var(--orange-soft); border-radius:99px; padding:3px 9px}
+  /* The carrier chip is loud on purpose: an audiobook filed as the newest "edition" of a
+     novel has to be visible before the year is, not after the walk. */
+  .carr{display:inline-block; font-size:9.5px; text-transform:uppercase; letter-spacing:1px;
+    color:var(--paper); background:var(--slate); border-radius:99px; padding:3px 9px}
+  .carr.audio,.carr.music{background:#7a5c9e}
+  .carr.video{background:#9e5c5c}
+  .carr.online{background:var(--slate)}
+  .carr.microform{background:#6b6b5c}
+  .lib{padding:10px 13px; border-top:1px solid var(--line)}
+  .lib-n{font-size:10.5px; text-transform:uppercase; letter-spacing:1px; color:var(--ink-soft); margin-bottom:3px}
+  .lib.away{background:var(--paper-2)}
+  .hold{padding:8px 0 2px; border-top:1px dotted var(--line)}
+  .lib .hold:first-of-type{border-top:0; padding-top:4px}
+  .hold-l{display:flex; flex-wrap:wrap; align-items:center; gap:5px 10px}
+  .hold .cn{font-size:13px; font-weight:600; letter-spacing:.2px}
+  .hold .cn.none{font-weight:400; color:var(--ink-faint)}
+  .hold .where{display:block; font-size:11.5px; color:var(--ink-soft); line-height:1.55; margin-top:4px}
+  .chip{font-size:10px; text-transform:uppercase; letter-spacing:.7px; padding:3px 8px; border-radius:99px; border:1px solid var(--line); color:var(--ink-soft); background:var(--card); white-space:nowrap}
+  .chip.ok{color:var(--good); border-color:#bcce9e; background:var(--green-soft)}
+  .chip.no{color:var(--accent); border-color:#e0bfa2; background:var(--orange-soft)}
+  .chip.vol{color:var(--slate); border-color:var(--slate-soft); background:var(--slate-soft)}
+
+  .found{display:block; width:100%; text-align:left; font-family:var(--mono); font-size:13px; color:var(--ink);
+    background:var(--green-soft); border:1px solid #bcce9e; border-radius:8px; padding:9px 12px; margin-top:6px; cursor:pointer; min-height:44px}
+  .found:hover{border-color:var(--green)}
+  .found:focus-visible{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft)}
+  .found .lead{display:block; font-weight:600}
+  .found .rng{display:block; font-size:11px; color:var(--ink-soft); margin-top:3px}
+  .nofind,.elsewhere{font-size:11.5px; border:1px solid var(--line); border-radius:8px; padding:8px 11px; margin-top:6px; line-height:1.6}
+  .nofind{color:var(--accent); background:var(--orange-soft)}
+  .elsewhere{color:var(--ink-soft); background:var(--paper-2)}
+  .cat-empty{font-size:12.5px; color:var(--ink-soft); background:var(--paper-2); border:1px solid var(--line); border-radius:8px; padding:12px 14px; line-height:1.7}
+  .cat-empty b{color:var(--ink)}
+  .cat-more{display:flex; justify-content:center; margin:12px 0 2px}
+  .cat-scope{display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin:13px 0 0}
+  .cat-opts select{font:inherit; font-size:12px; padding:5px 7px; border:1px solid var(--line); border-radius:7px; background:var(--paper); color:var(--ink)}
+  .cat-adv{margin:11px 0 0; border:1px solid var(--line); border-radius:9px; background:var(--paper-2)}
+  .cat-adv>summary{cursor:pointer; list-style:none; padding:9px 13px; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--ink-soft); min-height:38px; display:flex; align-items:center}
+  .cat-adv>summary::-webkit-details-marker{display:none}
+  .cat-adv>summary::before{content:'\25b8'; margin-right:8px; color:var(--accent)}
+  .cat-adv[open]>summary::before{content:'\25be'}
+  .cat-adv>summary:focus-visible{outline:none; box-shadow:inset 0 0 0 2px var(--accent)}
+  .filt{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:9px 12px; padding:4px 13px 12px}
+  .filt .f{display:flex; flex-direction:column; gap:4px; font-size:11px; color:var(--ink-soft)}
+  .filt .f>span{text-transform:uppercase; letter-spacing:.6px; font-size:9.5px}
+  .filt .f input[type=text],.filt .f input:not([type]),.filt .f select{font:inherit; font-size:13px; padding:7px 9px; border:1px solid var(--line); border-radius:7px; background:var(--paper); color:var(--ink); min-width:0}
+  .filt .f input:focus-visible,.filt .f select:focus-visible{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft)}
+  .filt .chk2{flex-direction:row; align-items:center; gap:7px; font-size:12px; min-height:34px}
+  .filt .chk2 input{width:16px; height:16px; accent-color:var(--accent); flex:none}
+  .filt-note{font-size:11.5px; color:var(--ink-soft); line-height:1.7; margin:0; padding:0 13px 12px}
+  .filt-note code,.cheat code{font-family:var(--mono); font-size:11px; background:var(--card); border:1px solid var(--line); border-radius:4px; padding:1px 5px; color:var(--accent)}
+  .cheat{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; padding:0 13px 12px; font-size:11.5px; color:var(--ink-soft); line-height:1.6; align-items:baseline}
+  .cheat>div:nth-child(odd){white-space:nowrap}
+  .cheat .cheat-h{font-size:9.5px; text-transform:uppercase; letter-spacing:1px; color:var(--ink-faint); padding-top:8px; border-top:1px solid var(--line); white-space:normal}
+  .cat-example{font:inherit; font-size:11.5px; color:var(--accent); background:var(--card); border:1px solid var(--line); border-radius:99px; padding:5px 11px; margin:3px 4px 0 0; cursor:pointer; min-height:30px}
+  .cat-example:hover{border-color:var(--accent)}
+  .cat-applied{margin:10px 0 0; font-size:11.5px; line-height:1.7}
+  .cat-applied .ap-row{display:flex; flex-wrap:wrap; gap:5px; align-items:baseline; color:var(--ink-soft)}
+  .cat-applied .ap-n{background:var(--green-soft); border:1px solid #bcce9e; border-radius:99px; padding:2px 9px; font-size:11px}
+  .cat-applied .ap-eq{color:var(--ink-faint); margin-top:5px}
+  .cat-applied .ap-eq code{font-family:var(--mono); font-size:11px; color:var(--ink-soft)}
+  .cat-applied .ap-err{color:var(--accent); background:var(--orange-soft); border:1px solid #e0bfa2; border-radius:8px; padding:7px 11px; margin-top:6px}
+  .cat-status code{font-family:var(--mono); font-size:11px}
+  .cat-note{font-size:11.5px; color:var(--ink-soft); text-align:center; margin:10px 0 0}
+  .edcount{display:inline-block; font-size:9.5px; text-transform:uppercase; letter-spacing:1px; color:var(--slate); background:var(--slate-soft); border-radius:99px; padding:3px 9px}
+  .eds{border-top:1px solid var(--line); background:var(--paper-2)}
+  .eds>summary{cursor:pointer; list-style:none; padding:8px 13px; font-size:11px; color:var(--ink-soft); min-height:36px; display:flex; align-items:center}
+  .eds>summary::-webkit-details-marker{display:none}
+  .eds>summary::before{content:'\25b8'; margin-right:8px; color:var(--accent)}
+  .eds[open]>summary::before{content:'\25be'}
+  .eds-body{padding:0 0 4px}
+  .edrow{border-top:1px dotted var(--line)}
+  .edrow-h{display:flex; gap:9px; align-items:baseline; padding:8px 13px 2px}
+  .edrow-h .edy{font-family:var(--mono); font-size:12px; font-weight:600; color:var(--accent); flex:none}
+  .edrow-h .edt{font-size:12px; color:var(--ink-soft); line-height:1.45}
+
   /* ── responsive / mobile ── */
   .planwrap{width:100%}
   @media (hover:hover) and (pointer:fine){ #shoot{display:none} }
@@ -140,10 +240,27 @@
     #cnList{font-size:16px}
     .drop{padding:13px}
     .drop .btn{flex:1 1 auto}
-    .route-head{padding:11px 13px}
-    .route-body{padding:0 13px 14px}
+    .route-head,.cat-head{padding:11px 13px}
+    .route-body,.cat-body{padding:0 13px 14px}
     .detail{padding:14px 15px}
     .itin-stop .loc{min-width:0; flex:1 1 100%}
+    /* 16px keeps iOS from auto-zooming the field; 44px is the Apple/Material tap floor */
+    .cat-form input{font-size:16px; flex:1 1 100%}
+    .cat-form .btn{flex:1 1 0; min-height:44px}
+    .cat-modes .pill{min-height:44px; padding:8px 16px}
+    .cat-scope .pill{min-height:44px; padding:8px 16px}
+    .filt{grid-template-columns:1fr}
+    .filt .f input,.filt .f select{font-size:16px}
+    .cheat{grid-template-columns:1fr; gap:2px 0}
+    .cheat>div:nth-child(even){padding-bottom:7px}
+    .cat-head .btn{min-height:44px}
+    .chk{min-height:44px}
+    .work-h{padding:9px 11px; gap:10px}
+    .cover{width:74px; height:111px}
+    .lib{padding:9px 11px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important}
   }
 </style>
 </head>
@@ -174,6 +291,150 @@
       <b data-q="QW 4 S851b">QW 4 S851b</b> ·
       <b data-q="BF 400">BF 400</b> ·
       <b data-q="WS 200 P370">WS 200 P370</b>
+    </div>
+  </div>
+
+  <div class="cat" id="cat">
+    <div class="cat-head" id="catHead">
+      <h2>Find a book in the catalog<span class="tag">beta</span></h2>
+      <button class="btn ghost" type="button" id="catToggle" aria-expanded="false" aria-controls="catBody"><span class="tgl">Open</span></button>
+    </div>
+    <div class="cat-body" id="catBody" hidden>
+      <p class="cat-hint">Search UCLA&rsquo;s catalog by title, author or ISBN. The default answers the question asked at the desk all day &mdash; <b>the newest edition of this book, in this building</b> &mdash; so results are scoped to Biomed and ordered newest-first, and widen to the rest of UCLA only if Biomed has nothing. Copies in the <b>Biomed stacks</b> are resolved to an actual shelf you can walk to. The catalog itself returns hits in alphabetical order with no relevance ranking and no spelling correction, so both are done here: a typo of a word or two still finds the book.</p>
+      <div class="cat-scope" role="group" aria-label="Where to search">
+        <span class="sect-label">Where:</span>
+        <button class="pill active" type="button" data-scope="biomed" aria-pressed="true">Biomed</button>
+        <button class="pill" type="button" data-scope="stacks" aria-pressed="false">Walkable stacks</button>
+        <button class="pill" type="button" data-scope="ucla" aria-pressed="false">All of UCLA</button>
+      </div>
+      <div class="cat-modes" role="group" aria-label="Search field">
+        <span class="sect-label">Search by:</span>
+        <button class="pill active" type="button" data-mode="kw" aria-pressed="true">Keyword</button>
+        <button class="pill" type="button" data-mode="title" aria-pressed="false">Title</button>
+        <button class="pill" type="button" data-mode="author" aria-pressed="false">Author</button>
+        <button class="pill" type="button" data-mode="isbn" aria-pressed="false">ISBN</button>
+      </div>
+      <div class="cat-form">
+        <label class="sr-only" for="catQ">Search the catalog</label>
+        <input id="catQ" placeholder="harrison's principles of internal medicine" autocomplete="off" enterkeyhint="search" spellcheck="false">
+        <button class="btn" type="button" id="catGo">Search</button>
+        <button class="btn ghost" type="button" id="catClear">Clear</button>
+      </div>
+      <div class="cat-opts">
+        <label class="chk" for="catSort">Sort:
+          <select id="catSort">
+            <option value="best" selected>Best match, then newest</option>
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="title">Title A&ndash;Z</option>
+            <option value="author">Author A&ndash;Z</option>
+            <option value="shelf">Shelf order (walk it)</option>
+          </select>
+        </label>
+        <label class="chk"><input type="checkbox" id="catGroupEd" checked> Group editions <span class="chk-note">(newest on top)</span></label>
+        <label class="chk"><input type="checkbox" id="catBiomed"> Biomed copies only</label>
+        <label class="chk"><input type="checkbox" id="catCovers" checked> Show covers <span class="chk-note">(sends the ISBN to openlibrary.org)</span></label>
+      </div>
+
+      <details class="cat-adv">
+        <summary>Filters</summary>
+        <div class="filt" id="catFilters">
+          <label class="f"><span>Published from</span><input id="fYearFrom" inputmode="numeric" placeholder="2015" autocomplete="off"></label>
+          <label class="f"><span>&hellip; to</span><input id="fYearTo" inputmode="numeric" placeholder="2026" autocomplete="off"></label>
+          <label class="f"><span>Language</span><select id="fLang">
+            <option value="">any</option><option value="eng">English</option><option value="spa">Spanish</option>
+            <option value="fre">French</option><option value="ger">German</option><option value="ita">Italian</option>
+            <option value="por">Portuguese</option><option value="rus">Russian</option><option value="chi">Chinese</option>
+            <option value="jpn">Japanese</option><option value="kor">Korean</option><option value="lat">Latin</option>
+          </select></label>
+          <label class="f"><span>Carrier</span><select id="fCarrier">
+            <option value="">any</option><option value="print">Print / physical book</option>
+            <option value="audio">Audiobook</option><option value="music">Recorded music</option>
+            <option value="video">Video</option><option value="score">Printed score</option>
+            <option value="map">Map</option><option value="microform">Microform</option>
+            <option value="software">Software / data</option><option value="image">Image</option>
+            <option value="online">Online only</option>
+          </select></label>
+          <label class="f"><span>Kind of thing</span><select id="fType">
+            <option value="">any</option><option value="book">Book (monograph)</option><option value="journal">Journal / serial</option>
+            <option value="video">Video</option><option value="audio">Audio</option><option value="music">Recorded music</option>
+            <option value="score">Printed score</option><option value="map">Map</option><option value="software">Software / data</option>
+            <option value="manuscript">Manuscript</option><option value="image">Image</option><option value="archive">Mixed / archive</option>
+          </select></label>
+          <label class="f"><span>Item type</span><select id="fMaterial">
+            <option value="">any</option><option value="book">BOOK</option><option value="issue">ISSUE</option>
+            <option value="bound">Bound issue</option><option value="dvd">DVD</option><option value="cdrom">CD-ROM</option>
+            <option value="map">MAP</option><option value="microform">Microform</option><option value="score">Score</option>
+            <option value="record">Sound recording</option><option value="mixed">Mixed</option><option value="other">Other</option>
+          </select></label>
+          <label class="f"><span>Exact location</span><select id="fLoc">
+            <option value="">any in scope</option><option value="bi">bi &middot; general stacks</option>
+            <option value="biper">biper &middot; bound volumes</option><option value="biprwt">biprwt &middot; building use</option>
+            <option value="bian">bian &middot; annual / series</option><option value="birf">birf &middot; Reference, Floor 4</option>
+            <option value="birs">birs &middot; Reserves</option><option value="bicidperm">bicidperm &middot; desk reserves</option>
+            <option value="bicimm">bicimm &middot; desk media</option><option value="biherb">biherb &middot; Herbarium</option>
+          </select></label>
+          <label class="f"><span>MeSH subject</span><input id="fMesh" placeholder="neoplasms" autocomplete="off"></label>
+          <label class="f"><span>Any subject</span><input id="fSubject" placeholder="nursing" autocomplete="off"></label>
+          <label class="f"><span>Series</span><input id="fSeries" placeholder="Lange" autocomplete="off"></label>
+          <label class="f"><span>Genre / form</span><input id="fGenre" placeholder="atlases" autocomplete="off"></label>
+          <label class="f"><span>Publisher</span><input id="fPublisher" placeholder="Elsevier" autocomplete="off"></label>
+          <label class="f"><span>Author</span><input id="fAuthor" placeholder="longo" autocomplete="off"></label>
+          <label class="f"><span>Call number</span><input id="fCall" placeholder="WM 100" autocomplete="off"></label>
+          <label class="f chk2"><input type="checkbox" id="fShelf"> Only copies that resolve to a shelf</label>
+          <label class="f chk2"><input type="checkbox" id="fAvail"> Only titles with a copy on the shelf now</label>
+        </div>
+        <p class="filt-note">Each control is shorthand for a token you could type in the box &mdash; the exact tokens are echoed above the results, because a filter that narrows the answer silently is indistinguishable from a gap in the collection.</p>
+      </details>
+
+      <details class="cat-adv">
+        <summary>Search syntax &mdash; everything the box understands</summary>
+        <p class="filt-note">Type <code>field:value</code> anywhere in the box; quote values with spaces; prefix with <code>-</code> to exclude. Everything else is ordinary search text. Every index below was probed against this endpoint on 2026&#8209;08&#8209;05 &mdash; nothing is offered that returns nothing.</p>
+        <div class="cheat">
+          <div><code>title:</code> <code>ti:</code></div><div>Title phrase. <code>title:"internal medicine"</code></div>
+          <div><code>author:</code> <code>au:</code> <code>by:</code></div><div>Creator (MARC 100/110/111). <code>au:"longo, dan"</code></div>
+          <div><code>subject:</code> <code>su:</code></div><div>Any subject heading.</div>
+          <div><code>mesh:</code></div><div>Medical subject heading. <code>mesh:neoplasms</code></div>
+          <div><code>lcsh:</code></div><div>Library of Congress subject heading.</div>
+          <div><code>series:</code></div><div>Series statement. <code>series:Lange</code></div>
+          <div><code>genre:</code> <code>form:</code></div><div>Genre / form. <code>genre:atlases</code>, <code>genre:handbooks</code></div>
+          <div><code>uniform:</code></div><div>Uniform title.</div>
+          <div><code>publisher:</code> <code>pub:</code></div><div>Publisher name. <code>pub:Elsevier</code></div>
+          <div><code>place:</code></div><div>Place of publication.</div>
+          <div><code>note:</code></div><div>Any MARC note field.</div>
+          <div><code>isbn:</code> <code>issn:</code></div><div>Standard numbers; punctuation is stripped.</div>
+          <div><code>cn:</code> <code>call:</code></div><div>Call number as shelved. <code>cn:"WM 100"</code> browses the class.</div>
+          <div><code>nlm:</code> <code>lc:</code></div><div>The NLM-type or LC-type number specifically.</div>
+          <div><code>lang:</code></div><div>Language, by name or MARC code. <code>lang:spanish</code>, <code>lang:jpn</code></div>
+          <div><code>year:</code> <code>date:</code></div><div><code>year:2015</code> &middot; <code>year:&gt;=2015</code> &middot; <code>year:2010..2020</code> &middot; <code>year:2015+</code> &middot; <code>year:1990s</code></div>
+          <div><code>after:</code> <code>before:</code></div><div>Shorthand for the same. <code>after:2015 before:2020</code></div>
+          <div><code>type:</code> <code>format:</code></div><div>book &middot; journal &middot; video &middot; audio &middot; music &middot; score &middot; map &middot; software &middot; manuscript &middot; image &middot; archive</div>
+          <div><code>material:</code> <code>item:</code></div><div>Item type on the shelf: book &middot; issue &middot; dvd &middot; cdrom &middot; microform &middot; score &middot; map</div>
+          <div><code>loc:</code></div><div>One exact Biomed location code. <code>loc:birf</code></div>
+          <div><code>at:</code> <code>in:</code></div><div>Scope, overriding the pills: biomed &middot; stacks &middot; reference &middot; desk &middot; ucla</div>
+          <div><code>sort:</code></div><div>best &middot; newest &middot; oldest &middot; title &middot; author &middot; shelf</div>
+          <div><code>word*</code></div><div>Trailing truncation, in the free text or in any phrase field. <code>cardio*</code> catches cardiology and cardiovascular. Only at the end of a word &mdash; <code>*word</code> is ignored and <code>car*logy</code> matches nothing.</div>
+          <div class="cheat-h">Two words, both required</div><div class="cheat-h">Free text uses the <code>all</code> relation: every word must appear somewhere in the record. Quote a phrase to require the words together.</div>
+          <div class="cheat-h">Applied here, not by the catalog</div><div class="cheat-h">These are facts about the shelf map</div>
+          <div><code>shelf:</code></div><div><code>shelf:yes</code> keeps only copies that resolve to a real shelf face.</div>
+          <div><code>level:</code></div><div><code>level:8</code> or <code>level:8,10</code> &mdash; only books on those stack levels.</div>
+          <div><code>avail:</code></div><div><code>avail:yes</code> &mdash; only titles Alma reports as on the shelf now.</div>
+          <div><code>online:</code></div><div><code>online:no</code> &mdash; exclude anything with an electronic copy.</div>
+          <div><code>editions:</code></div><div><code>editions:all</code> lists every printing separately instead of grouping them.</div>
+          <div><code>carrier:</code> <code>is:</code></div><div>print &middot; audio &middot; music &middot; video &middot; score &middot; map &middot; microform &middot; software &middot; image &middot; online. Read from six MARC fields rather than the leader alone, because an audiobook is routinely catalogued as text — <code>carrier:print</code> is the one that excludes it. Editions group per carrier, so a recording never presents itself as the newest printing of a book.</div>
+        </div>
+        <p class="filt-note">Examples:
+          <button class="cat-example" type="button" data-q="harrison's principles of internal medicine">newest Harrison&rsquo;s at Biomed</button>
+          <button class="cat-example" type="button" data-q="cn:&quot;WM 100&quot; at:stacks sort:shelf">browse WM 100 in shelf order</button>
+          <button class="cat-example" type="button" data-q="mesh:neoplasms year:2020+ type:book shelf:yes">recent oncology books on a shelf</button>
+          <button class="cat-example" type="button" data-q="anatomy genre:atlases -lang:eng">non-English anatomy atlases</button>
+          <button class="cat-example" type="button" data-q="type:journal at:stacks level:7">journals shelved on level 7</button>
+        </p>
+      </details>
+
+      <div class="cat-applied" id="catApplied" hidden></div>
+      <div class="cat-status" id="catStatus" role="status" aria-live="polite"></div>
+      <div class="cat-results" id="catResults"></div>
     </div>
   </div>
 
@@ -752,9 +1013,21 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
   }
 
   /* ---- routing ---- */
+  /* Level 9 is Special Collections: a second, parallel sequence whose seventeen faces run
+     `A` to `ZWZ 330` and therefore contain almost every call number in the building. Routing
+     used to search it alongside the general stacks and then take the lowest-numbered floor,
+     which meant **every** book whose real home was level 10 or 11 was routed to level 9 --
+     98 of the 436 mapped faces, i.e. all of both floors. It looked like an OCR failure
+     because the call number on screen was right and only the floor was wrong.
+
+     `shelfHits` in the catalog module and `search` in the iOS port had always excluded level
+     9; only the trip planner did not. It does now. Special Collections is reachable through
+     its own section pill, which is the only place it should ever be reached from. */
   function routeLocate(cn){
     const qs=scheme(cn), hits=[];
-    for(const key in DATA){ const d=DATA[key]; if(!d.start||!d.end) continue; if(scheme(d.start)!==qs) continue;
+    for(const key in DATA){ const d=DATA[key]; if(!d.start||!d.end) continue;
+      if(key.charAt(0)==='9' && key.charAt(1)==='|') continue;
+      if(scheme(d.start)!==qs) continue;
       if(cmpCN(cn,d.start)>=0 && cmpCN(cn,d.end)<=0){ const [lvl,id,side]=key.split('|'); hits.push({lvl:+lvl,id,side,d}); } }
     hits.sort((a,b)=>a.lvl-b.lvl);
     return hits;
@@ -826,6 +1099,1460 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
   function miss(arr){ return `<div class="itin-miss"><b>Not located (${arr.length}):</b> ${arr.join(' · ')}<br>These may be mis-read by OCR, shelved in Reference (Floor 4), or outside the mapped ranges. Fix the spelling above and rebuild, or look them up one at a time.</div>`; }
 
   window.routeShow=function(lvl,id){ level=lvl; selected=id; flashId=id; if(typeof syncCollectionToLevel==='function') syncCollectionToLevel(); renderLevels(); renderPlan(); renderDetail(); setTimeout(()=>{ flashId=null; renderPlan(); },1600); const st=document.querySelector('.stage'); if(st) st.scrollIntoView({behavior:'smooth',block:'center'}); };
+})();
+
+/* ===== Catalog search (Alma SRU) =====
+   Answers the question the shelf map alone can't: "do we have this book, and which
+   edition is newest?" One unauthenticated GET to Alma SRU returns bib records with
+   holdings already injected (AVA = physical, AVE = electronic), so there is no second
+   availability call and no server of our own — the endpoint sends
+   `Access-Control-Allow-Origin: *`, verified, so the browser may call it directly.
+
+   The dangerous half of this is the join back into the shelf map. A wrong aisle is
+   worse than no aisle, so `resolve()` below refuses in five separate ways and only
+   ever hands back a shelf when the call number survived all of them.
+
+   The default is the question asked at the desk all day: *the newest edition of this
+   book, in this building*. So a search is scoped to Biomed and sorted newest-first
+   before anything else happens, and only widens to the rest of UCLA when Biomed has
+   nothing. Everything beyond that default — twenty-odd filter fields, negation, year
+   ranges, call-number browsing — is reachable from the same box as `field:value`
+   tokens. The Filters panel is a mouse-driven way of typing the same tokens; it shows
+   what it added, because a filter that narrows results invisibly reads as "not held". */
+(function(){
+  const $=id=>document.getElementById(id);
+  const root=$('cat'); if(!root) return;
+  const head=$('catHead'), toggle=$('catToggle'), body=$('catBody'), input=$('catQ'),
+        statusEl=$('catStatus'), out=$('catResults'), biomedOnly=$('catBiomed'), covers=$('catCovers'),
+        groupEd=$('catGroupEd'), sortSel=$('catSort'), applied=$('catApplied'), filtForm=$('catFilters');
+
+  const SRU='https://ucla.alma.exlibrisgroup.com/view/sru/01UCS_LAL';
+  const MARC='http://www.loc.gov/MARC21/slim';
+  const PAGE=50;                 // Alma silently caps maximumRecords at 50 (probed)
+
+/* == catalog-core:start ==
+   Everything between these markers is pure: no DOM, no network, no globals except the
+   comparator (parseCN/cmpCN/scheme/DATA) it shares with the rest of the app. The test
+   harness in Tools/catalog.test.js extracts this block verbatim and runs it against the
+   two live SRU fixtures, so the tested code is literally the shipped code. */
+
+  /* Media copies (DVD, CD-ROM …) carry the class number of the work but do not sit in
+     the stacks sequence — they live at a desk. Strip the prefix so it is visible, and
+     treat its presence as a hard "no shelf lookup". */
+  const MEDIA_PREFIX=/^(?:(?:DVD-ROM|CD-ROM|DVD|CD|VHS|VIDEO|VIDEODISC|VIDEOCASSETTE|AUDIO|CASSETTE|MICROFILM|MICROFICHE|MICROCARD|SLIDE|KIT|MAP|ATLAS|OVERSIZE|FOLIO)[\s.:-]+)+/i;
+  const BARCODE=/\[\s*barcode\s*:[^\]]*\]/ig;
+
+  // AVA $d -> { cn, prefix, barcode, year }. Never guesses: if nothing usable is left,
+  // cn is '' and every downstream step declines.
+  function splitCallNumber(raw){
+    const src=(raw||'').trim();
+    const bc=src.match(/\[\s*barcode\s*:\s*([^\]]*)\]/i);
+    let s=src.replace(BARCODE,' ').replace(/\s+/g,' ').trim();
+    let prefix='';
+    const mp=s.match(MEDIA_PREFIX);
+    if(mp){ prefix=mp[0].trim().replace(/[\s.:-]+$/,''); s=s.slice(mp[0].length).trim(); }
+    return { raw:src, cn:s, prefix, barcode: bc?bc[1].trim():'', year:yearOf(s) };
+  }
+
+  /* The edition-ordering key. It must come from the call number, not from MARC 250
+     (inconsistent) and not from the string as a whole: Harrison's cutter is reassigned
+     from H248p to H322 in 2015, so alphabetical order is chronologically wrong.
+     Only tokens *after* the class letters + class number are considered, so a large
+     class number can never be mistaken for a year. */
+  function yearOf(cn){
+    const toks=(cn||'').trim().split(/\s+/);
+    for(let i=toks.length-1;i>=2;i--){
+      const m=toks[i].match(/^(1[5-9]\d{2}|20\d{2})[a-z]?\.?$/i);
+      if(m) return +m[1];
+    }
+    return null;
+  }
+
+  /* The comparator is deliberately tolerant — it will happily order garbage. This is
+     the gate that decides whether its answer is trustworthy at all. Two accepted
+     shapes: the W1-series serials scheme, and a class-letters + class-number + cutter
+     call number (NLM, or an LC-shaped number, which Biomed does use for non-medical
+     subjects such as BF789.D4 despite $k saying "0"). */
+  function isLocatable(cn){
+    if(!cn) return false;
+    if(/^W[1-4][A-Z]{0,2}\s+[A-Z]/i.test(cn)) return true;
+    return /^[A-Z]{1,3}\s*\d{1,4}(?:\.\d+)?[\s.]+\.?[A-Z]/i.test(cn);
+  }
+
+  /* Biomed location codes ($j). Confirmed live against the endpoint, not guessed.
+     `stacks` is the only kind that may resolve to a shelf. An unlisted bi* code falls
+     through to `unknown` and is shown honestly rather than routed by assumption —
+     the authoritative list still has to come from Library IT. */
+  const BIOMED_LOC={
+    bi:        {kind:'stacks', label:'Biomed Library \u00b7 general stacks'},
+    biper:     {kind:'stacks', label:'Biomed stacks \u00b7 bound volumes', note:'Current issues are shelved separately in Current Journals.'},
+    biprwt:    {kind:'stacks', label:'Biomed stacks \u00b7 building use only', note:'Does not circulate. Current issues are in Current Journals.'},
+    bian:      {kind:'stacks', label:'Biomed \u00b7 annual or series', note:'Volumes of a series can shelve apart from the run \u2014 check the series record if the shelf is empty.'},
+    birf:      {kind:'desk',   label:'Biomed Reference \u00b7 Floor 4', note:'Shelved by call number in the Reference area; that floor has no per-shelf map.'},
+    birs:      {kind:'desk',   label:'Biomed Reserves', note:'Ask at the Circulation Desk.'},
+    bicidperm: {kind:'desk',   label:'Biomed Circulation Desk \u00b7 permanent reserves', note:'Held at the desk \u2014 ask for it by call number.'},
+    bicimm:    {kind:'desk',   label:'Biomed Circulation Desk \u00b7 media', note:'Held at the desk \u2014 ask for it by call number.'},
+    biherb:    {kind:'desk',   label:'Biomed Herbarium', note:'Ask at the desk; access is by arrangement.'}
+  };
+  const OFFSITE={
+    sr:'Offsite at SRLF (Southern Regional Library Facility) \u2014 not in this building; request it in the catalog.',
+    lsyrboxm:'YRL Special Collections, boxed, stored at SRLF \u2014 offsite; request it in the catalog.'
+  };
+  /* Not every AVA is a copy. `RES_SHARE` rows are resource-sharing request placeholders
+     attached to records UCLA does not hold at all \u2014 the 2022 Blackstone Audio recording of
+     Atlas Shrugged is one. Rendering it as "held at Resource Sharing Library" invents a
+     building that does not exist. */
+  const PHANTOM_LIB={
+    RES_SHARE:'Not a UCLA copy \u2014 this row is a resource-sharing request placeholder, so there is no shelf anywhere to walk to.'
+  };
+
+  function classify(ava){
+    const lib=(ava.b||'').toUpperCase(), j=(ava.j||'').toLowerCase();
+    if(PHANTOM_LIB[lib]) return {kind:'phantom', here:false, code:j,
+                                 label:'Request only \u00b7 not held at UCLA', note:PHANTOM_LIB[lib]};
+    if(lib==='BIOMED'){
+      const known=BIOMED_LOC[j];
+      if(known) return Object.assign({here:true, code:j}, known);
+      return {kind:'unknown', here:true, code:j,
+              label:ava.c||('Biomed \u00b7 location code '+(j||'unknown')),
+              note:'This Biomed location is not in the routing table yet \u2014 ask at the desk rather than walking the stacks.'};
+    }
+    return {kind:'away', here:false, code:j,
+            label:ava.q||ava.c||lib||'Another UCLA library',
+            note:OFFSITE[j]||('Held at '+(ava.c||lib||'another UCLA library')+' \u2014 not in this building.')};
+  }
+
+  // Shelf faces whose mapped range contains this call number. Level 9 is excluded:
+  // Special Collections has its own routing and must never be reached from a stacks code.
+  function shelfHits(cn){
+    if(!cn) return [];
+    const qs=scheme(cn), hits=[];
+    for(const key in DATA){
+      const d=DATA[key]; if(!d.start||!d.end) continue;
+      if(key.charAt(0)==='9' && key.charAt(1)==='|') continue;
+      if(scheme(d.start)!==qs) continue;
+      if(cmpCN(cn,d.start)>=0 && cmpCN(cn,d.end)<=0){
+        const p=key.split('|'); hits.push({lvl:+p[0], id:p[1], side:p[2], d});
+      }
+    }
+    hits.sort((a,b)=>a.lvl-b.lvl);
+    return hits;
+  }
+
+  /* The single decision point: does this patron get pointed at a shelf, and if not, why
+     not. Every `reason` is rendered to the user — silence would read as "not held". */
+  function resolve(ava){
+    const parts=splitCallNumber(ava.d||''), route=classify(ava);
+    const r={ava, parts, route, hits:[], reason:''};
+    if(route.kind!=='stacks'){ r.reason='not-stacks'; return r; }
+    if(parts.prefix)          { r.reason='media';         return r; }
+    if(!parts.cn)             { r.reason='no-call-number';return r; }
+    if(!isLocatable(parts.cn)){ r.reason='unparseable';   return r; }
+    r.hits=shelfHits(parts.cn);
+    if(!r.hits.length) r.reason='unmapped';
+    return r;
+  }
+
+  /* ---- carrier: what the thing physically is ----
+     "The newest edition of Atlas Shrugged" at UCLA is a 2022 Blackstone Audio recording, and
+     not one field designed to say so says so: the leader calls it language material, there is
+     no 007, no 336, no 338, no GMD and no 300 — it is an OverDrive brief record. Detection is
+     therefore a ladder of signals, strongest first, and the bottom rung only fires when every
+     rung above it came up empty.
+
+     This matters beyond labelling. Editions cluster per carrier, so the audiobook forms its
+     own group instead of crowning itself the newest edition of the novel, and print gets a
+     small ranking bonus, because at a physical library desk the default question is about a
+     book. */
+  const CARRIER={
+    print:     {label:'', short:'print'},
+    audio:     {label:'Audiobook',       short:'audio'},
+    music:     {label:'Recorded music',  short:'music'},
+    video:     {label:'Video',           short:'video'},
+    score:     {label:'Printed score',   short:'score'},
+    map:       {label:'Map',             short:'map'},
+    image:     {label:'Image',           short:'image'},
+    software:  {label:'Software / data', short:'software'},
+    manuscript:{label:'Manuscript',      short:'manuscript'},
+    object:    {label:'Object',          short:'object'},
+    mixed:     {label:'Mixed material',  short:'mixed'},
+    microform: {label:'Microform',       short:'microform'},
+    online:    {label:'Online only',     short:'online'}
+  };
+  const AUDIO_PHRASE=/\b(sound recording|audiobook|audio ?book|spoken word|audio disc|sound disc|sound cassette|audiocassette|audio cassette|playaway|mp3)\b/i;
+  // `dvd` must not fire on DVD-ROM: that is data in a book's back pocket, not a film.
+  const VIDEO_PHRASE=/\b(videorecording|video ?disc|video ?cassette|dvd(?!\s*-?\s*rom)|blu-?ray|motion picture|streaming video|two-dimensional moving image)\b/i;
+  const FILM_PHRASE=/\bmicro(film|fiche|opaque)\b/i;
+  // Not `online resource` — that is an ebook, and the AVE rule at the bottom names it
+  // correctly. Calling it software was a worse answer than calling it nothing.
+  const DATA_PHRASE=/\b(cd-?rom|dvd-?rom|computer disc|computer disk)\b/i;
+  // Publishers whose name states what they manufacture. Only consulted on the bottom rung.
+  const AUDIO_PUB=/\b(audio|audiobooks|sound|recorded books|blackstone|books on tape|listening library|brilliance|tantor|audible|naxos|dreamscape|highbridge|caedmon)\b/i;
+
+  function carrierOf(m){
+    /* 007 is repeatable, and **only the first one describes the item itself** — the ones after
+       it describe accompanying material. Harrison's 19th edition is a two-volume printed book
+       with a DVD-ROM in the pocket: its 007s are `ta` (text, regular print) and then
+       `vf cbahos`. Scanning all of them called the book a video and split it out of its own
+       edition cluster, which is worse than not classifying it at all. */
+    const t7=String((m.f007||[])[0]||'').charAt(0).toLowerCase();
+    if(t7==='s') return m.ldr06==='j'?'music':'audio';
+    if(t7==='v'||t7==='m'||t7==='g') return 'video';
+    if(t7==='h') return 'microform';
+    if(t7==='k') return 'image';
+    if(t7==='a'||t7==='d') return 'map';
+    if(t7==='q') return 'score';
+    if(t7==='t') return 'print';          // "regular print", stated outright
+    switch(m.ldr06){
+      case 'i': return 'audio';
+      case 'j': return 'music';
+      case 'g': return 'video';
+      case 'c': case 'd': return 'score';
+      case 'e': case 'f': return 'map';
+      case 'k': return 'image';
+      case 'm': return 'software';
+      case 'r': return 'object';
+      case 'p': return 'mixed';
+    }
+    /* RDA says it plainly when it is present: 336 content + 338 carrier. "text" in a "volume"
+       is a book and nothing in the 300 can argue with it. */
+    const c336=(m.term336||'').toLowerCase(), c338=(m.term338||'').toLowerCase();
+    if(/\btext\b/.test(c336) && /\bvolume\b/.test(c338)) return 'print';
+    const bag=[m.term338,m.term336,m.gmd,m.phys].filter(Boolean).join(' ');
+    if(AUDIO_PHRASE.test(bag)) return 'audio';
+    if(VIDEO_PHRASE.test(bag)) return 'video';
+    if(FILM_PHRASE.test(bag))  return 'microform';
+    if(DATA_PHRASE.test(bag) && !m.hasAVA) return 'software';
+    /* The bottom rung, and the reason it exists: "Unabridged." in the edition statement beside
+       a publisher named for what it makes. Both are required. "Unabridged" on its own is an
+       ordinary print edition statement, and a publisher with "Sound" in its name is not
+       evidence of anything by itself. */
+    if(/\b(un)?abridged\b/i.test(m.edition||'') && AUDIO_PUB.test(m.publisher||'')) return 'audio';
+    if(!m.hasAVA && m.hasAVE) return 'online';
+    return 'print';
+  }
+  const carrierLabel=c=>(CARRIER[c]||CARRIER.print).label;
+
+  /* ---- scopes ----
+     `alma.permanentPhysicalLocation` is the only index that actually filters by where a
+     copy sits: every library-shaped index (itemLibrary, holding_Library, rep_Library)
+     returns 0 for BIOMED in this tenant, probed. So a scope is a set of $j codes and
+     nothing else, which is fine — the same nine codes the routing table already knows. */
+  const SCOPE={
+    biomed:{codes:['bi','biper','biprwt','bian','birf','birs','bicidperm','bicimm','biherb'],
+            label:'Biomed \u2014 any location', short:'Biomed'},
+    stacks:{codes:['bi','biper','biprwt','bian'],
+            label:'Biomed \u2014 shelves you can walk to', short:'Walkable stacks'},
+    ref:   {codes:['birf'], label:'Biomed Reference \u00b7 Floor 4', short:'Reference'},
+    desk:  {codes:['birs','bicidperm','bicimm','biherb'],
+            label:'Biomed service desks (reserves, media, herbarium)', short:'At the desk'},
+    ucla:  {codes:null, label:'Every UCLA library', short:'All of UCLA'}
+  };
+  const SCOPE_ALIAS={biomed:'biomed', bio:'biomed', here:'biomed', building:'biomed',
+    stacks:'stacks', walkable:'stacks', shelf:'stacks', shelves:'stacks',
+    ref:'ref', reference:'ref', desk:'desk', reserves:'desk', reserve:'desk',
+    ucla:'ucla', all:'ucla', any:'ucla', anywhere:'ucla', everywhere:'ucla'};
+
+  /* ---- the filter vocabulary ----
+     Each entry is one index probed live against this endpoint on 2026-08-05. Nothing is
+     offered that was not observed to narrow a real result set: `alma.mms_resource_type`,
+     `alma.audience` and every *_Library index answer queries and return zero for every
+     value tried, which is worse than not existing, so none of them is here. */
+  const FIELD={
+    keyword:  {ix:'alma.all_for_ui',           rel:'all', label:'keyword'},
+    title:    {ix:'alma.title',                rel:'=',   label:'title'},
+    author:   {ix:'alma.creator',              rel:'=',   label:'author'},
+    subject:  {ix:'alma.subjects',             rel:'=',   label:'subject'},
+    mesh:     {ix:'alma.mesh',                 rel:'=',   label:'MeSH subject'},
+    lcsh:     {ix:'alma.lcsh',                 rel:'=',   label:'LC subject'},
+    series:   {ix:'alma.series',               rel:'=',   label:'series'},
+    genre:    {ix:'alma.genre_form',           rel:'=',   label:'genre / form'},
+    uniform:  {ix:'alma.uniform_title',        rel:'=',   label:'uniform title'},
+    publisher:{ix:'alma.publisher',            rel:'=',   label:'publisher'},
+    place:    {ix:'alma.publisher_location',   rel:'=',   label:'place of publication'},
+    note:     {ix:'alma.notes',                rel:'=',   label:'note'},
+    isbn:     {ix:'alma.isbn',                 rel:'=',   label:'ISBN', strip:/[^0-9Xx]/g},
+    issn:     {ix:'alma.issn',                 rel:'=',   label:'ISSN'},
+    cn:       {ix:'alma.PermanentCallNumber',  rel:'=',   label:'call number'},
+    nlm:      {ix:'alma.nlm_call_number',      rel:'=',   label:'NLM call number'},
+    lc:       {ix:'alma.lc_class_number',      rel:'=',   label:'LC call number'},
+    lang:     {ix:'alma.language',             rel:'=',   label:'language', map:'lang'},
+    loc:      {ix:'alma.permanentPhysicalLocation', rel:'=', label:'location code', lower:true},
+    material: {ix:'alma.materialType',         rel:'=',   label:'item material type', upper:true},
+    year:     {kind:'year',  label:'publication year'},
+    after:    {kind:'year',  label:'published after',  op:'>'},
+    before:   {kind:'year',  label:'published before', op:'<'},
+    type:     {kind:'type',  label:'record type'},
+    at:       {kind:'scope', label:'search scope'},
+    sort:     {kind:'sort',  label:'sort order'},
+    shelf:    {kind:'local', label:'has a walkable shelf'},
+    level:    {kind:'local', label:'stack level'},
+    avail:    {kind:'local', label:'on the shelf now'},
+    online:   {kind:'local', label:'electronic copy'},
+    editions: {kind:'local', label:'edition grouping'},
+    /* Local rather than server-side on purpose. `type:` asks Alma about the MARC leader,
+       which is exactly the field the Atlas Shrugged audiobook gets wrong; `carrier:` asks
+       this app, which read six fields instead of one. */
+    carrier:  {kind:'local', label:'carrier'}
+  };
+  const ALIAS={ti:'title', t:'title', au:'author', a:'author', creator:'author', by:'author',
+    su:'subject', subj:'subject', subjects:'subject', kw:'keyword', all:'keyword', anyword:'keyword',
+    pub:'publisher', form:'genre', ut:'uniform', notes:'note', comment:'note',
+    call:'cn', callno:'cn', callnumber:'cn', cno:'cn',
+    language:'lang', location:'loc', item:'material', mat:'material',
+    date:'year', published:'year', yr:'year', y:'year', since:'after', from:'after',
+    until:'before', to:'before', kind:'type', format:'type',
+    scope:'at', library:'at', lib:'at', in:'at',
+    edition:'editions', eds:'editions', lvl:'level', floor:'level',
+    available:'avail', instock:'avail', ebook:'online', electronic:'online',
+    is:'carrier', medium:'carrier'};
+  // carrier: values, and the words people reach for first
+  const CARRIER_ALIAS={print:'print', book:'print', paper:'print', physical:'print',
+    audio:'audio', audiobook:'audio', spoken:'audio', music:'music',
+    video:'video', dvd:'video', film:'video', score:'score', map:'map', image:'image',
+    software:'software', data:'software', manuscript:'manuscript', object:'object',
+    mixed:'mixed', microform:'microform', microfilm:'microform', online:'online',
+    ebook:'online', electronic:'online'};
+
+  // MARC language codes for the languages a UCLA biomedical collection actually contains.
+  // Anything unrecognised is passed through, so `lang:tur` works without being listed.
+  const LANG={english:'eng', spanish:'spa', french:'fre', german:'ger', italian:'ita',
+    portuguese:'por', russian:'rus', chinese:'chi', japanese:'jpn', korean:'kor',
+    latin:'lat', arabic:'ara', hebrew:'heb', dutch:'dut', polish:'pol', swedish:'swe',
+    danish:'dan', norwegian:'nor', greek:'gre', hindi:'hin', persian:'per', turkish:'tur',
+    vietnamese:'vie', thai:'tha', czech:'cze', hungarian:'hun', ukrainian:'ukr'};
+
+  /* MARC leader/06 (type of record) and leader/07 (bibliographic level). Alma exposes both
+     and they are the only working format filter — `alma.mms_resource_type` returns zero for
+     every documented value. Counts in a probe: type_of_record a=115692, g=2741, j=201,
+     t=1185; bib_level m=112725, s=6904. */
+  const TYPE={
+    book:      ['alma.type_of_record=a','alma.bib_level=m'],
+    monograph: ['alma.type_of_record=a','alma.bib_level=m'],
+    journal:   ['alma.bib_level=s'],
+    serial:    ['alma.bib_level=s'],
+    periodical:['alma.bib_level=s'],
+    magazine:  ['alma.bib_level=s'],
+    video:     ['alma.type_of_record=g'],
+    film:      ['alma.type_of_record=g'],
+    dvd:       ['alma.type_of_record=g'],
+    audio:     ['(alma.type_of_record=i or alma.type_of_record=j)'],
+    sound:     ['(alma.type_of_record=i or alma.type_of_record=j)'],
+    music:     ['alma.type_of_record=j'],
+    score:     ['alma.type_of_record=c'],
+    map:       ['alma.type_of_record=e'],
+    software:  ['alma.type_of_record=m'],
+    dataset:   ['alma.type_of_record=m'],
+    manuscript:['alma.type_of_record=t'],
+    image:     ['alma.type_of_record=k'],
+    object:    ['alma.type_of_record=r'],
+    mixed:     ['alma.type_of_record=p'],
+    archive:   ['alma.type_of_record=p'],
+    collection:['alma.bib_level=c']
+  };
+  // alma.materialType, item level. Values verified to return records; VIDEO, AUDIOCD and
+  // GOVDOC all return zero here and are deliberately absent.
+  const MATERIAL={book:'BOOK', issue:'ISSUE', bound:'ISSBD', dvd:'DVD', cdrom:'CDROM',
+    map:'MAP', microform:'MICROFORM', score:'SCORE', record:'RECORD', mixed:'MIXED',
+    other:'OTHER'};
+
+  const SORTS={
+    best:  {label:'Best match, then newest', server:'alma.main_pub_date/descending'},
+    newest:{label:'Newest first',            server:'alma.main_pub_date/descending'},
+    oldest:{label:'Oldest first',            server:'alma.main_pub_date/ascending'},
+    title: {label:'Title A\u2013Z',          server:'alma.title/ascending'},
+    author:{label:'Author A\u2013Z',         server:'alma.creator/ascending'},
+    shelf: {label:'Shelf order (walk it)',   server:'alma.main_pub_date/descending'}
+  };
+  const SORT_ALIAS={relevance:'best', best:'best', match:'best', new:'newest', newest:'newest',
+    year:'newest', recent:'newest', old:'oldest', oldest:'oldest', title:'title',
+    az:'title', author:'author', creator:'author', shelf:'shelf', callnumber:'shelf', cn:'shelf'};
+
+  /* ---- query parsing ----
+     One box, two languages. Anything that is not a recognised `field:value` token is free
+     text and goes to whichever index the mode pills selected. A leading `-` negates.
+     Values may be quoted, so `series:"Current clinical strategies"` is one value. */
+  function tokenize(s){
+    const re=/(-)?(?:([A-Za-z_]+):)?(?:"([^"]*)"|'([^']*)'|(\S+))/g, out=[];
+    let m;
+    while((m=re.exec(s||''))){
+      const val=m[3]!==undefined?m[3]:(m[4]!==undefined?m[4]:m[5]);
+      if(val===undefined) continue;
+      out.push({neg:!!m[1], field:(m[2]||'').toLowerCase(), val:val, raw:m[0]});
+    }
+    return out;
+  }
+
+  /* year:2015  year:>=2015  year:2010-2020  year:2010..2020  year:2015+  year:..1990
+     Returns a list of CQL clauses, or null if the value is not a year expression at all —
+     in which case the caller reports it rather than quietly dropping the filter. */
+  function yearClauses(v,forced){
+    const IX='alma.main_pub_date', s=String(v==null?'':v).trim();
+    let m;
+    if(forced && /^\d{3,4}$/.test(s)) return [IX+forced+s];
+    if((m=s.match(/^(>=|<=|>|<|=)?\s*(\d{3,4})$/))) return [IX+(m[1]==='='||!m[1]?'=':m[1])+m[2]];
+    if((m=s.match(/^(\d{3,4})\s*(?:\.\.|-|\u2013|to)\s*(\d{3,4})$/i))) return [IX+'>='+m[1], IX+'<='+m[2]];
+    if((m=s.match(/^(\d{3,4})\s*\+$/))) return [IX+'>='+m[1]];
+    if((m=s.match(/^(?:\.\.|-|\u2013)\s*(\d{3,4})$/))) return [IX+'<='+m[1]];
+    if((m=s.match(/^(\d{4})s$/))) return [IX+'>='+m[1], IX+'<='+(+m[1]+9)];
+    return null;
+  }
+
+  const YESNO={yes:true, y:true, true:true, on:true, '1':true, only:true,
+               no:false, n:false, false:false, off:false, '0':false, none:false};
+
+  /* Parse the whole box into: free text, server clauses, client-side predicates, sort and
+     scope. `notes` records every decision in words so the UI can show what it did — an
+     advanced filter that narrows silently is indistinguishable from a catalogue gap. */
+  function parseQuery(s){
+    const p={text:'', pos:[], neg:[], local:{}, sort:'', scope:'', notes:[], errors:[]};
+    const free=[];
+    tokenize(s).forEach(tk=>{
+      if(!tk.field){ free.push(tk.neg?'-'+tk.val:tk.val); return; }
+      const name=ALIAS[tk.field]||tk.field, spec=FIELD[name];
+      if(!spec){ p.errors.push('There is no filter called \u201c'+tk.field+'\u201d \u2014 it was searched as ordinary text.'); free.push(tk.raw); return; }
+      const v=String(tk.val==null?'':tk.val).trim();
+      if(!v){ p.errors.push('\u201c'+tk.field+':\u201d was given no value, so it was ignored.'); return; }
+
+      if(spec.kind==='scope'){
+        const k=SCOPE_ALIAS[v.toLowerCase()];
+        if(!k) p.errors.push('Unknown scope \u201c'+v+'\u201d. Try biomed, stacks, reference, desk or ucla.');
+        else { p.scope=k; p.notes.push('scope: '+SCOPE[k].label); }
+        return;
+      }
+      if(spec.kind==='sort'){
+        const k=SORT_ALIAS[v.toLowerCase()];
+        if(!k) p.errors.push('Unknown sort \u201c'+v+'\u201d. Try best, newest, oldest, title, author or shelf.');
+        else { p.sort=k; p.notes.push('sort: '+SORTS[k].label.toLowerCase()); }
+        return;
+      }
+      if(spec.kind==='year'){
+        const cl=yearClauses(v, spec.op);
+        if(!cl){ p.errors.push('\u201c'+tk.field+':'+v+'\u201d is not a year or year range.'); return; }
+        (tk.neg?p.neg:p.pos).push.apply(tk.neg?p.neg:p.pos, cl);
+        p.notes.push((tk.neg?'not ':'')+spec.label+' '+v);
+        return;
+      }
+      if(spec.kind==='type'){
+        const cl=TYPE[v.toLowerCase()];
+        if(!cl){ p.errors.push('Unknown type \u201c'+v+'\u201d. Try book, journal, video, audio, music, score, map, software, manuscript, image or archive.'); return; }
+        (tk.neg?p.neg:p.pos).push.apply(tk.neg?p.neg:p.pos, cl);
+        p.notes.push((tk.neg?'not ':'')+'type: '+v.toLowerCase());
+        return;
+      }
+      if(spec.kind==='local'){
+        localFilter(p,name,v,tk.neg);
+        return;
+      }
+      // an ordinary index
+      let val=v;
+      if(spec.map==='lang') val=LANG[val.toLowerCase()]||val.toLowerCase();
+      if(name==='material') val=MATERIAL[val.toLowerCase()]||val.toUpperCase();
+      if(spec.strip) val=val.replace(spec.strip,'');
+      if(spec.lower) val=val.toLowerCase();
+      if(!val){ p.errors.push('\u201c'+tk.field+':'+v+'\u201d left nothing to search for.'); return; }
+      (tk.neg?p.neg:p.pos).push(clause(spec,val));
+      p.notes.push((tk.neg?'not ':'')+spec.label+': '+val);
+    });
+    p.text=free.join(' ').trim();
+    return p;
+  }
+
+  function localFilter(p,name,v,neg){
+    const lv=v.toLowerCase();
+    if(name==='level'){
+      const lv2=v.split(/[,\s]+/).map(x=>parseInt(x,10)).filter(x=>!isNaN(x));
+      if(!lv2.length){ p.errors.push('\u201clevel:'+v+'\u201d is not a stack level.'); return; }
+      p.local.levels=(p.local.levels||[]).concat(lv2);
+      p.notes.push('only shelves on level '+lv2.join(' or '));
+      return;
+    }
+    if(name==='carrier'){
+      const want=v.split(/[,\s]+/).map(x=>CARRIER_ALIAS[x.toLowerCase()]).filter(Boolean);
+      if(!want.length){ p.errors.push('“carrier:'+v+'” — try print, audio, video, music, score, map, microform, software, image or online.'); return; }
+      (neg?(p.local.carrierNot=p.local.carrierNot||[]):(p.local.carrier=p.local.carrier||[])).push.apply(
+        neg?p.local.carrierNot:p.local.carrier, want);
+      p.notes.push((neg?'not ':'')+'carrier: '+want.join(' or '));
+      return;
+    }
+    if(name==='editions'){
+      if(lv==='all'||lv==='every'||lv==='show'){ p.local.groupEditions=false; p.notes.push('every printing listed separately'); }
+      else if(lv==='newest'||lv==='group'||lv==='latest'){ p.local.groupEditions=true; p.notes.push('editions grouped, newest on top'); }
+      else p.errors.push('\u201ceditions:'+v+'\u201d \u2014 try editions:all or editions:newest.');
+      return;
+    }
+    const b=YESNO[lv];
+    if(b===undefined){ p.errors.push('\u201c'+name+':'+v+'\u201d \u2014 expected yes or no.'); return; }
+    const want=neg?!b:b;
+    p.local[name]=want;
+    p.notes.push(name==='shelf' ? (want?'only copies that resolve to a shelf':'only copies with no mapped shelf')
+              : name==='avail' ? (want?'only titles with a copy on the shelf now':'only titles with nothing available')
+              : name==='online'? (want?'only titles with an electronic copy':'only titles with no electronic copy')
+              : name+': '+(want?'yes':'no'));
+  }
+
+  const cqlSafe=v=>String(v==null?'':v).replace(/["\\]/g,' ').replace(/\s+/g,' ').trim();
+  function clause(spec,val){
+    const v=cqlSafe(val);
+    return spec.rel==='all' ? spec.ix+' all "'+v+'"' : spec.ix+'="'+v+'"';
+  }
+
+  /* ---- CQL assembly ----
+     Three rules this endpoint enforces and does not document, all probed:
+       1. A single clause must never be wrapped in parentheses. `(alma.title="x") and y`
+          comes back "Invalid query".
+       2. A clause using the `all` relation must never be wrapped either — and that one
+          fails *silently*: `(alma.all_for_ui all "x") and y` returns 0 records, which
+          reads as "the library does not have it". It is the worst failure available here,
+          so the keyword clause is always emitted bare and first.
+       3. A parenthesised group of two or more simple clauses is fine anywhere.
+     Hence: no parentheses are ever emitted around one clause, and the free-text clause
+     always leads. */
+  const orGroup=cl=>!cl.length?'':(cl.length===1?cl[0]:'('+cl.join(' or ')+')');
+
+  function buildCQL(parsed,mode,scopeKey,sortKey){
+    const lead=[], rest=[];
+    if(parsed.text){
+      const f=FIELD[mode]||FIELD.keyword;
+      let t=parsed.text;
+      if(f.strip) t=t.replace(f.strip,'');
+      if(t) (f.rel==='all'?lead:rest).push(clause(f,t));
+    }
+    parsed.pos.forEach(c=>rest.push(c));
+    // A scope is a narrowing of somebody's question, never a question of its own: with
+    // nothing else asked for it would return the entire Biomed collection.
+    if(!lead.length && !rest.length && !parsed.neg.length) return '';
+    const sc=SCOPE[scopeKey];
+    if(sc && sc.codes) rest.push(orGroup(sc.codes.map(c=>'alma.permanentPhysicalLocation='+c)));
+    let q=lead.concat(rest).filter(Boolean).join(' and ');
+    if(!q) return '';
+    parsed.neg.forEach(c=>{ q+=' not '+c; });
+    const srt=SORTS[sortKey]||SORTS.best;
+    // Only alma.main_pub_date, alma.title and alma.creator are sortable; anything else is
+    // rejected outright, so the table above is the whole permitted vocabulary.
+    if(srt.server) q+=' sortBy '+srt.server;
+    return q;
+  }
+
+  /* ---- relevance ----
+     Alma SRU does no relevance ranking: it returns hits in filing-title order, so a search
+     for "atlas shrugged" hands back "The American Bible" first. The `sortKeys` *parameter*
+     is accepted and ignored; the CQL `sortBy` *clause* does work and is used above, but it
+     sorts by date or title, never by how well a record answers the question. Every bit of
+     that is local, below. */
+
+  const ARTICLE=/^(?:the|a|an|le|la|les|el|los|las|der|die|das|il|un|une)\s+/;
+  function norm(s){
+    // NFD splits an accented letter into letter + combining mark, and \p{M} then deletes the
+    // mark outright — it must not go through the punctuation pass below, which would leave a
+    // space and turn "Pediatría" into "pediatri a". Apostrophes are deleted for the same
+    // reason: "harrison's" has to become "harrisons", not "harrison s".
+    return (s||'').toLowerCase().normalize('NFD')
+      .replace(/\p{M}/gu,'')
+      .replace(/['\u2019]/g,'')
+      .replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
+  }
+  const normTitle=s=>norm(s).replace(ARTICLE,'');
+  const words=s=>normTitle(s).split(' ').filter(Boolean);
+
+  // Bounded Levenshtein — bails out as soon as it cannot come in under `max`.
+  function lev(a,b,max){
+    if(a===b) return 0;
+    const m=a.length, n=b.length;
+    if(Math.abs(m-n)>max) return max+1;
+    let prev=new Array(n+1), cur=new Array(n+1);
+    for(let j=0;j<=n;j++) prev[j]=j;
+    for(let i=1;i<=m;i++){
+      cur[0]=i;
+      let best=cur[0];
+      for(let j=1;j<=n;j++){
+        cur[j]=Math.min(prev[j]+1, cur[j-1]+1, prev[j-1]+(a.charCodeAt(i-1)===b.charCodeAt(j-1)?0:1));
+        if(cur[j]<best) best=cur[j];
+      }
+      if(best>max) return max+1;
+      const t=prev; prev=cur; cur=t;
+    }
+    return prev[n];
+  }
+  // How wrong a word may be before it stops counting as the same word. Short words get no
+  // slack — at three letters an edit is a different word, not a typo.
+  const slack=t=>t.length<=3?0:t.length<=6?1:2;
+  // Returns both how good the match was and *which* word matched, because the weighting
+  // below needs the document word's rarity, not the typo's.
+  function matchWord(t,list){
+    const d=slack(t);
+    let best={q:0,w:null};
+    for(let i=0;i<list.length;i++){
+      const w=list[i];
+      if(w===t) return {q:1,w:w};
+      if(t.length>=4 && w.indexOf(t)===0){ if(best.q<0.9) best={q:0.9,w:w}; continue; }
+      if(d && lev(t,w,d)<=d && best.q<0.8) best={q:0.8,w:w};
+    }
+    return best;
+  }
+  const wordIn=(t,list)=>matchWord(t,list).q;
+
+  /* Inverse document frequency over the pool actually fetched. Without it every query word
+     weighs the same, and in a medical library "medicine" — in a large share of all titles —
+     drowns out "harrisons", which is in almost none. The pool is a sample rather than the
+     whole catalogue, which is enough to separate the distinctive words in a query from the
+     filler, and it costs no extra request. */
+  function idfContext(recs){
+    const df=Object.create(null), N=(recs&&recs.length)||0;
+    if(!N) return null;
+    recs.forEach(r=>{
+      const seen=Object.create(null);
+      words(r.title).concat(norm(r.author).split(' ')).forEach(w=>{
+        if(w && !seen[w]){ seen[w]=1; df[w]=(df[w]||0)+1; }
+      });
+    });
+    const lg=Math.log(1+N);
+    return { N:N, df:df, weight:function(t){ return Math.log(1+N/(1+(df[t]||0)))/lg; } };
+  }
+
+  // Share of the query the list accounts for. With a context the share is weighted by how
+  // rare each word is; without one — which is how the unit tests call it — every word
+  // counts the same and this is the original plain average.
+  function coverage(qw,list,ctx){
+    if(!qw.length) return 0;
+    let num=0, den=0;
+    for(let i=0;i<qw.length;i++){
+      const m=matchWord(qw[i],list);
+      const wt=ctx?Math.max(0.05,ctx.weight(m.w||qw[i])):1;
+      den+=wt; num+=wt*m.q;
+    }
+    return den?num/den:0;
+  }
+
+  // The longest run of query words that appears in the title in the same order, adjacent.
+  // "principles of internal medicine" inside a 30-word title is a real signal that a bag of
+  // words cannot see.
+  function runBonus(qw,tw){
+    if(qw.length<2||!tw.length) return 0;
+    let best=0;
+    for(let i=0;i<tw.length;i++){
+      let k=0;
+      while(k<qw.length && i+k<tw.length && matchWord(qw[k],[tw[i+k]]).q>0) k++;
+      if(k>best) best=k;
+    }
+    return best<2?0:(best-1)/(qw.length-1);
+  }
+
+  /* Score one record against the typed query. Title dominates; a long title that merely
+     contains the query is worth less than a title that *is* it; everything else earns
+     credit only for the words the title left unexplained. `ctx` is optional — pass the
+     pool's idf context to weight rare words, omit it to weight every word alike. */
+  function scoreRecord(rec,query,ctx){
+    const qn=normTitle(query), qw=qn.split(' ').filter(Boolean);
+    if(!qw.length) return 0;
+    const mainN=normTitle(rec.titleMain||rec.title), fullN=normTitle(rec.title);
+    const fullW=fullN.split(' ').filter(Boolean);
+
+    let s=0, exact=true;
+    if(fullN===qn)      s+=190;            // the whole title is what was typed
+    else if(mainN===qn) s+=100;            // the main title is, but there is a subtitle
+    else exact=false;
+
+    if(!exact){
+      // Whole-string typo tolerance, so "wtlas shrugged" still finds Atlas Shrugged.
+      const tol=Math.max(1,Math.floor(qn.length*0.15));
+      if(lev(qn,fullN,tol)<=tol || lev(qn,mainN,tol)<=tol) s+=85;
+    }
+    if(mainN.indexOf(qn)===0 || fullN.indexOf(qn)===0) s+=60;
+    if(fullN.indexOf(qn)>=0) s+=40;
+    s+=35*coverage(qw,fullW,ctx);
+    s+=22*runBonus(qw,fullW);
+    /* The author only earns credit for words the title did not already explain. Without this,
+       searching "harrison's principles of internal medicine" gives the printings that happen
+       to carry a MARC 100 for Tinsley Harrison a bonus the 2018 edition (no 100) never gets,
+       and a tiny author score silently reorders every edition of the same book. The same rule
+       is what lets series, subject and publisher contribute at all without doing that damage:
+       "cardiology lange" finds the Lange series, "atlas shrugged rand" still finds Rand. */
+    const resid=qw.filter(w=>wordIn(w,fullW)===0);
+    if(resid.length){
+      const share=resid.length/qw.length;
+      s+=15*coverage(resid,norm(rec.author).split(' ').filter(Boolean),ctx)*share;
+      const other=norm([rec.uniformTitle,rec.series,rec.subjects,rec.publisherName].join(' '))
+        .split(' ').filter(Boolean);
+      if(other.length) s+=10*coverage(resid,other,ctx)*share;
+    }
+    /* Every extra word in the title is a little less likely to be the book meant, but the old
+       flat 2-per-word cap punished a six-word subtitle as hard as a thirty-word one. This
+       saturates instead: the first few extra words cost real points, the twentieth costs
+       almost nothing, and the ceiling is never reached abruptly. */
+    const extra=Math.max(0,fullW.length-qw.length);
+    s-=26*(extra/(extra+7));
+    if(rec.hasBiomed) s+=12;               // a tiebreak, not an override: walkable copies first
+    if(rec.hasShelf)  s+=6;                // …and a copy that resolved to an actual shelf face
+    /* At a physical library desk the unqualified question is about a book. A 2022 audiobook is
+       not a newer edition of a 1957 novel, it is a different object; without this the year
+       tiebreak crowns it. Uniform across a `carrier:`-filtered search, so it costs nothing
+       when the reader did ask for the recording. */
+    if(rec.carrier==='print') s+=10;
+    return s;
+  }
+
+  /* Spelling fallback. The endpoint has no fuzzy matching and no "did you mean", so when a
+     query returns nothing, drop one word at a time — longest remaining query first — and let
+     the local scorer fuzzy-match the survivors against what was originally typed. */
+  function relaxations(query){
+    const w=norm(query).split(' ').filter(Boolean);
+    if(w.length<2) return [];
+    const out=[];
+    for(let i=0;i<w.length;i++){                       // drop one word
+      const rest=w.slice(0,i).concat(w.slice(i+1));
+      if(rest.length) out.push(rest.join(' '));
+    }
+    out.sort((a,b)=>b.length-a.length);                // keep as much of the query as possible
+    const byLen=w.slice().sort((a,b)=>b.length-a.length);
+    /* Two words wrong at once needs two dropped. Only pairs among the four longest words are
+       tried, which bounds this at six extra queries: a real-word typo like "principals" for
+       "principles" cannot be detected — it is a word, and the catalog has books about
+       principals — so removing candidates is the only lever left. */
+    if(w.length>=4){
+      const top=byLen.slice(0,4);
+      for(let i=0;i<top.length;i++) for(let j=i+1;j<top.length;j++){
+        const rest=w.filter(x=>x!==top[i]&&x!==top[j]);
+        if(rest.length) out.push(rest.join(' '));
+      }
+    }
+    if(byLen.length>=2) out.push(byLen.slice(0,2).join(' '));   // then just the two longest words
+    if(byLen[0] && byLen[0].length>=4) out.push(byLen[0]);      // then the single longest
+    return out.filter((v,i,a)=>a.indexOf(v)===i && v);
+  }
+  const bestScore=(recs,q,ctx)=>recs.reduce((m,r)=>Math.max(m,scoreRecord(r,q,ctx)),0);
+
+  // Newest first, by the year inside the call number. Holdings with no year sort last.
+  function byYearDesc(a,b){
+    const x=a.parts.year, y=b.parts.year;
+    if(x===y) return 0;
+    if(x==null) return 1;
+    if(y==null) return -1;
+    return y-x;
+  }
+
+  // The year a record is filed under: 008/07-10 if it is a real year, else the 264/260
+  // string, else the newest year on any of its own spines.
+  function recordYear(rec){
+    if(rec.year!=null) return rec.year;
+    let y=null;
+    (rec.holdings||[]).forEach(h=>{ if(h.parts.year!=null) y=Math.max(y==null?-Infinity:y,h.parts.year); });
+    return y;
+  }
+
+  /* ---- client-side predicates ----
+     Filters the endpoint cannot express, because they are facts about the shelf map rather
+     than about the catalogue. */
+  function passesLocal(rec,local){
+    if(!local) return true;
+    const holds=rec.holdings||[];
+    if(local.shelf!==undefined){
+      const has=holds.some(h=>h.hits.length>0);
+      if(has!==local.shelf) return false;
+    }
+    if(local.levels && local.levels.length){
+      const on=holds.some(h=>h.hits.some(x=>local.levels.indexOf(x.lvl)>=0));
+      if(!on) return false;
+    }
+    if(local.avail!==undefined){
+      const av=holds.some(h=>(h.ava.e||'').toLowerCase()==='available');
+      if(av!==local.avail) return false;
+    }
+    if(local.online!==undefined){
+      const on=(rec.online||[]).length>0;
+      if(on!==local.online) return false;
+    }
+    const car=rec.carrier||'print';
+    if(local.carrier && local.carrier.indexOf(car)<0) return false;
+    if(local.carrierNot && local.carrierNot.indexOf(car)>=0) return false;
+    return true;
+  }
+
+  // Where in the building a record's best copy sits, for shelf-order sorting: level first,
+  // then the call number itself through the same comparator the locator uses.
+  function shelfKey(rec){
+    let best=null;
+    (rec.holdings||[]).forEach(h=>{
+      h.hits.forEach(x=>{
+        if(!best || x.lvl<best.lvl) best={lvl:x.lvl, cn:h.parts.cn};
+      });
+    });
+    return best;
+  }
+  function cmpShelf(a,b){
+    const x=shelfKey(a), y=shelfKey(b);
+    if(!x&&!y) return 0;
+    if(!x) return 1;
+    if(!y) return -1;
+    if(x.lvl!==y.lvl) return x.lvl-y.lvl;
+    return cmpCN(x.cn,y.cn);
+  }
+
+  /* ---- edition clustering ----
+     SRU returns flat records with no FRBR group: a Harrison's title search is 33 separate
+     MMS IDs, one per printing. Clustering on the *full* 245 ($a plus $b) is the conservative
+     choice — it keeps "Harrison's principles of internal medicine" together across every
+     edition from 1970 to 2025 while leaving the companion handbook, the PreTest
+     self-assessment and the board review as the separate books they are, because their
+     subtitles differ. The cluster inherits its best member's score, so grouping never
+     changes which book wins, only how many rows it takes to say so.
+
+     The carrier is part of the key. Without it the 2022 Blackstone Audio recording of Atlas
+     Shrugged joins the novel's cluster, wins the year tiebreak and is presented as the newest
+     edition of the book — which is how this was found. */
+  const clusterKey=rec=>(normTitle(rec.title)||('mms:'+(rec.mms||'')))+
+                        ((rec.carrier&&rec.carrier!=='print')?' · '+rec.carrier:'');
+
+  function clusterRecords(recs,query,ctx){
+    const byKey=Object.create(null), order=[];
+    recs.forEach((r,i)=>{
+      const k=clusterKey(r);
+      if(!byKey[k]){ byKey[k]={key:k, members:[], score:-Infinity, i:i}; order.push(byKey[k]); }
+      const c=byKey[k];
+      c.members.push({rec:r, i:i, s:scoreRecord(r,query,ctx), y:recordYear(r)});
+      if(c.members[c.members.length-1].s>c.score) c.score=c.members[c.members.length-1].s;
+    });
+    order.forEach(c=>orient(c,'newest'));
+    return order;
+  }
+  /* Which printing represents its cluster. Newest, except when the sort explicitly asks for
+     the oldest — a "oldest first" list whose rows are each the *newest* printing of a book
+     would be answering a question nobody asked. A printing with no year can never lead a
+     cluster that has one, either way round: "no date" is not evidence of being current. */
+  function orient(c,mode){
+    const asc=mode==='oldest';
+    const ordered=c.members.slice()
+      .sort((a,b)=>(asc?cmpYear(b.y,a.y):cmpYear(a.y,b.y))||(a.i-b.i));
+    c.head=ordered[0].rec;
+    c.rest=ordered.slice(1).map(m=>m.rec);
+    c.year=ordered[0].y;
+    return c;
+  }
+  function cmpYear(x,y){
+    if(x===y) return 0;
+    if(x==null) return 1;
+    if(y==null) return -1;
+    return y-x;
+  }
+
+  /* Best match first, then newest edition first. The year tiebreak is what makes a title
+     search land on the current edition: every printing of Harrison's scores identically, so
+     the 2018 sorts above the 1998 without any edition clustering — and with clustering on,
+     the same tiebreak picks which printing leads its group. */
+  function sortClusters(clusters,mode){
+    const m=SORTS[mode]?mode:'best';
+    const arr=clusters.slice();
+    arr.forEach(c=>{ if(c.members&&c.members.length) orient(c,m); });
+    if(m==='best')   arr.sort((a,b)=>(b.score-a.score)||cmpYear(a.year,b.year)||(a.i-b.i));
+    if(m==='newest') arr.sort((a,b)=>cmpYear(a.year,b.year)||(b.score-a.score)||(a.i-b.i));
+    if(m==='oldest') arr.sort((a,b)=>cmpYear(b.year,a.year)||(b.score-a.score)||(a.i-b.i));
+    if(m==='title')  arr.sort((a,b)=>(a.key<b.key?-1:a.key>b.key?1:0)||(a.i-b.i));
+    if(m==='author') arr.sort((a,b)=>{
+      const x=norm(a.head.author), y=norm(b.head.author);
+      if(x&&!y) return -1;
+      if(!x&&y) return 1;
+      return (x<y?-1:x>y?1:0)||(a.i-b.i);
+    });
+    if(m==='shelf')  arr.sort((a,b)=>cmpShelf(a.head,b.head)||(b.score-a.score)||(a.i-b.i));
+    return arr;
+  }
+
+  /* Does the typed string look like something other than a title? Getting this right saves
+     the patron from choosing a mode pill for the two cases where the answer is unambiguous:
+     a 10- or 13-digit ISBN, and a call number they copied off a spine. */
+  function detectMode(s,current){
+    const t=(s||'').trim();
+    const digits=t.replace(/[^0-9Xx]/g,'');
+    if(current==='kw'||current==='title'){
+      if(/^[0-9][0-9Xx-]{8,}$/.test(t) && (digits.length===10||digits.length===13)) return 'isbn';
+    }
+    return null;
+  }
+/* == catalog-core:end == */
+
+  /* ---- MARCXML ---- */
+  function fields(rec,tag){
+    const all=rec.getElementsByTagNameNS(MARC,'datafield'), out=[];
+    for(let i=0;i<all.length;i++) if(all[i].getAttribute('tag')===tag) out.push(all[i]);
+    return out;
+  }
+  function subs(df){
+    const sf=df.getElementsByTagNameNS(MARC,'subfield'), m={};
+    for(let i=0;i<sf.length;i++){
+      const c=sf[i].getAttribute('code'), v=(sf[i].textContent||'').trim();
+      m[c]= m[c]===undefined ? v : m[c]+' '+v;
+    }
+    return m;
+  }
+  function text(rec,tag,codes){
+    const f=fields(rec,tag)[0]; if(!f) return '';
+    const sf=f.getElementsByTagNameNS(MARC,'subfield'), parts=[];
+    for(let i=0;i<sf.length;i++) if(codes.indexOf(sf[i].getAttribute('code'))>=0) parts.push((sf[i].textContent||'').trim());
+    return parts.join(' ').replace(/\s+/g,' ').replace(/[\s\/:;,]+$/,'').trim();
+  }
+  // Every value of a repeated field, joined — subjects and series are both repeatable and
+  // the second 650 is as good a match as the first.
+  function texts(rec,tag,codes){
+    return fields(rec,tag).map(f=>{
+      const sf=f.getElementsByTagNameNS(MARC,'subfield'), parts=[];
+      for(let i=0;i<sf.length;i++) if(codes.indexOf(sf[i].getAttribute('code'))>=0) parts.push((sf[i].textContent||'').trim());
+      return parts.join(' ');
+    }).filter(Boolean).join(' \u00b7 ').replace(/\s+/g,' ').trim();
+  }
+  function readRecord(rec){
+    let mms='', f008='';
+    const f007=[];
+    const cf=rec.getElementsByTagNameNS(MARC,'controlfield');
+    for(let i=0;i<cf.length;i++){
+      const t=cf[i].getAttribute('tag');
+      if(t==='001') mms=(cf[i].textContent||'').trim();
+      if(t==='007') f007.push(cf[i].textContent||'');
+      if(t==='008') f008=(cf[i].textContent||'');
+    }
+    const ldrEl=rec.getElementsByTagNameNS(MARC,'leader')[0];
+    const ldr=ldrEl?(ldrEl.textContent||''):'';
+    const pub=text(rec,'264',['b','c'])||text(rec,'260',['b','c']);
+    const holdings=fields(rec,'AVA').map(df=>resolve(subs(df)));
+    const online=fields(rec,'AVE').map(df=>subs(df));
+    const publisherName=text(rec,'264',['b'])||text(rec,'260',['b']);
+    const editionStmt=text(rec,'250',['a']);
+    const carrier=carrierOf({
+      ldr06:ldr.charAt(6).toLowerCase(), f007:f007,
+      term338:texts(rec,'338',['a']), term336:texts(rec,'336',['a']),
+      gmd:text(rec,'245',['h']), phys:text(rec,'300',['a']),
+      edition:editionStmt, publisher:publisherName,
+      hasAVA:holdings.length>0, hasAVE:online.length>0
+    });
+    return {
+      carrier, online, publisherName,
+      mms, pub, holdings,
+      title:    text(rec,'245',['a','b'])||'(untitled record)',
+      titleMain:text(rec,'245',['a']),          // ranked separately: "Atlas shrugged" beats "Atlas shrugged : manifesto of the mind"
+      author:   text(rec,'100',['a','b','c','d'])||text(rec,'110',['a','b'])||text(rec,'111',['a']),
+      edition:  editionStmt,          // $a only — $b is the statement of responsibility, far too long for a chip
+      // Ranked, but only for query words the title did not already explain.
+      uniformTitle: text(rec,'240',['a'])||text(rec,'130',['a']),
+      series:   [texts(rec,'490',['a']),texts(rec,'830',['a'])].filter(Boolean).join(' \u00b7 '),
+      subjects: [texts(rec,'650',['a','x']),texts(rec,'651',['a']),texts(rec,'655',['a'])].filter(Boolean).join(' \u00b7 '),
+      isbns:    isbnsOf(rec),
+      // 008/07-10 is the machine-readable date of publication; the 264/260 string is the fallback.
+      year:     (/^(1[5-9]\d{2}|20\d{2})$/.test(f008.substr(7,4)) ? +f008.substr(7,4)
+                 : (pub.match(/(1[5-9]\d{2}|20\d{2})/)||[])[1] ? +pub.match(/(1[5-9]\d{2}|20\d{2})/)[1] : null),
+      hasBiomed:holdings.some(h=>(h.ava.b||'').toUpperCase()==='BIOMED'),
+      hasShelf: holdings.some(h=>h.hits.length>0)
+    };
+  }
+  // 020 $a carries qualifiers ("9780071802154 (hardcover)"); keep only well-formed ISBNs.
+  function isbnsOf(rec){
+    const out=[];
+    fields(rec,'020').forEach(df=>{
+      const raw=subs(df).a||'';
+      const m=raw.match(/[0-9][0-9Xx-]{8,}/);
+      if(!m) return;
+      const v=m[0].replace(/-/g,'').toUpperCase();
+      if((v.length===10||v.length===13) && out.indexOf(v)<0) out.push(v);
+    });
+    return out;
+  }
+
+  /* ---- SRU ---- */
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+  // Rate limits are undocumented, so: one request in flight at a time, and two backed-off
+  // retries before giving up. Never a retry storm. `sortBy` is a CQL 1.2 clause this tenant
+  // does honour, but it is undocumented enough that a rejection has to be survivable: the
+  // clause is dropped and the query retried once before the error reaches the user.
+  async function sru(query,start,signal,max){
+    let q=query, droppedSort=false, lastErr;
+    for(let attempt=0;attempt<3;attempt++){
+      if(attempt) await sleep(500*Math.pow(3,attempt-1));
+      const p=new URLSearchParams({version:'1.2', operation:'searchRetrieve', recordSchema:'marcxml',
+                                   maximumRecords:String(max||PAGE), startRecord:String(start), query:q});
+      try{
+        const res=await fetch(SRU+'?'+p.toString(),{signal});
+        if(!res.ok) throw new Error('the catalog returned HTTP '+res.status);
+        const doc=new DOMParser().parseFromString(await res.text(),'application/xml');
+        if(doc.getElementsByTagName('parsererror').length) throw new Error('the catalog sent a response we could not read');
+        const all=doc.getElementsByTagName('*');
+        let diag='', total=0;
+        for(let i=0;i<all.length;i++){
+          const ln=all[i].localName;
+          if(ln==='message' && !diag) diag=(all[i].textContent||'').trim();
+          if(ln==='numberOfRecords' && !total) total=parseInt(all[i].textContent,10)||0;
+        }
+        if(diag) throw new Error(diag);
+        const recs=[], marc=doc.getElementsByTagNameNS(MARC,'record');
+        for(let i=0;i<marc.length;i++) recs.push(readRecord(marc[i]));
+        return {total, records:recs, sorted:!droppedSort && / sortBy /.test(q)};
+      }catch(e){
+        if(e.name==='AbortError') throw e;
+        lastErr=e;
+        if(!droppedSort && / sortBy /.test(q)){ q=q.replace(/ sortBy .*$/,''); droppedSort=true; attempt=-1; }
+      }
+    }
+    throw lastErr;
+  }
+
+  /* ---- render ---- */
+  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const SIDE={left:'Left', right:'Right', single:'Single (R)'};
+
+  // Counts are per holding, not per bib (verified on multi-AVA records). check_holdings
+  // arrives with $f/$g absent, so no number is invented for it.
+  function availChip(a){
+    const e=(a.e||'').toLowerCase();
+    if(e==='check_holdings') return '<span class="chip vol">Multiple volumes \u2014 check at the desk</span>';
+    const tot=a.f===undefined?null:parseInt(a.f,10), un=a.g===undefined?0:parseInt(a.g,10);
+    if(e==='available')   return '<span class="chip ok">On shelf'+(isFinite(tot)?' \u00b7 '+Math.max(tot-un,0)+' of '+tot:'')+'</span>';
+    if(e==='unavailable') return '<span class="chip no">All copies out'+(isFinite(tot)?' \u00b7 '+tot:'')+'</span>';
+    return '<span class="chip">'+esc(a.e||'status unknown')+'</span>';
+  }
+
+  const WHY={
+    media:'Media copy \u2014 discs are held at a service desk, not in the stacks sequence, so no shelf is shown.',
+    'no-call-number':'This holding carries no call number, so no shelf can be resolved.',
+    unparseable:'This call number could not be parsed with confidence. No shelf is shown \u2014 a wrong aisle is worse than none.',
+    unmapped:'Range not mapped \u2014 this call number falls outside every shelf range recorded so far. Check the floor by class letter, or ask at the desk.'
+  };
+
+  function shelfBlock(r){
+    if(r.hits.length){
+      let h=r.hits.map(hit=>{
+        const s=shelfById(hit.id);
+        const where=s?(s.row+' row \u00b7 index '+s.index):('shelf '+hit.id);
+        return '<button class="found" type="button" data-lvl="'+hit.lvl+'" data-id="'+esc(hit.id)+'">'+
+               '<span class="lead">Level '+hit.lvl+' \u00b7 '+esc(where)+' \u00b7 '+(SIDE[hit.side]||esc(hit.side))+' side</span>'+
+               '<span class="rng">'+esc(hit.d.start)+' \u2192 '+esc(hit.d.end)+'</span></button>';
+      }).join('');
+      if(r.hits.length>1) h+='<div class="elsewhere">'+r.hits.length+' shelves match \u2014 a serial run shares one call number, so check the volume and year on the spine.</div>';
+      return h;
+    }
+    return WHY[r.reason]?'<div class="nofind">'+esc(WHY[r.reason])+'</div>':'';
+  }
+
+  const groupName=ava=>ava.q||ava.c||(ava.b||'').toUpperCase()||'OTHER';
+
+  /* Jacket art. Open Library's cover API is keyless, CORS-open, and returns 404 with
+     `default=false` when it has nothing — so a missing cover removes itself rather than
+     leaving a grey box. This is the one request the app makes to a third party, it carries
+     only the ISBN, and the checkbox above turns it off. */
+  function coverTag(rec){
+    if(!covers.checked || !rec.isbns.length) return '';
+    // -L is Open Library's large file (~500 px wide). -M is 180 px, which was visibly soft at
+    // the size these are now displayed. Same request count, same one ISBN, no extra bytes on
+    // the covers it does not have — `default=false` still 404s and the element removes itself.
+    return '<img class="cover" loading="lazy" decoding="async" alt="" '+
+           'src="https://covers.openlibrary.org/b/isbn/'+encodeURIComponent(rec.isbns[0])+'-L.jpg?default=false">';
+  }
+
+  function holdingRow(r){
+    const shown=(r.parts.prefix?r.parts.prefix+' ':'')+(r.parts.cn||'');
+    let h='<div class="hold"><div class="hold-l">';
+    h+= shown ? '<span class="cn">'+esc(shown)+'</span>'
+              : '<span class="cn none">no call number on this holding</span>';
+    h+=availChip(r.ava);
+    h+='</div>';
+    // The library name is already the section heading; repeating it here reads as stutter.
+    const lead=(r.route.label===groupName(r.ava))?'':esc(r.route.label);
+    h+='<span class="where">'+lead+(r.route.note?(lead?' \u2014 ':'')+esc(r.route.note):'')+'</span>';
+    if(r.route.kind==='stacks') h+=shelfBlock(r);
+    return h+'</div>';
+  }
+
+  function holdingsHtml(rec){
+    const keep=biomedOnly.checked
+      ? rec.holdings.filter(h=>(h.ava.b||'').toUpperCase()==='BIOMED')
+      : rec.holdings.slice();
+    const groups={};
+    keep.forEach(h=>{
+      const lib=(h.ava.b||'').toUpperCase()||'OTHER';
+      (groups[lib]=groups[lib]||{name:groupName(h.ava), here:h.route.here, rows:[]}).rows.push(h);
+    });
+    // Group by library; Biomed first, everything else after, alphabetically.
+    const order=Object.keys(groups).sort((a,b)=>
+      (a==='BIOMED'?-1:b==='BIOMED'?1:0) || (a<b?-1:a>b?1:0));
+    let h='';
+    order.forEach(lib=>{
+      const g=groups[lib];
+      g.rows.sort(byYearDesc);
+      h+='<section class="lib'+(g.here?'':' away')+'">';
+      h+='<div class="lib-n">'+esc(g.name)+'</div>';
+      h+=g.rows.map(holdingRow).join('');
+      h+='</section>';
+    });
+    if(!biomedOnly.checked && rec.online.length){
+      const names=[...new Set(rec.online.map(o=>o.m).filter(Boolean))].slice(0,3);
+      h+='<section class="lib away"><div class="lib-n">Online</div><div class="hold"><span class="where">'+
+         rec.online.length+' electronic '+(rec.online.length===1?'copy':'copies')+
+         (names.length?' \u00b7 '+esc(names.join(', ')):'')+' \u2014 read it in the catalog; nothing to walk to.</span></div></section>';
+    }
+    if(!keep.length && !rec.online.length)
+      h+='<section class="lib away"><div class="hold"><span class="where">'+
+         (biomedOnly.checked?'No Biomed copy on this record \u2014 untick \u201cBiomed copies only\u201d to see where else it is held.'
+                            :'No copies attached to this record.')+'</span></div></section>';
+    return {html:h, kept:keep.length};
+  }
+
+  function workHead(rec,extra){
+    let h='<div class="work-h">'+coverTag(rec)+'<div class="work-t">';
+    h+='<div class="ti">'+esc(rec.title)+'</div>';
+    const by=[rec.author, rec.pub].filter(Boolean).join(' \u00b7 ');
+    if(by) h+='<div class="by">'+esc(by)+'</div>';
+    let tags='';
+    // The carrier chip leads the row. A reader scanning results has to be able to see that
+    // the 2022 "edition" is a recording before they read the year, not after they walk.
+    const cl=carrierLabel(rec.carrier);
+    if(cl) tags+='<span class="carr '+esc(rec.carrier)+'">'+esc(cl)+'</span>';
+    if(rec.edition) tags+='<span class="ed">'+esc(rec.edition)+'</span>';
+    if(extra) tags+=extra;
+    if(tags) h+='<div class="tags">'+tags+'</div>';
+    return h+'</div></div>';
+  }
+
+  // One cluster = one book. The newest printing is the card; the rest fold away behind a
+  // count, because "which edition is current" is the question and 32 rows of Harrison's is
+  // an answer to a different one.
+  function clusterCard(c,idx){
+    const head=holdingsHtml(c.head);
+    if(biomedOnly.checked && !head.kept && !c.head.online.length && !c.rest.length) return '';
+    const older=c.rest.filter(r=>r!==c.head);
+    let badge='';
+    if(older.length) badge='<span class="edcount">'+(older.length+1)+' printings \u00b7 newest shown</span>';
+    let h='<article class="work">'+workHead(c.head,badge)+head.html;
+    if(older.length){
+      h+='<details class="eds"><summary>'+older.length+' earlier printing'+(older.length===1?'':'s')+
+         ' of this title</summary><div class="eds-body">';
+      older.forEach(r=>{
+        const sub=holdingsHtml(r), y=recordYear(r);
+        h+='<div class="edrow"><div class="edrow-h"><span class="edy">'+(y==null?'no date':y)+'</span>'+
+           '<span class="edt">'+esc(r.edition||r.title)+'</span></div>'+sub.html+'</div>';
+      });
+      h+='</div></details>';
+    }
+    return h+'</article>';
+  }
+
+  /* ---- state / wiring ---- */
+  const POOL=150, MAX_PAGES=3,   // rank over this many records before showing anything
+        MAX_TRIES=8, PROBE=10, GOOD_ENOUGH=120,  // spelling retries, probe page size, score that ends the search
+        WEAK=60, WIDEN_MARGIN=40; // "nothing here resembles the title" / "out there is clearly better"
+  let mode='kw', scope='biomed', ctl=null, seq=0,
+      loaded=[], total=0, lastQuery='', rankQuery='', relaxedTo='', usedScope='biomed',
+      widenReason='', parsed=null, ctx=null;
+
+  const MODE_FIELD={kw:'keyword', title:'title', author:'author', isbn:'isbn'};
+
+  function setStatus(msg,err){ statusEl.innerHTML=msg||''; statusEl.classList.toggle('err',!!err); }
+
+  /* Every control in the Filters panel is shorthand for a token you could have typed. It is
+     compiled to exactly that, and the compiled string is shown back, so nothing narrows the
+     result set without saying so. */
+  function panelTokens(){
+    const t=[];
+    const g=id=>{ const el=$(id); return el?String(el.value||'').trim():''; };
+    const yf=g('fYearFrom'), yt=g('fYearTo');
+    if(yf&&yt) t.push('year:'+yf+'..'+yt);
+    else if(yf) t.push('year:'+yf+'+');
+    else if(yt) t.push('year:..'+yt);
+    [['fCarrier','carrier'],['fLang','lang'],['fType','type'],['fMaterial','material'],['fLoc','loc'],
+     ['fMesh','mesh'],['fSubject','subject'],['fSeries','series'],['fGenre','genre'],
+     ['fPublisher','publisher'],['fAuthor','author'],['fCall','cn']].forEach(([id,field])=>{
+      const v=g(id);
+      if(v) t.push(field+':'+(/\s/.test(v)?'"'+v.replace(/"/g,'')+'"':v));
+    });
+    if($('fShelf') && $('fShelf').checked) t.push('shelf:yes');
+    if($('fAvail') && $('fAvail').checked) t.push('avail:yes');
+    return t;
+  }
+
+  function effectiveQuery(){
+    const typed=input.value.trim();
+    const extra=panelTokens();
+    return {typed, full:(typed+' '+extra.join(' ')).trim(), extra};
+  }
+
+  function showApplied(p,extra){
+    if(!applied) return;
+    const bits=[];
+    if(p.notes.length) bits.push('<span class="ap-n">'+p.notes.map(esc).join('</span><span class="ap-n">')+'</span>');
+    let h='';
+    if(bits.length) h+='<div class="ap-row"><b>Filters:</b> '+bits.join('')+'</div>';
+    if(extra.length) h+='<div class="ap-eq">Equivalent to typing: <code>'+esc(extra.join(' '))+'</code></div>';
+    if(p.errors.length) h+='<div class="ap-err">'+p.errors.map(esc).join('<br>')+'</div>';
+    applied.innerHTML=h;
+    applied.hidden=!h;
+  }
+
+  /* The footer is rendered by every branch below, including the ones that show nothing.
+     It used to be attached only to a non-empty list, so a filter that emptied the ranked pool
+     also removed the only control that could fetch the records where the matches actually
+     were: 34 931 hits, 150 ranked, 0 shown, and no way forward. An empty page is exactly when
+     "load more" is the thing the reader needs. */
+  function footer(hidden){
+    let f='';
+    if(hidden>0) f+='<div class="cat-note">'+hidden+' record'+(hidden===1?'':'s')+
+      ' in the ranked pool hidden by the shelf-side filters.</div>';
+    if(loaded.length<total) f+='<div class="cat-more"><button class="btn ghost" type="button" id="catMore">Load '+
+      Math.min(PAGE,total-loaded.length)+' more \u00b7 '+loaded.length+' of '+total+' ranked so far</button></div>';
+    return f;
+  }
+
+  function draw(){
+    if(!loaded.length){ out.innerHTML=''; return; }
+    const local=(parsed&&parsed.local)||{};
+    const kept=loaded.filter(r=>passesLocal(r,local));
+    const hidden=loaded.length-kept.length;
+    if(!kept.length){
+      out.innerHTML='<div class="cat-empty">All '+loaded.length+' ranked record'+(loaded.length===1?'':'s')+
+        ' were removed by the shelf-side filters (<code>'+esc(localSummary(local))+'</code>). '+
+        'Those are applied here, not by the catalog \u2014 clear them, or load more of the '+total+
+        ' matches and they will be filtered too.</div>'+footer(0);
+      wireCards();
+      return;
+    }
+    const grouping=local.groupEditions!==undefined?local.groupEditions:(groupEd?groupEd.checked:true);
+    const sortMode=(parsed&&parsed.sort)||(sortSel?sortSel.value:'best')||'best';
+    let clusters;
+    if(grouping) clusters=clusterRecords(kept,rankQuery,ctx);
+    else clusters=kept.map((r,i)=>({key:'mms:'+r.mms, head:r, rest:[], members:[], i:i,
+                                    score:scoreRecord(r,rankQuery,ctx), year:recordYear(r)}));
+    const cards=sortClusters(clusters,sortMode).map(clusterCard).filter(Boolean);
+    if(!cards.length){
+      out.innerHTML='<div class="cat-empty">None of the '+kept.length+' ranked records has a copy left to show. '+
+        '<b>Untick &ldquo;Biomed copies only&rdquo;</b> to see where else at UCLA they are held.</div>'+footer(hidden);
+      wireCards();
+      return;
+    }
+    out.innerHTML=cards.join('')+footer(hidden);
+    wireCards();
+  }
+  // A cover Open Library does not have 404s; drop the element rather than leave a gap.
+  function wireCards(){
+    out.querySelectorAll('img.cover').forEach(img=>img.addEventListener('error',()=>img.remove(),{once:true}));
+  }
+  function localSummary(l){
+    const b=[];
+    if(l.shelf!==undefined) b.push('shelf:'+(l.shelf?'yes':'no'));
+    if(l.avail!==undefined) b.push('avail:'+(l.avail?'yes':'no'));
+    if(l.online!==undefined) b.push('online:'+(l.online?'yes':'no'));
+    if(l.levels) b.push('level:'+l.levels.join(','));
+    if(l.carrier) b.push('carrier:'+l.carrier.join(','));
+    if(l.carrierNot) b.push('-carrier:'+l.carrierNot.join(','));
+    return b.join(' ');
+  }
+
+  /* Ranking is only as good as the pool it ranks. Alma returns records in the order the
+     `sortBy` clause asks for — newest first by default here — so the pool is the newest N of
+     the result set rather than an alphabetical slice of it, which is the right N for
+     "what is the current edition". */
+  async function fetchPool(query,signal,mine){
+    let recs=[], tot=0;
+    for(let page=0;page<MAX_PAGES;page++){
+      const r=await sru(query, recs.length+1, signal);
+      if(mine!==seq) return null;
+      tot=r.total;
+      recs=recs.concat(r.records);
+      if(!r.records.length || recs.length>=Math.min(tot,POOL)) break;
+      setStatus('Ranking '+recs.length+' of '+tot+' records\u2026');
+    }
+    return {total:tot, records:recs};
+  }
+
+  const scopeChain=p=>{
+    if(p.scope) return [p.scope];                     // an explicit at: is an instruction, not a hint
+    if(scope==='ucla') return ['ucla'];
+    return [scope,'ucla'];                            // Biomed first, the rest of UCLA only if empty
+  };
+
+  async function run(reset){
+    const eq=effectiveQuery();
+    const p=parseQuery(eq.full);
+    showApplied(p,eq.extra);
+    const hasQuery=!!(p.text||p.pos.length||p.neg.length);
+    if(!hasQuery){
+      loaded=[]; total=0; out.innerHTML=''; parsed=p;
+      setStatus(p.errors.length?esc(p.errors.join(' ')):'Type a title, author or ISBN \u2014 or a filter such as <code>mesh:cardiology year:2015+</code>.',!!p.errors.length);
+      input.focus(); return;
+    }
+    const mine=++seq;
+    if(ctl) ctl.abort();
+    ctl=new AbortController();
+    const signal=ctl.signal;
+    const sortMode=p.sort||(sortSel?sortSel.value:'best')||'best';
+    const autoMode=detectMode(p.text,mode)||mode;
+    if(autoMode!==mode){ setMode(autoMode,false); }
+    const field=MODE_FIELD[autoMode]||'keyword';
+
+    try{
+      if(!reset){
+        setStatus('Loading more\u2026');
+        const more=await sru(lastQuery, loaded.length+1, signal);
+        if(mine!==seq) return;
+        total=more.total; loaded=loaded.concat(more.records);
+      } else {
+        loaded=[]; total=0; parsed=p; rankQuery=p.text||eq.typed; relaxedTo=''; ctx=null; widenReason='';
+        const chain=scopeChain(p);
+        const wide=chain[chain.length-1];
+        let page=null;
+        // Pass 1: the query as typed, narrowest scope first.
+        for(let i=0;i<chain.length;i++){
+          setStatus('Searching '+esc(SCOPE[chain[i]].label)+'\u2026');
+          lastQuery=buildCQL(p,field,chain[i],sortMode);
+          const r=await fetchPool(lastQuery,signal,mine);
+          if(r===null) return;
+          usedScope=chain[i];
+          if(r.total){ page=r; if(i>0) widenReason='empty'; break; }
+          page=r;
+        }
+        /* A scoped search that returns *something* has not necessarily returned the book.
+           "atlas shrugged" matches exactly one Biomed record \u2014 on a stray keyword, not on
+           the title \u2014 and that single hit would otherwise stop the widening dead and answer
+           a question nobody asked. So when the best thing in scope does not resemble the
+           title at all, spend one cheap page on the wider scope and take it only if it is
+           materially better. */
+        if(page && page.total && p.text && usedScope!==wide){
+          const here=bestScore(page.records,p.text,null);
+          if(here<WEAK){
+            setStatus('Nothing in '+esc(SCOPE[usedScope].short)+' looks like \u201c'+esc(p.text)+'\u201d \u2014 checking the rest of UCLA\u2026');
+            const pr=await sru(buildCQL(p,field,wide,sortMode),1,signal,PROBE);
+            if(mine!==seq) return;
+            if(pr.total && bestScore(pr.records,p.text,null)>=here+WIDEN_MARGIN){
+              lastQuery=buildCQL(p,field,wide,sortMode);
+              const full=await fetchPool(lastQuery,signal,mine);
+              if(full===null) return;
+              if(full.total){ page=full; usedScope=wide; widenReason='weak'; }
+            }
+          }
+        }
+        /* Pass 2: nothing matched as typed anywhere. The endpoint has no fuzzy search and no
+           "did you mean", so drop one word at a time and let the local scorer fuzzy-match
+           what comes back against the original spelling: "wtlas shrugged" -> search
+           "shrugged" -> Atlas Shrugged scores top because "wtlas" is one edit from "atlas". */
+        if(page && !page.total && p.text && autoMode!=='isbn'){
+          /* Try several relaxations with one cheap page each and keep the *best* one, judged
+             by how well its top hit scores against what was originally typed. Taking the first
+             retry that returns anything is worse than useless: "harrisons principals of
+             internal medicin" would settle for a single unrelated record. */
+          const alts=relaxations(p.text).slice(0,MAX_TRIES);
+          let best=null;
+          for(let i=0;i<alts.length;i++){
+            setStatus('Nothing matches \u201c'+esc(p.text)+'\u201d \u2014 trying \u201c'+esc(alts[i])+'\u201d\u2026');
+            const probe=Object.assign({},p,{text:alts[i]});
+            const pr=await sru(buildCQL(probe,field,wide,sortMode), 1, signal, PROBE);
+            if(mine!==seq) return;
+            if(!pr.total) continue;
+            const s=bestScore(pr.records,p.text,null);
+            if(!best || s>best.s) best={alt:alts[i], s};
+            if(s>=GOOD_ENOUGH) break;     // clearly the right book; stop spending requests
+          }
+          if(best){
+            relaxedTo=best.alt;
+            const relaxed=Object.assign({},p,{text:best.alt});
+            // Narrow it back down: a misspelt title whose book *is* at Biomed should still
+            // come back as a Biomed answer, not as an all-of-UCLA one.
+            for(let i=0;i<chain.length;i++){
+              setStatus('Ranking results for \u201c'+esc(best.alt)+'\u201d\u2026');
+              lastQuery=buildCQL(relaxed,field,chain[i],sortMode);
+              const full=await fetchPool(lastQuery,signal,mine);
+              if(full===null) return;
+              usedScope=chain[i];
+              page=full;
+              if(full.total){ widenReason=i>0?'empty':''; break; }
+            }
+          }
+        }
+        if(!page) return;
+        total=page.total; loaded=page.records;
+      }
+      if(mine!==seq) return;
+
+      if(!total){
+        out.innerHTML='<div class="cat-empty">No UCLA record matches <b>'+esc(eq.full)+'</b>'+
+          (p.text?', even after retrying with fewer words':'')+'. '+
+          (p.notes.length?'Filters are active \u2014 clearing them widens the search. ':'')+
+          'Check the spelling, or switch the search field above \u2014 <b>Keyword</b> is the loosest.</div>';
+        setStatus('');
+        return;
+      }
+      ctx=idfContext(loaded);
+      draw();
+      const shown=Math.min(loaded.length,total);
+      const bits=[];
+      if(relaxedTo) bits.push('No exact match for \u201c'+esc(rankQuery)+'\u201d \u2014 closest matches for \u201c'+esc(relaxedTo)+'\u201d.');
+      if(widenReason==='empty') bits.push('Nothing in '+esc(SCOPE[scope].short)+' \u2014 widened to '+esc(SCOPE[usedScope].label)+'.');
+      if(widenReason==='weak')  bits.push('Nothing in '+esc(SCOPE[scope].short)+' matched the title \u2014 widened to '+esc(SCOPE[usedScope].label)+'.');
+      bits.push(total+' record'+(total===1?'':'s')+' in '+esc(SCOPE[usedScope].label)+
+                (shown<total?' \u00b7 newest '+shown+' ranked':''));
+      setStatus(bits.join(' '));
+    }catch(e){
+      if(e.name==='AbortError') return;
+      if(mine!==seq) return;
+      out.innerHTML='';
+      setStatus('Could not reach the catalog \u2014 '+esc(e.message||'network error')+'. Check the connection and search again.',true);
+    }
+  }
+
+  function setMode(m,rerun){
+    mode=m;
+    root.querySelectorAll('.cat-modes .pill').forEach(o=>{
+      const on=o.dataset.mode===m; o.classList.toggle('active',on); o.setAttribute('aria-pressed',String(on));
+    });
+    input.placeholder = m==='isbn' ? '9780071802154'
+                      : m==='author' ? 'longo, dan l.'
+                      : m==='title' ? "harrison's principles of internal medicine"
+                      : "harrison's principles of internal medicine";
+    if(rerun && input.value.trim()) run(true);
+  }
+  function setScope(s,rerun){
+    scope=s;
+    root.querySelectorAll('.cat-scope .pill').forEach(o=>{
+      const on=o.dataset.scope===s; o.classList.toggle('active',on); o.setAttribute('aria-pressed',String(on));
+    });
+    if(rerun && input.value.trim()) run(true);
+  }
+
+  head.addEventListener('click',()=>{
+    const open=body.hidden;
+    body.hidden=!open;
+    toggle.setAttribute('aria-expanded',String(open));
+    toggle.querySelector('.tgl').textContent=open?'Close':'Open';
+    if(open) input.focus();
+  });
+  root.querySelectorAll('.cat-modes .pill').forEach(p=>{
+    p.addEventListener('click',e=>{ e.stopPropagation(); setMode(p.dataset.mode,true); });
+  });
+  root.querySelectorAll('.cat-scope .pill').forEach(p=>{
+    p.addEventListener('click',e=>{ e.stopPropagation(); setScope(p.dataset.scope,true); });
+  });
+  $('catGo').addEventListener('click',e=>{ e.stopPropagation(); run(true); });
+  $('catClear').addEventListener('click',e=>{
+    e.stopPropagation();
+    input.value=''; loaded=[]; total=0; parsed=null; ctx=null; out.innerHTML='';
+    if(filtForm) filtForm.querySelectorAll('input,select').forEach(el=>{ if(el.type==='checkbox') el.checked=false; else el.value=''; });
+    if(applied){ applied.innerHTML=''; applied.hidden=true; }
+    setStatus(''); input.focus();
+  });
+  input.addEventListener('keydown',e=>{ if(e.key==='Enter') run(true); });
+  biomedOnly.addEventListener('change',draw);
+  covers.addEventListener('change',draw);
+  if(groupEd) groupEd.addEventListener('change',draw);
+  if(sortSel) sortSel.addEventListener('change',()=>{
+    // Title and author order are server-side sorts, so changing to them has to re-ask;
+    // the rest are pure reorderings of what is already here.
+    const v=sortSel.value;
+    if((v==='title'||v==='author'||v==='oldest') && loaded.length) run(true); else draw();
+  });
+  if(filtForm) filtForm.addEventListener('change',()=>{ if(input.value.trim()||panelTokens().length) run(true); });
+  root.querySelectorAll('.cat-example').forEach(b=>{
+    b.addEventListener('click',e=>{ e.stopPropagation(); input.value=b.dataset.q||b.textContent; run(true); });
+  });
+  out.addEventListener('click',e=>{
+    const more=e.target.closest('#catMore');
+    if(more){ run(false); return; }
+    const btn=e.target.closest('.found');
+    if(btn && window.routeShow) window.routeShow(+btn.dataset.lvl, btn.dataset.id);
+  });
+  setScope('biomed',false);
 })();
 </script>
 </body>

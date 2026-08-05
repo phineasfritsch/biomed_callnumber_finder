@@ -145,10 +145,24 @@ struct Router {
     /// like a flaky OCR bug, not an ordering bug.
     ///
     /// Sorting by (level, key) reproduces the web app's behaviour deterministically.
+    ///
+    /// ## Level 9 is excluded, and that is a bug fix, not a port
+    ///
+    /// Level 9 is Special Collections: a second, parallel sequence whose seventeen faces run
+    /// `A` to `ZWZ 330` and so contain almost every call number in the building. Searching it
+    /// alongside the general stacks and then taking the lowest-numbered floor sent **every**
+    /// book whose real home was level 10 or 11 to level 9 — 98 of the 436 mapped faces, which
+    /// is all of both floors. Scanning a spine gave you the right call number and the wrong
+    /// building level, so it read as a flaky camera, not as a lookup bug.
+    ///
+    /// `search` below always excluded level 9, and so did the web app's catalog lookup; only
+    /// the trip planner did not. The web app has been fixed in the same commit. Special
+    /// Collections is reachable through its own section pill and nowhere else.
     func locate(_ cn: CallNumber) -> Hit? {
         var hits: [(key: String, hit: Hit)] = []
         for (key, range) in ranges {
-            guard let start = CallNumber.parse(range.start),
+            guard !key.hasPrefix("9|"),
+                  let start = CallNumber.parse(range.start),
                   let end = CallNumber.parse(range.end),
                   start.scheme == cn.scheme
             else { continue }
@@ -163,6 +177,40 @@ struct Router {
             $0.hit.level != $1.hit.level ? $0.hit.level < $1.hit.level : $0.key < $1.key
         }?.hit
     }
+
+    /// The website's search box, ported exactly. NOT the same operation as `locate`, and the
+    /// differences are deliberate:
+    ///
+    /// * Returns **every** matching face, level-ascending. Serial runs make this essential: a
+    ///   range with `start == end` is one journal spanning many shelves, so a single call number
+    ///   legitimately matches several faces and the human picks by volume/year on the spine.
+    ///   Showing only the lowest face (what `locate` does for routing) reads as simply wrong for
+    ///   serials — which is most of this collection.
+    /// * **Excludes Level 9** (Special Collections). The website searches those only through its
+    ///   section pill; the main search never returns them. (`locate` deliberately still includes
+    ///   them, matching the web's `routeLocate` — routing and search disagree on this in the web
+    ///   app, and we mirror both faithfully rather than "fixing" one to match the other.)
+    func search(_ cn: CallNumber) -> [Hit] {
+        var hits: [(key: String, hit: Hit)] = []
+        for (key, range) in ranges {
+            guard !key.hasPrefix("9|"),
+                  let start = CallNumber.parse(range.start),
+                  let end = CallNumber.parse(range.end),
+                  start.scheme == cn.scheme,
+                  CallNumber.compare(cn, start) >= 0, CallNumber.compare(cn, end) <= 0
+            else { continue }
+
+            let parts = key.split(separator: "|", omittingEmptySubsequences: false).map(String.init)
+            guard parts.count == 3, let level = Int(parts[0]) else { continue }
+            hits.append((key, Hit(level: level, shelfID: parts[1], side: parts[2], range: range)))
+        }
+        return hits
+            .sorted { $0.hit.level != $1.hit.level ? $0.hit.level < $1.hit.level : $0.key < $1.key }
+            .map(\.hit)
+    }
+
+    /// Shelf geometry for display ("top row · index 5"), mirroring the web results.
+    static func shelf(id: String) -> Shelf? { shelfByID[id] }
 
     // MARK: Sweep
 

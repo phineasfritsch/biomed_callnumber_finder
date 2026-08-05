@@ -46,10 +46,15 @@ function cmpCN(x, y) {
   return 0;
 }
 const scheme = cn => /^\s*W[1-4]([A-Z]|\b)/i.test(cn || '') ? 'w1' : 'nlm';
+// Level 9 is Special Collections: seventeen faces running `A` to `ZWZ 330`, so it
+// contains almost every call number in the building. Including it here and then taking
+// the lowest level routed every level-10 and level-11 book to level 9 -- all of both
+// floors. It is excluded from routing, exactly as the catalog lookup already excluded it.
 function locate(cn) {
   const hits = [];
   for (const key in DATA) {
     const d = DATA[key];
+    if (key.startsWith('9|')) continue;
     if (!d.start || !d.end || scheme(d.start) !== scheme(cn)) continue;
     if (cmpCN(cn, d.start) >= 0 && cmpCN(cn, d.end) <= 0) {
       const [lvl, id, side] = key.split('|');
