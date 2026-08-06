@@ -927,7 +927,11 @@ function renderDetail(){
 
 /* ===== lookup ===== */
 function locate(){
-  const q=document.getElementById('q').value.trim();
+  const inp=document.getElementById('q');
+  let q=inp.value.trim();
+  // "Hist Div WZ 100 ..." typed directly → strip prefix, switch to Special Collections
+  const hd=q.match(/^hist\.?\s*div\.?\s+(.+)/i);
+  if(hd){ q=hd[1].trim(); inp.value=q; setCollection('spec'); }
   const out=document.getElementById('result');
   if(collection==='ref'){
     const subject = q ? `<b>${q.toUpperCase()}</b>` : 'Your book';
@@ -1060,26 +1064,35 @@ document.querySelectorAll('.examples b').forEach(b=>b.onclick=()=>{document.getE
    If pasted text is multi-line or long, extract the call number and auto-search.
 */
 function extractCallNumber(text){
-  // Primary: UCLA catalog location line "Available Biomed Library ; <call number>"
+  // "Available Biomed Library Hist Div ; W3 JA271 1977"  → spec=true
+  const mH=text.match(/Biomed\s+Library\s+Hist\.?\s*Div\.?\s*;\s*([^\n\r;(]+)/i);
+  if(mH) return {cn:mH[1].trim(), spec:true};
+  // "Available Biomed Library ; W3 JA271 1977"
   const m=text.match(/Biomed\s+Library\s*;\s*([^\n\r;(]+)/i);
-  if(m) return m[1].trim();
-  // Fallback: first short line that looks like a call number (letters then digits/space)
+  if(m) return {cn:m[1].trim(), spec:false};
+  // Fallback: first short CN-looking line
   const lines=text.split(/[\n\r]+/).map(l=>l.trim()).filter(Boolean);
   const cn=lines.find(l=>/^[A-Z*][A-Z0-9]*[\s.]/i.test(l) && l.length<60);
-  if(cn) return cn;
-  return text.trim();
+  if(cn) return {cn, spec:false};
+  return {cn:text.trim(), spec:false};
 }
 document.getElementById('q').addEventListener('paste',e=>{
   const pasted=(e.clipboardData||window.clipboardData).getData('text');
-  // Only intercept if it's clearly multi-line or long catalog text
   if(pasted.includes('\n') || pasted.length>80){
-    const cn=extractCallNumber(pasted);
+    const {cn,spec}=extractCallNumber(pasted);
     if(cn && cn.length<60){
       e.preventDefault();
+<<<<<<< Updated upstream
       const inp=document.getElementById('q');
       inp.value=cn;
       inp.dispatchEvent(new Event('input'));
       setTimeout(unifiedSearch,60);
+=======
+      document.getElementById('q').value=cn;
+      if(spec) setCollection('spec');
+      document.getElementById('q').dispatchEvent(new Event('input'));
+      setTimeout(locate,60);
+>>>>>>> Stashed changes
     }
   }
 });
