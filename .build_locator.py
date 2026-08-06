@@ -42,7 +42,7 @@ HTML = r"""<!DOCTYPE html>
   h1{font-family:var(--disp); font-size:30px; font-weight:600; margin:0; letter-spacing:-0.4px; line-height:1.05}
   h1 .sub{display:block; font-size:11px; font-weight:400; color:var(--ink-soft); letter-spacing:1.6px; text-transform:uppercase; margin-top:6px}
   .coverage{font-size:11px; color:var(--ink-soft); text-align:right; line-height:1.6}
-  .coverage b{color:var(--accent); font-size:16px; font-weight:600}
+  .coverage .n{color:var(--accent); font-size:16px}
 
   .lookup{display:flex; gap:8px; align-items:center; margin:20px 0 10px; padding:12px 14px; background:var(--card); border:1px solid var(--line); border-radius:var(--r); flex-wrap:wrap}
   .lookup label{font-size:11px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:1px}
@@ -147,15 +147,14 @@ HTML = r"""<!DOCTYPE html>
   .itin-steps .sn{flex:none; width:21px; height:21px; border-radius:99px; color:#fff; font-family:var(--mono); font-size:11px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; align-self:flex-start}
   .itin-steps .sn.out{background:var(--slate)}
   .itin-steps .sd{flex:0 0 auto; min-width:170px; font-size:12px; line-height:1.6; color:var(--ink-soft)}
-  .itin-steps .sd b{color:var(--ink)}
+  .itin-steps .sd .k{color:var(--ink)}
   .itin-steps .sat{flex:0 0 auto; min-width:80px; font-size:12px; line-height:1.6; color:var(--ink-soft)}
-  .itin-steps .sat b{color:var(--ink)}
+  .itin-steps .sat .k{color:var(--ink)}
   .itin-steps .scn{flex:1 1 auto; font-family:var(--mono); font-size:11.5px; color:var(--accent)}
   /* The shelf-end label is what you check when you get there, so it goes last and gives way
      first: on a narrow screen it drops to its own line rather than squeezing the instruction. */
   .itin-steps .srng{flex:0 1 auto; margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--ink-soft)}
   .itin-miss{font-size:12px; color:var(--accent); background:var(--orange-soft); border:1px solid var(--line); border-radius:8px; padding:9px 12px; margin-top:10px; line-height:1.65}
-  .itin-miss b{color:var(--accent)}
 
   /* ── catalog search (Alma SRU) ── */
   .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0}
@@ -213,10 +212,9 @@ HTML = r"""<!DOCTYPE html>
   .nofind{color:var(--accent); background:var(--orange-soft)}
   .elsewhere{color:var(--ink-soft); background:var(--paper-2)}
   .cat-empty{font-size:12.5px; color:var(--ink-soft); background:var(--paper-2); border:1px solid var(--line); border-radius:8px; padding:12px 14px; line-height:1.7}
-  .cat-empty b{color:var(--ink)}
+  .cat-empty .k{color:var(--ink)}
   .cat-more{display:flex; justify-content:center; margin:12px 0 2px}
   .routed{font-size:11.5px; color:var(--ink-soft); margin:9px 2px 0; line-height:1.6}
-  .routed b{color:var(--ink)}
   .linky{font:inherit; font-size:11.5px; color:var(--accent); background:none; border:0; border-bottom:1px solid currentColor; padding:0; cursor:pointer}
   .linky:hover{color:var(--ink)}
   .cat-scope{display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin:13px 0 0}
@@ -346,7 +344,9 @@ HTML = r"""<!DOCTYPE html>
       <button class="btn ghost" type="button" id="catToggle" aria-expanded="false" aria-controls="catBody"><span class="tgl">Open</span></button>
     </div>
     <div class="cat-body" id="catBody" hidden>
-      <p class="cat-hint">Everything goes in <b>the one box at the top</b>: a call number goes to the shelf map, anything else comes here, to UCLA&rsquo;s catalog. The default answers the question asked at the desk all day &mdash; <b>the newest edition of this book, in this building</b> &mdash; so results are scoped to <b>whichever library you say you&rsquo;re at</b> and ordered newest-first, widening to the rest of UCLA only if your library has nothing. All 21 UCLA libraries can be searched this way; copies in the <b>Biomed stacks</b> additionally resolve to an actual shelf you can walk to, because Biomed is the only one with a shelf map. The catalog itself returns hits in alphabetical order with no relevance ranking and no spelling correction, so both are done here: a typo of a word or two still finds the book.</p>
+      <p class="cat-hint">Everything goes in the one box at the top. A call number goes to the shelf map; anything else searches UCLA&rsquo;s catalog.</p>
+      <p class="cat-hint">Results are scoped to the library you say you&rsquo;re at, newest first, and widen to the rest of UCLA only if yours has nothing. All 21 libraries work. Only Biomed stacks copies resolve to a shelf you can walk to.</p>
+      <p class="cat-hint">The catalog ranks nothing and corrects no spelling, so both happen here. A typo or two still finds the book.</p>
       <div class="cat-scope" role="group" aria-label="Where to search">
         <label class="sect-label" for="catLibrary">I&rsquo;m at:</label>
         <select id="catLibrary" aria-label="Which library you are working at">
@@ -449,12 +449,12 @@ HTML = r"""<!DOCTYPE html>
           <label class="f chk2"><input type="checkbox" id="fShelf"> Only copies that resolve to a shelf</label>
           <label class="f chk2"><input type="checkbox" id="fAvail"> Only titles with a copy on the shelf now</label>
         </div>
-        <p class="filt-note">Each control is shorthand for a token you could type in the box &mdash; the exact tokens are echoed above the results, because a filter that narrows the answer silently is indistinguishable from a gap in the collection.</p>
+        <p class="filt-note">Each control is shorthand for a token you could type. The tokens are echoed above the results, so nothing narrows silently.</p>
       </details>
 
       <details class="cat-adv">
-        <summary>Search syntax &mdash; everything the box understands</summary>
-        <p class="filt-note">Type <code>field:value</code> anywhere in the box; quote values with spaces; prefix with <code>-</code> to exclude. Everything else is ordinary search text. Every index below was probed against this endpoint on 2026&#8209;08&#8209;05 &mdash; nothing is offered that returns nothing.</p>
+        <summary>Search syntax</summary>
+        <p class="filt-note">Type <code>field:value</code> anywhere. Quote values with spaces, prefix with <code>-</code> to exclude. Everything else is ordinary search text. Every index below was probed live on 2026&#8209;08&#8209;05; none of them returns nothing.</p>
         <div class="cheat">
           <div><code>title:</code> <code>ti:</code></div><div>Title phrase. <code>title:"internal medicine"</code></div>
           <div><code>author:</code> <code>au:</code> <code>by:</code></div><div>Creator (MARC 100/110/111). <code>au:"longo, dan"</code></div>
@@ -476,17 +476,17 @@ HTML = r"""<!DOCTYPE html>
           <div><code>type:</code> <code>format:</code></div><div>book &middot; journal &middot; video &middot; audio &middot; music &middot; score &middot; map &middot; software &middot; manuscript &middot; image &middot; archive</div>
           <div><code>material:</code> <code>item:</code></div><div>Item type on the shelf: book &middot; issue &middot; dvd &middot; cdrom &middot; microform &middot; score &middot; map</div>
           <div><code>loc:</code></div><div>One exact Biomed location code. <code>loc:birf</code></div>
-          <div><code>at:</code> <code>in:</code></div><div>Where to search, overriding the pills. Any library &mdash; <code>at:yrl</code>, <code>at:powell</code>, <code>at:law</code>, <code>at:sel</code>, <code>at:arts</code>, <code>at:music</code>, <code>at:clark</code>, <code>at:srlf</code>&hellip; &mdash; or <code>at:here</code> for the one you picked, <code>at:stacks</code> for Biomed&rsquo;s walkable shelves, <code>at:ucla</code> for everywhere.</div>
+          <div><code>at:</code> <code>in:</code></div><div>Where to search, overriding the pills. Any library: <code>at:yrl</code>, <code>at:powell</code>, <code>at:law</code>, <code>at:sel</code>, <code>at:arts</code>, <code>at:music</code>, <code>at:clark</code>, <code>at:srlf</code>&hellip; Also <code>at:here</code> for the one you picked, <code>at:stacks</code> for Biomed&rsquo;s walkable shelves, <code>at:ucla</code> for everywhere.</div>
           <div><code>sort:</code></div><div>best &middot; newest &middot; oldest &middot; title &middot; author &middot; shelf</div>
-          <div><code>word*</code></div><div>Trailing truncation, in the free text or in any phrase field. <code>cardio*</code> catches cardiology and cardiovascular. Only at the end of a word &mdash; <code>*word</code> is ignored and <code>car*logy</code> matches nothing.</div>
+          <div><code>word*</code></div><div>Trailing truncation, in free text or any phrase field. <code>cardio*</code> catches cardiology and cardiovascular. End of a word only: <code>*word</code> is ignored, <code>car*logy</code> matches nothing.</div>
           <div class="cheat-h">Two words, both required</div><div class="cheat-h">Free text uses the <code>all</code> relation: every word must appear somewhere in the record. Quote a phrase to require the words together.</div>
           <div class="cheat-h">Applied here, not by the catalog</div><div class="cheat-h">These are facts about the shelf map</div>
           <div><code>shelf:</code></div><div><code>shelf:yes</code> keeps only copies that resolve to a real shelf face.</div>
-          <div><code>level:</code></div><div><code>level:8</code> or <code>level:8,10</code> &mdash; only books on those stack levels.</div>
-          <div><code>avail:</code></div><div><code>avail:yes</code> &mdash; only titles Alma reports as on the shelf now.</div>
-          <div><code>online:</code></div><div><code>online:no</code> &mdash; exclude anything with an electronic copy.</div>
+          <div><code>level:</code></div><div><code>level:8</code> or <code>level:8,10</code>. Only books on those stack levels.</div>
+          <div><code>avail:</code></div><div><code>avail:yes</code>. Only titles Alma reports as on the shelf now.</div>
+          <div><code>online:</code></div><div><code>online:no</code>. Excludes anything with an electronic copy.</div>
           <div><code>editions:</code></div><div><code>editions:all</code> lists every printing separately instead of grouping them.</div>
-          <div><code>carrier:</code> <code>is:</code></div><div>print &middot; audio &middot; music &middot; video &middot; score &middot; map &middot; microform &middot; software &middot; image &middot; online. Read from six MARC fields rather than the leader alone, because an audiobook is routinely catalogued as text — <code>carrier:print</code> is the one that excludes it. Editions group per carrier, so a recording never presents itself as the newest printing of a book.</div>
+          <div><code>carrier:</code> <code>is:</code></div><div>print &middot; audio &middot; music &middot; video &middot; score &middot; map &middot; microform &middot; software &middot; image &middot; online. Read from six MARC fields, not the leader alone, because audiobooks are routinely catalogued as text. <code>carrier:print</code> excludes them. Editions group per carrier, so a recording never leads a book.</div>
         </div>
         <p class="filt-note">Examples:
           <button class="cat-example" type="button" data-q="harrison's principles of internal medicine">newest Harrison&rsquo;s at Biomed</button>
@@ -509,7 +509,9 @@ HTML = r"""<!DOCTYPE html>
       <button class="btn ghost" type="button"><span class="tgl">Open</span></button>
     </div>
     <div class="route-body" id="routeBody" hidden>
-      <p class="route-hint">Upload photos of ILL slips or a pull list (JPEG/PNG) and the call numbers are read for you &mdash; or just type them in. Then we build the shortest walk: start at the highest floor, take the stairs <b>down one floor at a time</b>, and use the elevator to skip floors or go up. <b>More than five books is a truck trip</b> &mdash; then it is the elevator between every floor, because nobody walks a loaded truck down a stairwell. Text recognition runs in your browser and is imperfect (especially handwriting), so check the list before building.</p>
+      <p class="route-hint">Upload photos of ILL slips or a pull list (JPEG/PNG) and the call numbers are read for you, or type them in.</p>
+      <p class="route-hint">The walk starts at the highest floor and takes the stairs down one floor at a time. The elevator skips floors or goes up. Over five books is a truck trip, so it is the elevator between every floor.</p>
+      <p class="route-hint">Text recognition runs in your browser and is imperfect, especially on handwriting. Check the list before building.</p>
       <div class="drop" id="drop">
         <input type="file" id="files" accept="image/*,.heic,.heif" multiple hidden>
         <input type="file" id="camera" accept="image/*" capture="environment" hidden>
@@ -519,7 +521,7 @@ HTML = r"""<!DOCTYPE html>
       </div>
       <div class="ocr-status" id="ocrStatus"></div>
       <div class="thumbs" id="thumbs"></div>
-      <label class="cn-label" for="cnList">Call numbers &mdash; one per line, edit freely</label>
+      <label class="cn-label" for="cnList">Call numbers, one per line</label>
       <textarea id="cnList" rows="6" placeholder="W1 AM477&#10;QL 737 C22 M616g&#10;WM 13 D5537"></textarea>
       <div class="route-actions">
         <button class="btn" type="button" id="buildRoute">Build route</button>
@@ -948,9 +950,9 @@ function locate(){
   if(hd){ q=hd[1].trim(); inp.value=q; setCollection('spec'); }
   const out=document.getElementById('result');
   if(collection==='ref'){
-    const subject = q ? `<b>${q.toUpperCase()}</b>` : 'Your book';
+    const subject = q ? `<code>${q.toUpperCase()}</code>` : 'Your book';
     out.innerHTML = `<div class="hit"><div class="loc">Floor 4 · Reference</div>`+
-      `<div class="rng">${subject} is in the reference section on floor 4. Books are shelved by call number.</div></div>`;
+      `<div class="rng">${subject} is on floor 4, shelved by call number.</div></div>`;
     level=4; selected=null; flashId=null;
     renderLevels(); renderPlan(); renderDetail();
     return;
@@ -977,7 +979,7 @@ function locate(){
       renderLevels(); renderPlan(); renderDetail();
       setTimeout(()=>{flashId=null;renderPlan();},1600);
     } else {
-      out.innerHTML=`<div class="miss">Not found in mapped Special Collections ranges for <b>${q.toUpperCase()}</b>.</div>`;
+      out.innerHTML=`<div class="miss">No mapped Special Collections range contains <code>${q.toUpperCase()}</code>.</div>`;
       level=9; renderLevels(); renderPlan(); renderDetail();
     }
     return;
@@ -1000,27 +1002,26 @@ function locate(){
       return `<div class="hit"><div class="loc">Level ${h.lvl} · ${s.row} row · index ${s.index} · ${sideName[h.side]} side</div>`
         +`<div class="rng">${h.d.start} → ${h.d.end}</div></div>`;
     }).join('')
-    + (hits.length>1?`<div class="examples">${hits.length} shelves match — for serials, check the volume/year on the spine to pick the right one.</div>`:'');
+    + (hits.length>1?`<div class="examples">${hits.length} shelves match. For serials, check the volume and year on the spine.</div>`:'');
     const first=hits[0]; level=first.lvl; selected=first.id; flashId=first.id;
     renderLevels(); renderPlan(); renderDetail();
     setTimeout(()=>{flashId=null;renderPlan();},1600);
   } else {
-    out.innerHTML=`<div class="miss">No mapped shelf contains <b>${q.toUpperCase()}</b>. It may be on a shelf/level not yet entered, or just outside the mapped ranges.</div>`;
+    out.innerHTML=`<div class="miss">No mapped shelf contains <code>${q.toUpperCase()}</code>. It may be on a level not yet entered, or outside the mapped ranges.</div>`;
   }
 }
 
 /* ===== coverage summary ===== */
 function renderCoverage(){
   const lv=Object.keys(levelsWithData).map(Number).sort((a,b)=>a-b);
-  document.getElementById('coverage').innerHTML=`<b>${Object.keys(DATA).length}</b> shelf-sides mapped<br>levels ${lv.join(', ')}`;
+  document.getElementById('coverage').innerHTML=`<span class="n">${Object.keys(DATA).length}</span> shelf-sides mapped<br>levels ${lv.join(', ')}`;
 }
 
 document.getElementById('footer').innerHTML=
-  'Type a call number as printed, spaces and the Cutter dot are optional, so <b style="color:var(--ink)">QL737.C22</b>, <b style="color:var(--ink)">QL 737 C22</b>, and <b style="color:var(--ink)">W1 JO600</b> all work. '+
-  'HOWEVER, it is important the W1 in a call number have a leading space. '+
+  'Type a call number as printed. Spaces and the Cutter dot are optional, so <code>QL737.C22</code>, <code>QL 737 C22</code> and <code>W1 JO600</code> all work. A W1 number needs the space after W1. '+
   'The locator finds the shelf whose range contains it, comparing class letters, then class number, then each Cutter as a decimal, so AM4733 sorts before AM477. '+
-  'Each green column is a double-sided shelf (L / R faces); black is the bottom row. A range where start = end is a serial run, many volumes share one call number, so the search returns every matching shelf and you check the spine. '+
-  'Reference is shelved on floor 4 and Special Collections on floor 9; switch the Section pill to search for those.';
+  'Each green column is a double-sided shelf (L and R faces); black is the bottom row. Where a range start equals its end, many volumes share one call number, so every matching shelf is returned and you check the spine. '+
+  'Reference is on floor 4 and Special Collections on floor 9. Switch the Section pill to search those.';
 
 /* ===== init ===== */
 renderCoverage(); renderLevels(); renderPlan(); renderDetail();
@@ -1051,9 +1052,9 @@ function showRouted(kind,typed){
   if(!kind){ el.hidden=true; el.innerHTML=''; return; }
   el.hidden=false;
   el.innerHTML = kind==='shelf'
-    ? 'Read as a <b>call number</b> and looked up on the shelf map. '+
+    ? 'Read as a call number and looked up on the shelf map. '+
       '<button type="button" class="linky" id="routeToCat">Search the catalog for this instead</button>'
-    : 'Searched the <b>catalog</b>. '+
+    : 'Searched the catalog. '+
       '<button type="button" class="linky" id="routeToShelf">Treat it as a call number instead</button>';
   const a=document.getElementById('routeToCat');
   if(a) a.onclick=()=>{ showRouted('catalog'); if(window.catalogSearch) window.catalogSearch(); };
@@ -1238,7 +1239,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
   }
   async function handleFiles(fl){
     const files=[...fl].filter(f=>/^image\//.test(f.type)||isHeic(f));
-    if(!files.length){ setStatus('Those files are not images — upload JPEG/PNG/HEIC photos, or type call numbers below.',true); return; }
+    if(!files.length){ setStatus('Those files are not images. Upload JPEG, PNG or HEIC photos, or type call numbers below.',true); return; }
     setStatus('Loading text-recognition…');
     let worker;
     try{ worker=await getWorker(m=>{ if(m.status==='recognizing text') setStatus(`Reading… ${Math.round(m.progress*100)}%`); }); }
@@ -1261,7 +1262,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       }catch(_){ /* skip an unreadable image */ }
     }
     setLines([...found]);
-    setStatus(`Read ${files.length} image${files.length===1?'':'s'} — ${found.size} call number${found.size===1?'':'s'} detected. Check & fix the list, then Build route.`);
+    setStatus(`Read ${files.length} image${files.length===1?'':'s'}, found ${found.size} call number${found.size===1?'':'s'}. Check the list, then build the route.`);
   }
   function extractCNs(text){
     if(!text) return [];
@@ -1316,7 +1317,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
   }
   function buildRoute(){
     const want=[...new Set(lines())];
-    if(!want.length){ itin.innerHTML='<div class="itin-miss">Add some call numbers first — upload an image or type them above.</div>'; return; }
+    if(!want.length){ itin.innerHTML='<div class="itin-miss">Add call numbers first: upload an image or type them above.</div>'; return; }
     const located=[], missing=[];
     want.forEach(cn=>{ const h=routeLocate(cn); if(h.length) located.push({cn,hit:h[0]}); else missing.push(cn); });
     if(!located.length){ itin.innerHTML=miss(missing); return; }
@@ -1331,7 +1332,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     const truck = located.length>5;
 
     let entryKind='elevator', html='', stairs=0, lifts=0;
-    html+=transit('el',`Take the <b>elevator</b> to <b>Level ${levels[0]}</b> to start.`);
+    html+=transit('el',`Elevator to Level ${levels[0]} to start.`);
     for(let i=0;i<levels.length;i++){
       const lvl=levels[i], stops=groupStops(byLvl[lvl]);
       const xs=stops.map(s=>s.x), L=Math.min(...xs), R=Math.max(...xs);
@@ -1356,12 +1357,12 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
             if(!best||sc<best.sc) best={kind,sc};
           });
           exitKind=nextKind=best.kind; stairs++;
-          nextTransit=transit('st',`Take the <b>${best.kind.replace(' stairs','')} stairwell</b> down one floor to <b>Level ${nlvl}</b>.`);
+          nextTransit=transit('st',`${best.kind.replace(' stairs','')} stairwell down one floor to Level ${nlvl}.`);
         } else {
           exitKind=nextKind='elevator'; lifts++;
-          const why = truck && gap===1 ? ' (truck trip &mdash; no stairs)'
+          const why = truck && gap===1 ? ' (truck trip, no stairs)'
                     : gap>1 ? ` (skips ${gap-1} floor${gap-1===1?'':'s'})` : '';
-          nextTransit=transit('el',`Take the <b>elevator</b> down to <b>Level ${nlvl}</b>${why}.`);
+          nextTransit=transit('el',`Elevator down to Level ${nlvl}${why}.`);
         }
       }
       const outDoor=exitKind==='done'?null:doorFor(exitKind,'out');
@@ -1373,10 +1374,10 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     }
     const books=located.length, fl=levels.length;
     let plan;
-    if(fl===1){ plan=`All on Level ${levels[0]} — take the elevator there.`; }
-    else if(truck){ plan=`Over five books, so this is a truck trip: the elevator between every floor (${lifts} move${lifts===1?'':'s'}).`; }
+    if(fl===1){ plan=`All on Level ${levels[0]}. Elevator there.`; }
+    else if(truck){ plan=`Over five books, so it is a truck trip: elevator between every floor (${lifts} move${lifts===1?'':'s'}).`; }
     else { plan=`Elevator to Level ${levels[0]}, then ${stairs} stair descent${stairs===1?'':'s'}`+(lifts?` and ${lifts} elevator move${lifts===1?'':'s'}.`:'.'); }
-    const sum=`<b>${books}</b> book${books===1?'':'s'} across <b>${fl}</b> floor${fl===1?'':'s'}. ${plan}`;
+    const sum=`${books} book${books===1?'':'s'} across ${fl} floor${fl===1?'':'s'}. ${plan}`;
     html=`<div class="itin-summary">${sum}</div>`+html;
     if(missing.length) html+=miss(missing);
     itin.innerHTML=html;
@@ -1531,18 +1532,18 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
                  : Number.isInteger(st.shelves) ? `${st.shelves} ${st.shelves===1?'shelf':'shelves'}`
                  : (st.head>0?'east':'west');
       h+=`<li><span class="sn" style="background:${orderColor(st.n-1,n)}">${st.n}</span>`
-       + `<span class="sd"><b>${arrow[st.head]} ${move}</b> to ${aisleShort(st.x)}</span>`
-       + `<span class="sat"><b>${st.index}${face[st.side]||''}</b> ${st.row}</span>`
+       + `<span class="sd"><span class="k">${arrow[st.head]} ${move}</span> to ${aisleShort(st.x)}</span>`
+       + `<span class="sat"><span class="k">${st.index}${face[st.side]||''}</span> ${st.row}</span>`
        + `<span class="scn">${st.cns.join(' · ')}</span>`
        + `<span class="srng">${st.range.start} → ${st.range.end}</span></li>`;
     });
     if(outDoor){
       h+=`<li class="out"><span class="sn out">↺</span>`
-       + `<span class="sd">back to the <b>${shortDoor(outDoor)}</b></span></li>`;
+       + `<span class="sd">back to the <span class="k">${shortDoor(outDoor)}</span></span></li>`;
     }
     return h+'</ol>';
   }
-  function miss(arr){ return `<div class="itin-miss"><b>Not located (${arr.length}):</b> ${arr.join(' · ')}<br>These may be mis-read by OCR, shelved in Reference (Floor 4), or outside the mapped ranges. Fix the spelling above and rebuild, or look them up one at a time.</div>`; }
+  function miss(arr){ return `<div class="itin-miss">Not located (${arr.length}): ${arr.join(' · ')}<br>Mis-read by OCR, shelved in Reference on floor 4, or outside the mapped ranges. Fix the spelling above and rebuild.</div>`; }
 
   window.routeShow=function(lvl,id){ level=lvl; selected=id; flashId=id; if(typeof syncCollectionToLevel==='function') syncCollectionToLevel(); renderLevels(); renderPlan(); renderDetail(); setTimeout(()=>{ flashId=null; renderPlan(); },1600); const st=document.querySelector('.stage'); if(st) st.scrollIntoView({behavior:'smooth',block:'center'}); };
 })();
@@ -1637,11 +1638,11 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     bi:        {kind:'stacks', label:'Biomed Library \u00b7 general stacks'},
     biper:     {kind:'stacks', label:'Biomed stacks \u00b7 bound volumes', note:'Current issues are shelved separately in Current Journals.'},
     biprwt:    {kind:'stacks', label:'Biomed stacks \u00b7 building use only', note:'Does not circulate. Current issues are in Current Journals.'},
-    bian:      {kind:'stacks', label:'Biomed \u00b7 annual or series', note:'Volumes of a series can shelve apart from the run \u2014 check the series record if the shelf is empty.'},
-    birf:      {kind:'desk',   label:'Biomed Reference \u00b7 Floor 4', note:'Shelved by call number in the Reference area; that floor has no per-shelf map.'},
+    bian:      {kind:'stacks', label:'Biomed \u00b7 annual or series', note:'Volumes of a series can shelve apart from the run. Check the series record if the shelf is empty.'},
+    birf:      {kind:'desk',   label:'Biomed Reference \u00b7 Floor 4', note:'Shelved by call number in Reference. That floor has no per-shelf map.'},
     birs:      {kind:'desk',   label:'Biomed Reserves', note:'Ask at the Circulation Desk.'},
-    bicidperm: {kind:'desk',   label:'Biomed Circulation Desk \u00b7 permanent reserves', note:'Held at the desk \u2014 ask for it by call number.'},
-    bicimm:    {kind:'desk',   label:'Biomed Circulation Desk \u00b7 media', note:'Held at the desk \u2014 ask for it by call number.'},
+    bicidperm: {kind:'desk',   label:'Biomed Circulation Desk \u00b7 permanent reserves', note:'Held at the desk. Ask for it by call number.'},
+    bicimm:    {kind:'desk',   label:'Biomed Circulation Desk \u00b7 media', note:'Held at the desk. Ask for it by call number.'},
     biherb:    {kind:'desk',   label:'Biomed Herbarium', note:'Ask at the desk; access is by arrangement.'}
   };
   const OFFSITE={
@@ -1668,7 +1669,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       if(known) return Object.assign({here:hereLib==='BIOMED', code:j}, known);
       return {kind:'unknown', here:hereLib==='BIOMED', code:j,
               label:ava.c||('Biomed \u00b7 location code '+(j||'unknown')),
-              note:'This Biomed location is not in the routing table yet \u2014 ask at the desk rather than walking the stacks.'};
+              note:'This Biomed location is not in the routing table yet. Ask at the desk rather than walking the stacks.'};
     }
     const known=LIB_BY_CODE[lib];
     /* The reader's own library, when it is not Biomed. It is in this building and worth
@@ -1676,11 +1677,11 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
        the alternative is a blank space where an aisle would be. */
     if(lib && lib===hereLib) return {kind:'here', here:true, code:j,
             label:ava.c||ava.q||(known?known.name:lib),
-            note:'In this building \u2014 shelved by call number. There is no per-shelf map for '+
+            note:'In this building, shelved by call number. There is no per-shelf map for '+
                  esc0(known?known.name:lib)+' yet, so the call number is as precise as this gets.'};
     return {kind:'away', here:false, code:j,
             label:ava.q||ava.c||lib||'Another UCLA library',
-            note:OFFSITE[j]||('Held at '+(ava.c||(known?known.name:lib)||'another UCLA library')+' \u2014 not in this building.')};
+            note:OFFSITE[j]||('Held at '+(ava.c||(known?known.name:lib)||'another UCLA library')+'. Not in this building.')};
   }
   // The core block has no DOM; this is only here so a library name cannot smuggle markup in.
   const esc0=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1836,7 +1837,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     err:       {pre:'err', code:'ERR',        name:'English Reading Room',              short:'English RR'},
     ethno:     {pre:'et',  code:'ETHNOMUS',   name:'Ethnomusicology Archive',           short:'Ethnomusicology'},
     labschool: {pre:'ue',  code:'LABS',       name:'UCLA Lab School Library',           short:'Lab School'},
-    srlf:      {pre:'sr',  code:'SRLF',       name:'SRLF — offsite storage',             short:'SRLF', offsite:true},
+    srlf:      {pre:'sr',  code:'SRLF',       name:'SRLF, offsite storage',             short:'SRLF', offsite:true},
     ucla:      {pre:null,  code:'',           name:'Every UCLA library',                short:'All of UCLA'}
   };
   const LIB_BY_CODE=(function(){ const m={}; for(const k in LIBRARY) if(LIBRARY[k].code) m[LIBRARY[k].code]=LIBRARY[k]; return m; })();
@@ -1844,7 +1845,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
   // Sub-scopes. Only Biomed has a shelf map, so only Biomed has a "walkable" subset.
   const SUBSCOPE={
     stacks:{codes:['bi','biper','biprwt','bian'], lib:'biomed',
-            label:'Biomed \u2014 shelves you can walk to', short:'Walkable stacks'},
+            label:'Biomed, shelves you can walk to', short:'Walkable stacks'},
     ref:   {codes:['birf'], lib:'biomed', label:'Biomed Reference \u00b7 Floor 4', short:'Reference'},
     desk:  {codes:['birs','bicidperm','bicimm','biherb'], lib:'biomed',
             label:'Biomed service desks (reserves, media, herbarium)', short:'At the desk'}
@@ -2036,7 +2037,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     tokenize(s).forEach(tk=>{
       if(!tk.field){ free.push(tk.neg?'-'+tk.val:tk.val); return; }
       const name=ALIAS[tk.field]||tk.field, spec=FIELD[name];
-      if(!spec){ p.errors.push('There is no filter called \u201c'+tk.field+'\u201d \u2014 it was searched as ordinary text.'); free.push(tk.raw); return; }
+      if(!spec){ p.errors.push('There is no filter called \u201c'+tk.field+'\u201d. It was searched as ordinary text.'); free.push(tk.raw); return; }
       const v=String(tk.val==null?'':tk.val).trim();
       if(!v){ p.errors.push('\u201c'+tk.field+':\u201d was given no value, so it was ignored.'); return; }
 
@@ -2095,7 +2096,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     }
     if(name==='carrier'){
       const want=v.split(/[,\s]+/).map(x=>CARRIER_ALIAS[x.toLowerCase()]).filter(Boolean);
-      if(!want.length){ p.errors.push('“carrier:'+v+'” — try print, audio, video, music, score, map, microform, software, image or online.'); return; }
+      if(!want.length){ p.errors.push('“carrier:'+v+'” is not a carrier. Try print, audio, video, music, score, map, microform, software, image or online.'); return; }
       (neg?(p.local.carrierNot=p.local.carrierNot||[]):(p.local.carrier=p.local.carrier||[])).push.apply(
         neg?p.local.carrierNot:p.local.carrier, want);
       p.notes.push((neg?'not ':'')+'carrier: '+want.join(' or '));
@@ -2104,11 +2105,11 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     if(name==='editions'){
       if(lv==='all'||lv==='every'||lv==='show'){ p.local.groupEditions=false; p.notes.push('every printing listed separately'); }
       else if(lv==='newest'||lv==='group'||lv==='latest'){ p.local.groupEditions=true; p.notes.push('editions grouped, newest on top'); }
-      else p.errors.push('\u201ceditions:'+v+'\u201d \u2014 try editions:all or editions:newest.');
+      else p.errors.push('\u201ceditions:'+v+'\u201d is not valid. Try editions:all or editions:newest.');
       return;
     }
     const b=YESNO[lv];
-    if(b===undefined){ p.errors.push('\u201c'+name+':'+v+'\u201d \u2014 expected yes or no.'); return; }
+    if(b===undefined){ p.errors.push('\u201c'+name+':'+v+'\u201d expects yes or no.'); return; }
     const want=neg?!b:b;
     p.local[name]=want;
     p.notes.push(name==='shelf' ? (want?'only copies that resolve to a shelf':'only copies with no mapped shelf')
@@ -2748,7 +2749,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
   // arrives with $f/$g absent, so no number is invented for it.
   function availChip(a){
     const e=(a.e||'').toLowerCase();
-    if(e==='check_holdings') return '<span class="chip vol">Multiple volumes \u2014 check at the desk</span>';
+    if(e==='check_holdings') return '<span class="chip vol">Multiple volumes, check at the desk</span>';
     const tot=a.f===undefined?null:parseInt(a.f,10), un=a.g===undefined?0:parseInt(a.g,10);
     if(e==='available')   return '<span class="chip ok">On shelf'+(isFinite(tot)?' \u00b7 '+Math.max(tot-un,0)+' of '+tot:'')+'</span>';
     if(e==='unavailable') return '<span class="chip no">All copies out'+(isFinite(tot)?' \u00b7 '+tot:'')+'</span>';
@@ -2756,10 +2757,10 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
   }
 
   const WHY={
-    media:'Media copy \u2014 discs are held at a service desk, not in the stacks sequence, so no shelf is shown.',
+    media:'Media copy. Discs are held at a service desk, not in the stacks, so no shelf is shown.',
     'no-call-number':'This holding carries no call number, so no shelf can be resolved.',
-    unparseable:'This call number could not be parsed with confidence. No shelf is shown \u2014 a wrong aisle is worse than none.',
-    unmapped:'Range not mapped \u2014 this call number falls outside every shelf range recorded so far. Check the floor by class letter, or ask at the desk.'
+    unparseable:'This call number could not be parsed with confidence. No shelf is shown, because a wrong aisle is worse than none.',
+    unmapped:'Range not mapped. This call number falls outside every recorded shelf range. Check the floor by class letter, or ask at the desk.'
   };
 
   function shelfBlock(r){
@@ -2771,7 +2772,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
                '<span class="lead">Level '+hit.lvl+' \u00b7 '+esc(where)+' \u00b7 '+(SIDE[hit.side]||esc(hit.side))+' side</span>'+
                '<span class="rng">'+esc(hit.d.start)+' \u2192 '+esc(hit.d.end)+'</span></button>';
       }).join('');
-      if(r.hits.length>1) h+='<div class="elsewhere">'+r.hits.length+' shelves match \u2014 a serial run shares one call number, so check the volume and year on the spine.</div>';
+      if(r.hits.length>1) h+='<div class="elsewhere">'+r.hits.length+' shelves match. A serial run shares one call number, so check the volume and year on the spine.</div>';
       return h;
     }
     return WHY[r.reason]?'<div class="nofind">'+esc(WHY[r.reason])+'</div>':'';
@@ -2801,7 +2802,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     h+='</div>';
     // The library name is already the section heading; repeating it here reads as stutter.
     const lead=(r.route.label===groupName(r.ava))?'':esc(r.route.label);
-    h+='<span class="where">'+lead+(r.route.note?(lead?' \u2014 ':'')+esc(r.route.note):'')+'</span>';
+    h+='<span class="where">'+lead+(r.route.note?(lead?'. ':'')+esc(r.route.note):'')+'</span>';
     if(r.route.kind==='stacks') h+=shelfBlock(r);
     return h+'</div>';
   }
@@ -2832,11 +2833,11 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       const names=[...new Set(rec.online.map(o=>o.m).filter(Boolean))].slice(0,3);
       h+='<section class="lib away"><div class="lib-n">Online</div><div class="hold"><span class="where">'+
          rec.online.length+' electronic '+(rec.online.length===1?'copy':'copies')+
-         (names.length?' \u00b7 '+esc(names.join(', ')):'')+' \u2014 read it in the catalog; nothing to walk to.</span></div></section>';
+         (names.length?' \u00b7 '+esc(names.join(', ')):'')+'. Read it in the catalog; nothing to walk to.</span></div></section>';
     }
     if(!keep.length && !rec.online.length)
       h+='<section class="lib away"><div class="hold"><span class="where">'+
-         (biomedOnly.checked?'No '+esc(LIBRARY[library].short)+' copy on this record \u2014 untick \u201conly my library\u201d to see where else it is held.'
+         (biomedOnly.checked?'No '+esc(LIBRARY[library].short)+' copy on this record. Untick \u201conly my library\u201d to see where else it is held.'
                             :'No copies attached to this record.')+'</span></div></section>';
     return {html:h, kept:keep.length};
   }
@@ -2928,7 +2929,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     const bits=[];
     if(p.notes.length) bits.push('<span class="ap-n">'+p.notes.map(esc).join('</span><span class="ap-n">')+'</span>');
     let h='';
-    if(bits.length) h+='<div class="ap-row"><b>Filters:</b> '+bits.join('')+'</div>';
+    if(bits.length) h+='<div class="ap-row">Filters: '+bits.join('')+'</div>';
     if(extra.length) h+='<div class="ap-eq">Equivalent to typing: <code>'+esc(extra.join(' '))+'</code></div>';
     if(p.errors.length) h+='<div class="ap-err">'+p.errors.map(esc).join('<br>')+'</div>';
     applied.innerHTML=h;
@@ -2957,7 +2958,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     if(!kept.length){
       out.innerHTML='<div class="cat-empty">All '+loaded.length+' ranked record'+(loaded.length===1?'':'s')+
         ' were removed by the shelf-side filters (<code>'+esc(localSummary(local))+'</code>). '+
-        'Those are applied here, not by the catalog \u2014 clear them, or load more of the '+total+
+        'Those are applied here, not by the catalog. Clear them, or load more of the '+total+
         ' matches and they will be filtered too.</div>'+footer(0);
       wireCards();
       return;
@@ -2971,7 +2972,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     const cards=sortClusters(clusters,sortMode).map(clusterCard).filter(Boolean);
     if(!cards.length){
       out.innerHTML='<div class="cat-empty">None of the '+kept.length+' ranked records has a copy left to show. '+
-        '<b>Untick &ldquo;only my library&rdquo;</b> to see where else at UCLA they are held.</div>'+footer(hidden);
+        'Untick &ldquo;only my library&rdquo; to see where else at UCLA they are held.</div>'+footer(hidden);
       wireCards();
       return;
     }
@@ -3040,7 +3041,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     const dead=[];
     for(let i=0;i<qw.length;i++){
       if(qw[i].length<MIN_REPAIR_LEN) continue;
-      setStatus('Nothing matches “'+esc(p.text)+'” — checking “'+esc(qw[i])+'”…');
+      setStatus('Nothing matches “'+esc(p.text)+'”. Checking “'+esc(qw[i])+'”…');
       const n=await countOnly(buildCQL(Object.assign({},p,{text:qw[i]}),field,wide,'best'),signal);
       if(mine!==seq) return null;
       if(!n) dead.push(i);
@@ -3068,7 +3069,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
        typo is found first. */
     const cands=wordRepairs(bad).slice(0,MAX_REPAIRS);
     for(let k=0;k<cands.length && !aborted;k++){
-      setStatus('“'+esc(bad)+'” is in no UCLA record — trying “'+esc(cands[k])+'”…');
+      setStatus('“'+esc(bad)+'” is in no UCLA record. Trying “'+esc(cands[k])+'”…');
       const n=await countOnly(buildCQL(Object.assign({},p,{text:substituteWord(qw,dead[0],cands[k])}),field,wide,'best'),signal);
       if(mine!==seq) return null;
       if(n && await consider(cands[k])) return best.text;
@@ -3105,7 +3106,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     const clauses=wordGuesses(bad).map(g=>clause(spec,substituteWord(qw,dead[0],g)));
     const batches=batchClauses(clauses,GUESS_URL).slice(0,MAX_GUESS_BATCHES);
     for(let k=0;k<batches.length && !aborted;k++){
-      setStatus('Still nothing for “'+esc(bad)+'” — asking the catalog about '+
+      setStatus('Still nothing for “'+esc(bad)+'”. Asking the catalog about '+
                 batches[k].length+' near-misses at once…');
       const pr=await sru(batches[k].join(' or '),1,signal,HARVEST);
       if(mine!==seq) return null;
@@ -3151,7 +3152,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     if(page && page.total && scoreAgainst && used!==wide){
       const here=bestScore(page.records,scoreAgainst,null);
       if(here<WEAK){
-        setStatus('Nothing in '+esc(SCOPE(used).short)+' looks like “'+esc(scoreAgainst)+'” — checking the rest of UCLA…');
+        setStatus('Nothing in '+esc(SCOPE(used).short)+' looks like “'+esc(scoreAgainst)+'”. Checking the rest of UCLA…');
         const pr=await sru(buildCQL(pq,field,wide,sortMode),1,signal,PROBE);
         if(mine!==seq) return null;
         if(pr.total && bestScore(pr.records,scoreAgainst,null)>=here+WIDEN_MARGIN){
@@ -3181,7 +3182,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     const hasQuery=!!(p.text||p.pos.length||p.neg.length);
     if(!hasQuery){
       loaded=[]; total=0; out.innerHTML=''; parsed=p;
-      setStatus(p.errors.length?esc(p.errors.join(' ')):'Type a title, author or ISBN in the box at the top \u2014 or a filter such as <code>mesh:cardiology year:2015+</code>.',!!p.errors.length);
+      setStatus(p.errors.length?esc(p.errors.join(' ')):'Type a title, author or ISBN in the box at the top, or a filter such as <code>mesh:cardiology year:2015+</code>.',!!p.errors.length);
       return;
     }
     const mine=++seq;
@@ -3207,8 +3208,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     if(!buildCQL(p,field,scopeChain(p)[0],sortMode)){
       loaded=[]; total=0; out.innerHTML='';
       setStatus('\u201c'+esc(p.text||eq.typed)+'\u201d has nothing to search for as '+
-                esc((FIELD[field]||FIELD.keyword).label)+'. Pick a different <b>Search by</b> field \u2014 '+
-                '<b>Keyword</b> is the loosest.',true);
+                esc((FIELD[field]||FIELD.keyword).label)+'. Pick a different Search by field; Keyword is the loosest.',true);
       return;
     }
 
@@ -3258,7 +3258,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
             const qwAll=norm(p.text).split(' ').filter(Boolean);
             let best=null, repaired='';
             for(let i=0;i<alts.length && !repaired;i++){
-              setStatus('Nothing matches \u201c'+esc(p.text)+'\u201d \u2014 trying \u201c'+esc(alts[i])+'\u201d\u2026');
+              setStatus('Nothing matches \u201c'+esc(p.text)+'\u201d. Trying \u201c'+esc(alts[i])+'\u201d\u2026');
               const probe=Object.assign({},p,{text:alts[i]});
               const pr=await sru(buildCQL(probe,field,wide,sortMode), 1, signal, PROBE);
               if(mine!==seq) return;
@@ -3271,7 +3271,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
                 const near=nearestWord(gone[g],vocab,repairBudget(gone[g]));
                 if(!near) continue;
                 const text=substituteWord(qwAll,qwAll.indexOf(gone[g]),near.w);
-                setStatus('\u201c'+esc(gone[g])+'\u201d looks like \u201c'+esc(near.w)+'\u201d \u2014 checking\u2026');
+                setStatus('\u201c'+esc(gone[g])+'\u201d looks like \u201c'+esc(near.w)+'\u201d. Checking\u2026');
                 const n=await countOnly(buildCQL(Object.assign({},p,{text}),field,wide,'best'),signal);
                 if(mine!==seq) return;
                 if(n) repaired=text;
@@ -3299,10 +3299,10 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       if(mine!==seq) return;
 
       if(!total){
-        out.innerHTML='<div class="cat-empty">No UCLA record matches <b>'+esc(eq.full)+'</b>'+
+        out.innerHTML='<div class="cat-empty">No UCLA record matches <span class="k">'+esc(eq.full)+'</span>'+
           (p.text?', even after retrying with fewer words':'')+'. '+
-          (p.notes.length?'Filters are active \u2014 clearing them widens the search. ':'')+
-          'Check the spelling, or switch the search field above \u2014 <b>Keyword</b> is the loosest.</div>';
+          (p.notes.length?'Filters are active; clearing them widens the search. ':'')+
+          'Check the spelling, or switch the search field above. Keyword is the loosest.</div>';
         setStatus('');
         return;
       }
@@ -3316,14 +3316,14 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
          shelf full of anatomy atlases in the same confident tone as a direct hit. */
       if(relaxedTo){
         if(relaxedBy==='repair')
-          bits.push('\u201c'+esc(rankQuery)+'\u201d is in no UCLA record \u2014 corrected to \u201c'+esc(relaxedTo)+'\u201d.');
+          bits.push('\u201c'+esc(rankQuery)+'\u201d is in no UCLA record. Corrected to \u201c'+esc(relaxedTo)+'\u201d.');
         else if(bestScore(loaded,rankQuery,null)<WEAK_GUESS)
-          bits.push('No match for \u201c'+esc(rankQuery)+'\u201d. Nothing close was found either \u2014 these are simply the records for \u201c'+esc(relaxedTo)+'\u201d and are probably not the book you meant.');
+          bits.push('No match for \u201c'+esc(rankQuery)+'\u201d, and nothing close either. These are the records for \u201c'+esc(relaxedTo)+'\u201d and are probably not the book you meant.');
         else
-          bits.push('No exact match for \u201c'+esc(rankQuery)+'\u201d \u2014 closest matches for \u201c'+esc(relaxedTo)+'\u201d.');
+          bits.push('No exact match for \u201c'+esc(rankQuery)+'\u201d. Closest matches are for \u201c'+esc(relaxedTo)+'\u201d.');
       }
-      if(widenReason==='empty') bits.push('Nothing in '+esc(SCOPE(scopeNow()).short)+' \u2014 widened to '+esc(SCOPE(usedScope).label)+'.');
-      if(widenReason==='weak')  bits.push('Nothing in '+esc(SCOPE(scopeNow()).short)+' matched the title \u2014 widened to '+esc(SCOPE(usedScope).label)+'.');
+      if(widenReason==='empty') bits.push('Nothing in '+esc(SCOPE(scopeNow()).short)+'. Widened to '+esc(SCOPE(usedScope).label)+'.');
+      if(widenReason==='weak')  bits.push('Nothing in '+esc(SCOPE(scopeNow()).short)+' matched the title. Widened to '+esc(SCOPE(usedScope).label)+'.');
       bits.push(total+' record'+(total===1?'':'s')+' in '+esc(SCOPE(usedScope).label)+
                 (shown<total?' \u00b7 newest '+shown+' ranked':''));
       setStatus(bits.join(' '));
@@ -3331,7 +3331,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       if(e.name==='AbortError') return;
       if(mine!==seq) return;
       out.innerHTML='';
-      setStatus('Could not reach the catalog \u2014 '+esc(e.message||'network error')+'. Check the connection and search again.',true);
+      setStatus('Could not reach the catalog: '+esc(e.message||'network error')+'. Check the connection and search again.',true);
     }
   }
 
@@ -3377,7 +3377,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     if(note){
       note.hidden=!!LIBRARY[k].mapped;
       note.textContent=LIBRARY[k].mapped ? ''
-        : LIBRARY[k].name+' has no per-shelf map in this app \u2014 results are scoped and ranked for it, '+
+        : LIBRARY[k].name+' has no per-shelf map in this app. Results are scoped and ranked for it, '+
           'and each copy shows its call number, but only Biomed resolves to an actual aisle.';
     }
     setScopeMode(scopeMode,false);
