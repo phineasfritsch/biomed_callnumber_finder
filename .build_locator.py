@@ -1096,17 +1096,13 @@ document.getElementById('q').addEventListener('paste',e=>{
     const {cn,spec}=extractCallNumber(pasted);
     if(cn && cn.length<60){
       e.preventDefault();
-<<<<<<< Updated upstream
       const inp=document.getElementById('q');
       inp.value=cn;
+      // "Biomed Library Hist. Div." is the Special Collections sequence on L9, and the
+      // pasted line is the only place that says so — set the section before searching.
+      if(spec) setCollection('spec');
       inp.dispatchEvent(new Event('input'));
       setTimeout(unifiedSearch,60);
-=======
-      document.getElementById('q').value=cn;
-      if(spec) setCollection('spec');
-      document.getElementById('q').dispatchEvent(new Event('input'));
-      setTimeout(locate,60);
->>>>>>> Stashed changes
     }
   }
 });
