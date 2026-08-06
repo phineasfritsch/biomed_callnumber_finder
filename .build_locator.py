@@ -44,7 +44,15 @@ HTML = r"""<!DOCTYPE html>
   .coverage{font-size:11px; color:var(--ink-soft); text-align:right; line-height:1.6}
   .coverage .n{color:var(--accent); font-size:16px}
 
-  .lookup{display:flex; gap:8px; align-items:center; margin:20px 0 10px; padding:12px 14px; background:var(--card); border:1px solid var(--line); border-radius:var(--r); flex-wrap:wrap}
+  /* The library picker is page context, not a search option, so it reads as a line above the
+     box rather than as another control inside it. */
+  .whereami{display:flex; gap:9px; align-items:center; flex-wrap:wrap; margin:18px 0 0; padding:0 2px}
+  .whereami label{font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-soft)}
+  .whereami select{font:inherit; font-size:13px; font-weight:500; padding:7px 10px; border:1px solid var(--line);
+    border-radius:8px; background:var(--card); color:var(--ink); max-width:100%}
+  .whereami select:focus-visible{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft)}
+  .whereami-note{font-size:11px; color:var(--ink-faint)}
+  .lookup{display:flex; gap:8px; align-items:center; margin:10px 0 10px; padding:12px 14px; background:var(--card); border:1px solid var(--line); border-radius:var(--r); flex-wrap:wrap}
   .lookup label{font-size:11px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:1px}
   .lookup input{flex:1; font-family:var(--mono); font-size:15px; padding:11px 13px; border:1px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink); min-width:180px}
   .lookup input:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft)}
@@ -222,8 +230,6 @@ HTML = r"""<!DOCTYPE html>
   .linky{font:inherit; font-size:11.5px; color:var(--accent); background:none; border:0; border-bottom:1px solid currentColor; padding:0; cursor:pointer}
   .linky:hover{color:var(--ink)}
   .cat-scope{display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin:13px 0 0}
-  .cat-scope select{font:inherit; font-size:12.5px; padding:6px 8px; border:1px solid var(--line); border-radius:7px; background:var(--paper); color:var(--ink); max-width:100%}
-  .cat-scope select:focus-visible{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft)}
   .cat-libnote{font-size:11.5px; color:var(--ink-soft); background:var(--paper-2); border:1px solid var(--line); border-radius:8px; padding:8px 11px; margin:9px 0 0; line-height:1.65}
   .cat-opts select{font:inherit; font-size:12px; padding:5px 7px; border:1px solid var(--line); border-radius:7px; background:var(--paper); color:var(--ink)}
   .cat-adv{margin:11px 0 0; border:1px solid var(--line); border-radius:9px; background:var(--paper-2)}
@@ -293,7 +299,8 @@ HTML = r"""<!DOCTYPE html>
     .cat-form .btn{flex:1 1 0; min-height:44px}
     .cat-modes .pill{min-height:44px; padding:8px 16px}
     .cat-scope .pill{min-height:44px; padding:8px 16px}
-    .cat-scope select{font-size:16px; min-height:44px; flex:1 1 100%}
+    .whereami select{font-size:16px; min-height:44px; flex:1 1 100%}
+    .whereami-note{flex:1 1 100%}
     .filt{grid-template-columns:1fr}
     .filt .f input,.filt .f select{font-size:16px}
     .cheat{grid-template-columns:1fr; gap:2px 0}
@@ -315,6 +322,36 @@ HTML = r"""<!DOCTYPE html>
     <h1>Shelfmark<span class="sub">the book, then the aisle</span></h1>
     <div class="coverage" id="coverage"></div>
   </header>
+
+  <!-- Which desk you are standing at decides what "here" means for every search on the page,
+       so it sits above the search box rather than inside a panel that starts closed. -->
+  <div class="whereami">
+    <label for="catLibrary">I&rsquo;m working at:</label>
+    <select id="catLibrary" aria-label="Which library you are working at">
+      <option value="biomed">Biomed Library</option>
+      <option value="yrl">Young Research Library</option>
+      <option value="powell">Powell Library</option>
+      <option value="sel">Science &amp; Engineering &middot; SEL/EMS</option>
+      <option value="geology">SEL &middot; Geology</option>
+      <option value="arts">Arts Library</option>
+      <option value="music">Music Library</option>
+      <option value="law">Law Library</option>
+      <option value="eal">East Asian Library</option>
+      <option value="management">Management Library</option>
+      <option value="clark">Clark Library</option>
+      <option value="lsc">Library Special Collections</option>
+      <option value="ftva">Film &amp; Television Archive</option>
+      <option value="iml">Instructional Media Laboratory</option>
+      <option value="csrc">Chicano Studies Research Center</option>
+      <option value="aisc">American Indian Studies Center</option>
+      <option value="aasc">Asian American Studies Center</option>
+      <option value="err">English Reading Room</option>
+      <option value="ethno">Ethnomusicology Archive</option>
+      <option value="labschool">UCLA Lab School Library</option>
+      <option value="srlf">SRLF &middot; offsite storage</option>
+    </select>
+    <span class="whereami-note">searches here first, and shows this library&rsquo;s copies</span>
+  </div>
 
   <div class="lookup">
     <label for="q">Search:</label>
@@ -352,30 +389,6 @@ HTML = r"""<!DOCTYPE html>
       <p class="cat-hint">Results are scoped to the library you say you&rsquo;re at, newest first, and widen to the rest of UCLA only if yours has nothing. All 21 libraries work. Only Biomed stacks copies resolve to a shelf you can walk to.</p>
       <p class="cat-hint">The catalog ranks nothing and corrects no spelling, so both happen here. A typo or two still finds the book.</p>
       <div class="cat-scope" role="group" aria-label="Where to search">
-        <label class="sect-label" for="catLibrary">I&rsquo;m at:</label>
-        <select id="catLibrary" aria-label="Which library you are working at">
-          <option value="biomed">Biomed Library</option>
-          <option value="yrl">Young Research Library</option>
-          <option value="powell">Powell Library</option>
-          <option value="sel">Science &amp; Engineering &middot; SEL/EMS</option>
-          <option value="geology">SEL &middot; Geology</option>
-          <option value="arts">Arts Library</option>
-          <option value="music">Music Library</option>
-          <option value="law">Law Library</option>
-          <option value="eal">East Asian Library</option>
-          <option value="management">Management Library</option>
-          <option value="clark">Clark Library</option>
-          <option value="lsc">Library Special Collections</option>
-          <option value="ftva">Film &amp; Television Archive</option>
-          <option value="iml">Instructional Media Laboratory</option>
-          <option value="csrc">Chicano Studies Research Center</option>
-          <option value="aisc">American Indian Studies Center</option>
-          <option value="aasc">Asian American Studies Center</option>
-          <option value="err">English Reading Room</option>
-          <option value="ethno">Ethnomusicology Archive</option>
-          <option value="labschool">UCLA Lab School Library</option>
-          <option value="srlf">SRLF &middot; offsite storage</option>
-        </select>
         <span class="sect-label">Search:</span>
         <button class="pill active" type="button" data-scope="here" aria-pressed="true">Biomed</button>
         <button class="pill" type="button" data-scope="stacks" aria-pressed="false">Walkable stacks</button>
@@ -401,7 +414,7 @@ HTML = r"""<!DOCTYPE html>
           </select>
         </label>
         <label class="chk"><input type="checkbox" id="catGroupEd" checked> Group editions <span class="chk-note">(newest on top)</span></label>
-        <label class="chk"><input type="checkbox" id="catBiomed"> Only my library</label>
+        <label class="chk"><input type="checkbox" id="catBiomed" checked> Only my library</label>
         <label class="chk"><input type="checkbox" id="catCovers" checked> Show covers <span class="chk-note">(sends the ISBN to openlibrary.org)</span></label>
       </div>
 
