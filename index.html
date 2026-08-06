@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Biomed Shelf Locator</title>
+<title>Shelfmark</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -81,6 +81,8 @@
   .detail .face-row .fl{min-width:64px; color:var(--ink-soft); text-transform:uppercase; font-size:11px; letter-spacing:.5px; padding-top:1px}
   .detail .face-row .rg{font-weight:500}
   footer{margin-top:28px; padding-top:16px; border-top:1px solid var(--line); font-size:11px; color:var(--ink-soft); line-height:1.75; max-width:760px}
+  footer .by{display:block; margin-top:12px; color:var(--ink-faint)}
+  footer .by a{color:var(--ink-soft)}
   .legend{display:flex; gap:14px; flex-wrap:wrap; margin-top:12px; padding-left:2px; font-size:11px; color:var(--ink-soft)}
   .legend span{display:inline-flex; align-items:center; gap:6px}
   .sw{width:11px; height:11px; border-radius:3px; display:inline-block; border:1px solid rgba(0,0,0,.12)}
@@ -88,7 +90,8 @@
   /* ── collapsible panels (route planner, catalog search) ── */
   .route,.cat{margin:18px 0 6px; background:var(--card); border:1px solid var(--line); border-radius:var(--r); overflow:hidden}
   .route-head,.cat-head{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 16px; cursor:pointer}
-  .route-head h2,.cat-head h2{font-family:var(--disp); font-size:17px; font-weight:600; margin:0; display:flex; align-items:center}
+  .route-head h2,.cat-head h2{font-family:var(--disp); font-size:17px; font-weight:600; margin:0; display:flex; align-items:baseline; gap:9px; flex-wrap:wrap}
+  .h2-sub{font-family:var(--mono); font-size:11px; font-weight:400; color:var(--ink-faint); letter-spacing:0.03em}
   .route-head .tag,.cat-head .tag{font-size:9.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--accent); background:var(--orange-soft); padding:2px 7px; border-radius:99px; margin-left:9px}
   .route-body,.cat-body{padding:0 16px 16px; border-top:1px solid var(--line)}
   .route-hint,.cat-hint{font-size:12px; color:var(--ink-soft); line-height:1.65; margin:13px 0}
@@ -152,6 +155,7 @@
   .chk{display:inline-flex; align-items:center; gap:7px; font-size:12px; color:var(--ink-soft); cursor:pointer; min-height:32px}
   .chk input{width:16px; height:16px; accent-color:var(--accent); cursor:pointer}
   .cat-status{font-size:12px; color:var(--ink-soft); min-height:18px; margin:11px 2px 0; line-height:1.65}
+  .cat-diag{display:block; margin-top:4px; font-size:11px; color:var(--ink-faint)}
   .cat-status.err{color:var(--accent)}
   .cat-results{margin-top:10px}
 
@@ -294,7 +298,7 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>Biomed stacks · shelf locator<span class="sub">enter a call number → find the shelf</span></h1>
+    <h1>Shelfmark<span class="sub">the book, then the aisle</span></h1>
     <div class="coverage" id="coverage"></div>
   </header>
 
@@ -307,7 +311,7 @@
   </div>
   <div class="routed" id="routed" hidden></div>
   <div class="sect" id="sect">
-    <span class="sect-label">Section:</span>
+    <span class="sect-label">Biomed map:</span>
     <button class="pill active" data-coll="stacks">Main stacks</button>
     <button class="pill" data-coll="ref">Reference · L4</button>
     <button class="pill" data-coll="spec">Special Collections · L9</button>
@@ -326,7 +330,7 @@
 
   <div class="cat" id="cat">
     <div class="cat-head" id="catHead">
-      <h2>Find a book in the catalog</h2>
+      <h2>Find a book in the catalog <span class="h2-sub">all 21 UCLA libraries</span></h2>
       <button class="btn ghost" type="button" id="catToggle" aria-expanded="false" aria-controls="catBody"><span class="tgl">Open</span></button>
     </div>
     <div class="cat-body" id="catBody" hidden>
@@ -491,7 +495,7 @@
 
   <div class="route" id="route">
     <div class="route-head" id="routeHead">
-      <h2>Plan a pickup walk</h2>
+      <h2>Plan a pickup walk <span class="h2-sub">Biomed stacks</span></h2>
       <button class="btn ghost" type="button"><span class="tgl">Open</span></button>
     </div>
     <div class="route-body" id="routeBody" hidden>
@@ -1000,14 +1004,20 @@ function locate(){
 /* ===== coverage summary ===== */
 function renderCoverage(){
   const lv=Object.keys(levelsWithData).map(Number).sort((a,b)=>a-b);
-  document.getElementById('coverage').innerHTML=`<span class="n">${Object.keys(DATA).length}</span> shelf-sides mapped<br>levels ${lv.join(', ')}`;
+  document.getElementById('coverage').innerHTML=`<span class="n">${Object.keys(DATA).length}</span> Biomed shelf-sides mapped<br>levels ${lv.join(', ')}`;
 }
 
 document.getElementById('footer').innerHTML=
   'Type a call number as printed. Spaces and the Cutter dot are optional, so <code>QL737.C22</code>, <code>QL 737 C22</code> and <code>W1 JO600</code> all work. A W1 number needs the space after W1. '+
   'The locator finds the shelf whose range contains it, comparing class letters, then class number, then each Cutter as a decimal, so AM4733 sorts before AM477. '+
   'Each green column is a double-sided shelf (L and R faces); black is the bottom row. Where a range start equals its end, many volumes share one call number, so every matching shelf is returned and you check the spine. '+
-  'Reference is on floor 4 and Special Collections on floor 9. Switch the Section pill to search those.';
+  'Reference is on floor 4 and Special Collections on floor 9. Switch the Biomed map pill to search those.'+
+  /* The byline is also the disclaimer. Anything that searches a university catalog and draws
+     its floors will be taken for an official service unless it says otherwise in its own
+     voice, and saying so once here is cheaper than being asked. */
+  '<span class="by">Built by <a href="https://phineasfritsch.com">Phineas Fritsch</a>. '+
+  'The shelf map is surveyed by hand and the catalog data comes from UCLA\'s public SRU endpoint. '+
+  'Not affiliated with, or endorsed by, the UCLA Library.</span>';
 
 /* ===== init ===== */
 renderCoverage(); renderLevels(); renderPlan(); renderDetail();
@@ -2692,18 +2702,73 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
   /* ---- SRU ---- */
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
+  /* Everything in this block exists to keep the endpoint's load proportionate to the
+     question being asked. The counters are read by the diagnostics line, so the cost of a
+     search is a number anyone can look at rather than something to be argued about. */
+  const perf={reqs:0, cached:0, records:0, sessionReqs:0, sessionCached:0};
+
+  /* A search is allowed this many requests. Ordinary searches use one to four; only the
+     spelling-recovery ladder ever approaches the ceiling, and a query that would exceed it
+     is answered with what has been found so far rather than by spending more. */
+  const REQ_BUDGET=25;
+  let reqSpent=0;
+  function budgetLeft(){ return REQ_BUDGET-reqSpent; }
+
+  /* Responses are reused within a session. The recovery passes re-ask identical questions by
+     construction (the same probe is reached from more than one rung), and a reader who
+     retypes a search that is already on screen should not cost a request at all. Availability
+     is the one field that goes stale, so entries expire; the cap keeps memory bounded. */
+  const CACHE_TTL=300000, CACHE_MAX=120;
+  const cache=new Map();
+  function cacheGet(k){
+    const e=cache.get(k);
+    if(!e) return null;
+    if(Date.now()-e.t>CACHE_TTL){ cache.delete(k); return null; }
+    cache.delete(k); cache.set(k,e);          // move to the end: plain LRU
+    return e.v;
+  }
+  function cachePut(k,v){
+    cache.set(k,{t:Date.now(), v:v});
+    while(cache.size>CACHE_MAX) cache.delete(cache.keys().next().value);
+  }
+
+  /* One request in flight at a time, and never two inside this many milliseconds. The gap is
+     imperceptible against a 0.5-3 s response but it puts a hard ceiling on the burst rate of
+     the recovery ladder, which is the only path that ever issues requests back to back. */
+  const MIN_GAP=120;
+  let lastSent=0, chain=Promise.resolve();
+  function throttled(fn){
+    const run=chain.then(async ()=>{
+      const wait=MIN_GAP-(Date.now()-lastSent);
+      if(wait>0) await sleep(wait);
+      lastSent=Date.now();
+      return fn();
+    });
+    chain=run.catch(()=>{});                  // a failure must not break the queue
+    return run;
+  }
+
   // Rate limits are undocumented, so: one request in flight at a time, and two backed-off
   // retries before giving up. Never a retry storm. `sortBy` is a CQL 1.2 clause this tenant
   // does honour, but it is undocumented enough that a rejection has to be survivable: the
   // clause is dropped and the query retried once before the error reaches the user.
   async function sru(query,start,signal,max){
+    /* `max||PAGE` was here, and 0 is falsy: every count-only probe asked for and was sent
+       fifty full MARC records, which is the entire cost the probe existed to avoid. A
+       recovered typo issued a dozen of them. */
+    const want=(max===undefined||max===null)?PAGE:max;
+    const key=want+'|'+start+'|'+query;
+    const hit=cacheGet(key);
+    if(hit){ perf.cached++; perf.sessionCached++; return hit; }
+    if(reqSpent>=REQ_BUDGET){ const e=new Error('this search reached its request budget'); e.budget=true; throw e; }
     let q=query, droppedSort=false, lastErr;
     for(let attempt=0;attempt<3;attempt++){
       if(attempt) await sleep(500*Math.pow(3,attempt-1));
       const p=new URLSearchParams({version:'1.2', operation:'searchRetrieve', recordSchema:'marcxml',
-                                   maximumRecords:String(max||PAGE), startRecord:String(start), query:q});
+                                   maximumRecords:String(want), startRecord:String(start), query:q});
       try{
-        const res=await fetch(SRU+'?'+p.toString(),{signal});
+        reqSpent++; perf.reqs++; perf.sessionReqs++;
+        const res=await throttled(()=>fetch(SRU+'?'+p.toString(),{signal}));
         if(!res.ok) throw new Error('the catalog returned HTTP '+res.status);
         const doc=new DOMParser().parseFromString(await res.text(),'application/xml');
         if(doc.getElementsByTagName('parsererror').length) throw new Error('the catalog sent a response we could not read');
@@ -2717,7 +2782,10 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
         if(diag) throw new Error(diag);
         const recs=[], marc=doc.getElementsByTagNameNS(MARC,'record');
         for(let i=0;i<marc.length;i++) recs.push(readRecord(marc[i]));
-        return {total, records:recs, sorted:!droppedSort && / sortBy /.test(q)};
+        perf.records+=recs.length;
+        const out={total, records:recs, sorted:!droppedSort && / sortBy /.test(q)};
+        cachePut(key,out);
+        return out;
       }catch(e){
         if(e.name==='AbortError') throw e;
         lastErr=e;
@@ -3161,6 +3229,19 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     return [k,'ucla'];                                // your library first, the rest only if empty
   };
 
+  /* What this search cost the catalog, in the open. It is off by default because a patron
+     has no use for it, and on with `?diag=1` because the first question anyone responsible
+     for the endpoint will ask is "how many requests is this", and the honest answer should
+     be a number they can read off the screen rather than one they have to take on trust. */
+  const DIAG=/[?&]diag=1\b/.test(location.search);
+  function diagLine(){
+    if(!DIAG) return '';
+    return '<span class="cat-diag">'+perf.reqs+' catalog request'+(perf.reqs===1?'':'s')+
+           (perf.cached?' · '+perf.cached+' served from cache':'')+
+           ' · '+perf.records+' records transferred'+
+           ' · session '+perf.sessionReqs+' sent, '+perf.sessionCached+' cached</span>';
+  }
+
   async function run(reset){
     const eq=effectiveQuery();
     const p=parseQuery(eq.full,library);
@@ -3198,6 +3279,12 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       return;
     }
 
+    /* The budget is per search, so a reader who searches all afternoon is never throttled;
+       what is bounded is how much one question may cost. "Load more" continues the same
+       question and shares the same allowance. */
+    if(reset){ reqSpent=0; perf.reqs=0; perf.cached=0; perf.records=0; }
+    let budgetHit=false;
+
     try{
       if(!reset){
         setStatus('Loading more\u2026');
@@ -3217,6 +3304,10 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
            first is both cheaper and far more precise than the second. */
         if(page && !page.total && p.text && autoMode!=='isbn'){
           let recovered='', recoveredBy='';
+          /* Recovery is best-effort. Running out of the request budget mid-ladder means the
+             answer is "no match", which is what the page was already going to say; turning it
+             into "could not reach the catalog" would blame the network for a spending limit. */
+          try{
 
           /* Pass 2a: repair the broken word. See `wordRepairs` for why this exists — dropping
              a word is useless when the word that survives is "atlas". */
@@ -3278,6 +3369,12 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
             if(rr===null) return;
             if(rr.page){ page=rr.page; usedScope=rr.used; widenReason=rr.why; }
           }
+
+          }catch(e){
+            if(e.name==='AbortError') throw e;
+            if(!e.budget) throw e;
+            budgetHit=true;
+          }
         }
         if(!page) return;
         total=page.total; loaded=page.records;
@@ -3312,7 +3409,8 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       if(widenReason==='weak')  bits.push('Nothing in '+esc(SCOPE(scopeNow()).short)+' matched the title. Widened to '+esc(SCOPE(usedScope).label)+'.');
       bits.push(total+' record'+(total===1?'':'s')+' in '+esc(SCOPE(usedScope).label)+
                 (shown<total?' \u00b7 newest '+shown+' ranked':''));
-      setStatus(bits.join(' '));
+      if(budgetHit) bits.push('Stopped looking for a better spelling after '+REQ_BUDGET+' catalog requests.');
+      setStatus(bits.join(' ')+diagLine());
     }catch(e){
       if(e.name==='AbortError') return;
       if(mine!==seq) return;
