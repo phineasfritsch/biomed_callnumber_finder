@@ -11,10 +11,12 @@ biomed-shelf-ranges.json
 .build_locator.py
 *.py
 
-# Instruction docs
+# Docs. Listed by wildcard rather than by name: the assets directory is the repo root, so a
+# new .md is published the moment it is written, and SEARCH-REPORT.md in particular is a
+# working document about another team's software. It should reach people because it was
+# handed to them, not because it was left reachable.
 Instructions.txt
-SHELF-MAPPING-INSTRUCTIONS.md
-CATALOG.md
+*.md
 
 # Test corpus + harness (saved SRU responses; the app never reads these at runtime)
 fixtures/
@@ -34,7 +36,6 @@ Tools/
 
 # Source, not site
 ios/
-README.md
 
 # Misc downloads that ended up in the repo
 *.exe
