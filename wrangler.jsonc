@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "biomed-callnumber-finder",
+  "name": "shelfmark",
   "compatibility_date": "2026-06-05",
   "assets": {
     "directory": ".",
