@@ -346,14 +346,25 @@ section('query parsing');
 eq('a bare word is free text', parseQuery('cardiology').text, 'cardiology');
 eq('a token is not free text', parseQuery('mesh:neoplasms').text, '');
 eq('a quoted value survives its spaces',
-   parseQuery('series:"current clinical strategies"').pos, ['alma.series="current clinical strategies"']);
+   parseQuery('series:"current clinical strategies"').pos, ['alma.series all "current clinical strategies"']);
 eq('free text and tokens coexist', parseQuery('atlas year:2015+ anatomy').text, 'atlas anatomy');
 eq('a hyphenated word is not a negation', parseQuery('x-ray').text, 'x-ray');
 eq('a leading dash negates', parseQuery('-lang:eng').neg, ['alma.language="eng"']);
 eq('language names map to MARC codes', parseQuery('lang:spanish').pos, ['alma.language="spa"']);
 eq('an unlisted language code passes through', parseQuery('lang:tur').pos, ['alma.language="tur"']);
 eq('ISBN punctuation is stripped', parseQuery('isbn:978-0-07-180215-4').pos, ['alma.isbn="9780071802154"']);
-eq('aliases resolve', parseQuery('au:longo').pos, ['alma.creator="longo"']);
+eq('aliases resolve', parseQuery('au:longo').pos, ['alma.creator all "longo"']);
+
+// The relation is the whole author bug. MARC files a name inverted, so a phrase match on
+// "ayn rand" finds 3 records where the words happen to sit in that order and misses the 61
+// filed as "Rand, Ayn". Descriptive fields ask for the words; quoting asks for the phrase.
+eq('author is words, not a phrase', parseQuery('author:"ayn rand"').pos, ['alma.creator all "ayn rand"']);
+eq('an unquoted author is words', parseQuery('author:ayn rand').pos, ['alma.creator all "ayn"']);
+eq('subject is words', parseQuery('subject:heart').pos, ['alma.subjects all "heart"']);
+// In field:value the quotes supply the value; only the search box reads them as a phrase.
+eq('quoting a filter value is not a phrase request', parseQuery('subject:"heart diseases"').pos, ['alma.subjects all "heart diseases"']);
+eq('identifiers stay exact', parseQuery('lang:eng').pos, ['alma.language="eng"']);
+eq('call numbers stay exact', parseQuery('cn:"WM 100"').pos, ['alma.PermanentCallNumber="WM 100"']);
 eq('an unknown field becomes text, loudly', parseQuery('wibble:x').text, 'wibble:x');
 ok('…and says so', parseQuery('wibble:x').errors.length === 1, JSON.stringify(parseQuery('wibble:x').errors));
 ok('a bad year is reported, not guessed', parseQuery('year:soon').errors.length === 1);
@@ -429,9 +440,11 @@ ok('a not clause comes after every and clause',
 
 // Mode pills choose the index the free text lands in; a phrase index is quoted with =,
 // only alma.all_for_ui takes the `all` relation (quoting all_for_ui returns nothing).
-ok('title mode uses the title index', Q('atlas shrugged', 'title').indexOf('alma.title="atlas shrugged"') === 0);
+ok('title mode uses the title index', Q('atlas shrugged', 'title').indexOf('alma.title all "atlas shrugged"') === 0);
+ok('a quoted title mode search is a phrase', Q('"atlas shrugged"', 'title').indexOf('alma.title="atlas shrugged"') === 0);
 ok('author mode uses alma.creator, not alma.author (which does not exist)',
-   Q('longo', 'author').indexOf('alma.creator="longo"') === 0);
+   Q('longo', 'author').indexOf('alma.creator all "longo"') === 0);
+ok('author mode finds an inverted name', Q('ayn rand', 'author').indexOf('alma.creator all "ayn rand"') === 0);
 ok('ISBN mode strips punctuation', Q('978-0-07-180215-4', 'isbn').indexOf('alma.isbn="9780071802154"') === 0);
 eq('a query with nothing in it builds nothing', buildCQL(P(''), 'keyword', 'biomed', 'best'), '');
 ok('a filter alone is still a query', Q('mesh:neoplasms').length > 0);
@@ -447,7 +460,7 @@ ok('sort:shelf still asks for newest — shelf order is computed here',
 // Trailing truncation is not a feature this code adds — it is one the endpoint has and the
 // builder must not destroy. `*` has to survive into the CQL untouched; `"` and `\` must not.
 ok('a trailing star reaches the endpoint', Q('cardio*').indexOf('alma.all_for_ui all "cardio*"') === 0, Q('cardio*'));
-ok('a star inside a phrase field survives too', Q('title:"cardio*"').indexOf('alma.title="cardio*"') === 0);
+ok('a star inside a field value survives too', Q('title:"cardio*"').indexOf('alma.title all "cardio*"') >= 0, Q('title:"cardio*"'));
 
 /* ================= 10. Ranking additions ================= */
 section('ranking: idf, adjacency, residual fields');

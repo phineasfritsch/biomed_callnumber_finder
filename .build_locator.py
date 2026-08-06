@@ -1910,17 +1910,17 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
      value tried, which is worse than not existing, so none of them is here. */
   const FIELD={
     keyword:  {ix:'alma.all_for_ui',           rel:'all', label:'keyword'},
-    title:    {ix:'alma.title',                rel:'=',   label:'title'},
-    author:   {ix:'alma.creator',              rel:'=',   label:'author'},
-    subject:  {ix:'alma.subjects',             rel:'=',   label:'subject'},
-    mesh:     {ix:'alma.mesh',                 rel:'=',   label:'MeSH subject'},
-    lcsh:     {ix:'alma.lcsh',                 rel:'=',   label:'LC subject'},
-    series:   {ix:'alma.series',               rel:'=',   label:'series'},
-    genre:    {ix:'alma.genre_form',           rel:'=',   label:'genre / form'},
-    uniform:  {ix:'alma.uniform_title',        rel:'=',   label:'uniform title'},
-    publisher:{ix:'alma.publisher',            rel:'=',   label:'publisher'},
-    place:    {ix:'alma.publisher_location',   rel:'=',   label:'place of publication'},
-    note:     {ix:'alma.notes',                rel:'=',   label:'note'},
+    title:    {ix:'alma.title',                rel:'words', label:'title'},
+    author:   {ix:'alma.creator',              rel:'words', label:'author'},
+    subject:  {ix:'alma.subjects',             rel:'words', label:'subject'},
+    mesh:     {ix:'alma.mesh',                 rel:'words', label:'MeSH subject'},
+    lcsh:     {ix:'alma.lcsh',                 rel:'words', label:'LC subject'},
+    series:   {ix:'alma.series',               rel:'words', label:'series'},
+    genre:    {ix:'alma.genre_form',           rel:'words', label:'genre / form'},
+    uniform:  {ix:'alma.uniform_title',        rel:'words', label:'uniform title'},
+    publisher:{ix:'alma.publisher',            rel:'words', label:'publisher'},
+    place:    {ix:'alma.publisher_location',   rel:'words', label:'place of publication'},
+    note:     {ix:'alma.notes',                rel:'words', label:'note'},
     isbn:     {ix:'alma.isbn',                 rel:'=',   label:'ISBN', strip:/[^0-9Xx]/g},
     issn:     {ix:'alma.issn',                 rel:'=',   label:'ISSN'},
     cn:       {ix:'alma.PermanentCallNumber',  rel:'=',   label:'call number'},
@@ -2028,7 +2028,10 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     while((m=re.exec(s||''))){
       const val=m[3]!==undefined?m[3]:(m[4]!==undefined?m[4]:m[5]);
       if(val===undefined) continue;
-      out.push({neg:!!m[1], field:(m[2]||'').toLowerCase(), val:val, raw:m[0]});
+      // Whether the reader quoted the value is a real instruction, not punctuation: it is
+      // what separates "the words, in any order" from "these words, in this order".
+      out.push({neg:!!m[1], field:(m[2]||'').toLowerCase(), val:val, raw:m[0],
+                quoted:(m[3]!==undefined||m[4]!==undefined)});
     }
     return out;
   }
@@ -2055,10 +2058,10 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
      scope. `notes` records every decision in words so the UI can show what it did — an
      advanced filter that narrows silently is indistinguishable from a catalogue gap. */
   function parseQuery(s,here){
-    const p={text:'', pos:[], neg:[], local:{}, sort:'', scope:'', here:here||'', notes:[], errors:[]};
-    const free=[];
+    const p={text:'', phrase:false, pos:[], neg:[], local:{}, sort:'', scope:'', here:here||'', notes:[], errors:[]};
+    const free=[]; let freeQuoted=0;
     tokenize(s).forEach(tk=>{
-      if(!tk.field){ free.push(tk.neg?'-'+tk.val:tk.val); return; }
+      if(!tk.field){ free.push(tk.neg?'-'+tk.val:tk.val); if(tk.quoted) freeQuoted++; return; }
       const name=ALIAS[tk.field]||tk.field, spec=FIELD[name];
       if(!spec){ p.errors.push('There is no filter called \u201c'+tk.field+'\u201d. It was searched as ordinary text.'); free.push(tk.raw); return; }
       const v=String(tk.val==null?'':tk.val).trim();
@@ -2101,10 +2104,17 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       if(spec.strip) val=val.replace(spec.strip,'');
       if(spec.lower) val=val.toLowerCase();
       if(!val){ p.errors.push('\u201c'+tk.field+':'+v+'\u201d left nothing to search for.'); return; }
-      (tk.neg?p.neg:p.pos).push(clause(spec,val));
+      /* Not `tk.quoted`. In `field:value` the quotes are how a multi-word value is supplied
+         at all, so reading them as a request for a phrase would mean `author:"ayn rand"` —
+         the only way to write that filter — was the one spelling of it that fails. Quoting
+         means "phrase" in the search box, where it is optional; here it means nothing. */
+      (tk.neg?p.neg:p.pos).push(clause(spec,val,false));
       p.notes.push((tk.neg?'not ':'')+spec.label+': '+val);
     });
     p.text=free.join(' ').trim();
+    // One quoted run and nothing else is a phrase search. Two quoted runs, or a quoted run
+    // beside loose words, is not: there is no phrase to ask the endpoint for.
+    p.phrase=(freeQuoted===1 && free.length===1);
     return p;
   }
 
@@ -2142,9 +2152,22 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
   }
 
   const cqlSafe=v=>String(v==null?'':v).replace(/["\\]/g,' ').replace(/\s+/g,' ').trim();
-  function clause(spec,val){
+  /* `=` on this endpoint is a phrase match: the words, in that order, adjacent. That is right
+     for an identifier and wrong for everything a reader types from memory, and it was wrong in
+     the way that costs the most — `alma.creator="ayn rand"` returns 3 records because MARC
+     files the name as "Rand, Ayn, 1905-1982", while `all` returns 61. "dan longo" is the
+     starker case: 0 as a phrase, 11 as words.
+
+     So descriptive fields resolve to `all` and identifier fields stay `=`, and quoting the
+     value asks for the phrase back. Nothing is lost and the common case stops failing. */
+  function relationFor(spec,quoted){
+    if(spec.rel==='all') return 'all';
+    if(spec.rel==='words') return quoted?'=':'all';
+    return '=';
+  }
+  function clause(spec,val,quoted){
     const v=cqlSafe(val);
-    return spec.rel==='all' ? spec.ix+' all "'+v+'"' : spec.ix+'="'+v+'"';
+    return relationFor(spec,quoted)==='all' ? spec.ix+' all "'+v+'"' : spec.ix+'="'+v+'"';
   }
 
   /* ---- CQL assembly ----
@@ -2166,7 +2189,10 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       const f=FIELD[mode]||FIELD.keyword;
       let t=parsed.text;
       if(f.strip) t=t.replace(f.strip,'');
-      if(t) (f.rel==='all'?lead:rest).push(clause(f,t));
+      /* A search box holding one quoted run is a phrase search; otherwise the words.
+         `all` clauses lead, because rule 2 above is about where they must not end up. */
+      const q=!!parsed.phrase;
+      if(t) (relationFor(f,q)==='all'?lead:rest).push(clause(f,t,q));
     }
     parsed.pos.forEach(c=>rest.push(c));
     // A scope is a narrowing of somebody's question, never a question of its own: with
@@ -2888,8 +2914,15 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     return h+'</div>';
   }
 
+  /* "Only my library" and "your library had nothing, so this is the rest of UCLA" are
+     contradictory instructions, and the checkbox is on by default, so the reader never chose
+     the one that wins. When a search has widened away from your library the filter is
+     suspended for that result set: otherwise every card reads "no Biomed copy, untick only my
+     library" and the answer is buried under an instruction to undo a default. */
+  function onlyMine(){ return biomedOnly.checked && !widenedAway; }
+
   function holdingsHtml(rec){
-    const keep=biomedOnly.checked
+    const keep=onlyMine()
       ? rec.holdings.filter(h=>(h.ava.b||'').toUpperCase()===LIBRARY[library].code)
       : rec.holdings.slice();
     const groups={};
@@ -2910,7 +2943,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       h+=g.rows.map(holdingRow).join('');
       h+='</section>';
     });
-    if(!biomedOnly.checked && rec.online.length){
+    if(!onlyMine() && rec.online.length){
       const names=[...new Set(rec.online.map(o=>o.m).filter(Boolean))].slice(0,3);
       h+='<section class="lib away"><div class="lib-n">Online</div><div class="hold"><span class="where">'+
          rec.online.length+' electronic '+(rec.online.length===1?'copy':'copies')+
@@ -2918,7 +2951,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     }
     if(!keep.length && !rec.online.length)
       h+='<section class="lib away"><div class="hold"><span class="where">'+
-         (biomedOnly.checked?'No '+esc(LIBRARY[library].short)+' copy on this record. Untick \u201conly my library\u201d to see where else it is held.'
+         (onlyMine()?'No '+esc(LIBRARY[library].short)+' copy on this record. Untick \u201conly my library\u201d to see where else it is held.'
                             :'No copies attached to this record.')+'</span></div></section>';
     return {html:h, kept:keep.length};
   }
@@ -2944,7 +2977,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
   // an answer to a different one.
   function clusterCard(c,idx){
     const head=holdingsHtml(c.head);
-    if(biomedOnly.checked && !head.kept && !c.head.online.length && !c.rest.length) return '';
+    if(onlyMine() && !head.kept && !c.head.online.length && !c.rest.length) return '';
     const older=c.rest.filter(r=>r!==c.head);
     let badge='';
     if(older.length) badge='<span class="edcount">'+(older.length+1)+' printings \u00b7 newest shown</span>';
@@ -2972,7 +3005,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
         WEAK=60, WIDEN_MARGIN=40; // "nothing here resembles the title" / "out there is clearly better"
   let mode='kw', library='biomed', scopeMode='here', ctl=null, seq=0,
       loaded=[], total=0, lastQuery='', rankQuery='', relaxedTo='', usedScope='biomed',
-      widenReason='', relaxedBy='', parsed=null, ctx=null, modeAuto=false;
+      widenReason='', relaxedBy='', parsed=null, ctx=null, modeAuto=false, widenedAway=false;
 
   const MODE_FIELD={kw:'keyword', title:'title', author:'author', isbn:'isbn'};
 
@@ -3405,6 +3438,14 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
         }
         if(!page) return;
         total=page.total; loaded=page.records;
+        /* The answer came from a library other than the one the reader is standing in, so
+           "only my library" would now hide the whole answer. See `onlyMine`.
+
+           Compared against the library rather than against the scope: `at:stacks` and
+           `at:reference` are scopes *of* Biomed, so a Biomed reader who picks one has not
+           gone anywhere, and suspending their filter would show them the whole of UCLA. */
+        const usedLib=SUBSCOPE[usedScope]?SUBSCOPE[usedScope].lib:usedScope;
+        widenedAway=(usedLib!==library);
       }
       if(mine!==seq) return;
 
@@ -3436,6 +3477,8 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       if(widenReason==='weak')  bits.push('Nothing in '+esc(SCOPE(scopeNow()).short)+' matched the title. Widened to '+esc(SCOPE(usedScope).label)+'.');
       bits.push(total+' record'+(total===1?'':'s')+' in '+esc(SCOPE(usedScope).label)+
                 (shown<total?' \u00b7 newest '+shown+' ranked':''));
+      if(widenedAway && biomedOnly.checked)
+        bits.push('Showing copies at other libraries; “only my library” would hide every one of them.');
       if(budgetHit) bits.push('Stopped looking for a better spelling after '+REQ_BUDGET+' catalog requests.');
       setStatus(bits.join(' ')+diagLine());
     }catch(e){
