@@ -119,6 +119,12 @@
   .chip.free{background:var(--green-soft); color:var(--good)}
 
   /* ── hours ── */
+  .hr-days{display:flex; gap:5px; flex-wrap:wrap; margin:14px 0 4px}
+  .hr-days .pill{font-size:12px}
+  .hr-d{color:var(--ink-faint)}
+  .hr-days .pill.active .hr-d{color:inherit; opacity:.8}
+  .hr-today{font-size:9px; letter-spacing:.6px; text-transform:uppercase; color:var(--accent)}
+  .hr-days .pill.active .hr-today{color:var(--orange-soft)}
   .hr-lib{border-top:1px solid var(--line); padding:10px 2px}
   .hr-lib:first-child{border-top:0}
   .hr-row{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}
@@ -572,6 +578,7 @@
       <button class="btn ghost" type="button" id="hrsToggle" aria-expanded="false" aria-controls="hrsBody"><span class="tgl">Open</span></button>
     </div>
     <div class="cat-body" id="hrsBody" hidden>
+      <div class="hr-days" id="hrsDays" role="group" aria-label="Day of the week"></div>
       <div class="cat-status" id="hrsStatus" role="status" aria-live="polite"></div>
       <div id="hrsOut"></div>
     </div>
@@ -3839,62 +3846,105 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
 })();
 
 /* ===== hours, from LibCal =====
-   `api_hours_today.php` is keyless, CORS-open and carries no personal data at all. Departments
-   nest under their library by `parent_lid`, which is the only structure in the payload and the
-   only thing that makes it readable. Probed 2026-08-06. */
+   `api_hours_grid.php` is keyless, CORS-open and carries no personal data. One request returns
+   all seven days for all 32 locations, so the day selector costs nothing extra: the whole week
+   is already in hand and switching days is a re-render, not a fetch.
+
+   Departments nest under their library by `parent_lid`, which is the only structure in the
+   payload and the only thing that makes it readable. Probed 2026-08-06. */
 (function(){
   const $=id=>document.getElementById(id);
   const root=$('hrs'); if(!root) return;
   const head=$('hrsHead'), body=$('hrsBody'), toggle=$('hrsToggle'),
-        summary=$('hrsSummary'), statusEl=$('hrsStatus'), out=$('hrsOut');
-  const HOURS='https://api2.libcal.com/api_hours_today.php?iid=3244&lid=0&format=json';
+        summary=$('hrsSummary'), statusEl=$('hrsStatus'), out=$('hrsOut'), days=$('hrsDays');
+  const GRID='https://api2.libcal.com/api_hours_grid.php?iid=3244&weeks=1&format=json';
+  const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  let loaded=false, loading=false;
+  let locs=[], today='', pick='', loaded=false, loading=false;
 
-  /* Status is a dot *and* a word. `currently_open` is the field to trust: `status` says
-     "open" for a location that opens later today, which at 7am is the opposite of the truth. */
-  function statusOf(loc){
-    const t=loc.times||{}, s=(t.status||'').toLowerCase();
-    if(s==='24hours') return {cls:'open', word:'Open 24 hours'};
+  // Local date as YYYY-MM-DD. Not toISOString(), which is UTC and puts Los Angeles on
+  // tomorrow's row after 4pm.
+  function localDate(){
+    const d=new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  const dayOf=(loc,name)=>((loc.weeks&&loc.weeks[0])||{})[name]||null;
+
+  /* LibCal returns `not-set` for a day nobody has filled in. Rendering those as "unknown" pads
+     the list with rows that answer nothing, so they are dropped for that day. A location with
+     no hours all week therefore never appears at all. */
+  const known=d=>!!d && ((d.times||{}).status||'').toLowerCase()!=='not-set';
+
+  /* Status is a dot *and* a word: colour alone must never carry the meaning. "Open now" is
+     only claimed for today — on any other day the honest word is just "Open". */
+  function statusOf(d,isToday){
+    const t=(d&&d.times)||{}, s=(t.status||'').toLowerCase();
+    if(s==='24hours') return {cls:'open', word:'24 hours'};
     if(s==='byapp')   return {cls:'', word:'By appointment'};
-    if(t.currently_open===true)  return {cls:'open', word:'Open now'};
-    if(s==='closed' || t.currently_open===false) return {cls:'shut', word:'Closed'};
+    if(s==='closed')  return {cls:'shut', word:'Closed'};
+    if(s==='open')    return {cls:'open', word:(isToday && t.currently_open===true)?'Open now':'Open'};
+    if(s==='text')    return {cls:'', word:'See note'};
     return {cls:'', word:esc(t.status||'unknown')};
   }
 
-  /* LibCal returns `not-set` for locations whose hours nobody has filled in. Rendering those
-     as "unknown" pads the list with rows that answer nothing, so they are dropped and the
-     counts are computed over what is left. */
-  const known=l=>((l.times||{}).status||'').toLowerCase()!=='not-set';
-
-  function row(loc,sub){
-    const s=statusOf(loc), when=esc(loc.rendered||(loc.times&&loc.times.status)||'');
+  function row(loc,name,isToday){
+    const d=dayOf(loc,name), s=statusOf(d,isToday);
+    const when=esc((d&&d.rendered)||'');
     return '<div class="hr-row">'+
       '<span class="hr-n">'+esc(loc.name||'Unnamed location')+'</span>'+
-      (when?'<span class="hr-t">'+when+'</span>':'')+
+      (when && when.toLowerCase()!==s.word.toLowerCase() ? '<span class="hr-t">'+when+'</span>' : '')+
       '<span class="hr-s '+s.cls+'"><i></i>'+s.word+'</span></div>';
   }
 
-  function render(all){
-    const locs=all.filter(known);
-    const parents=locs.filter(l=>!l.parent_lid);
+  function renderDays(){
+    if(!days) return;
+    const first=locs[0];
+    days.innerHTML=DAYS.map(n=>{
+      const d=dayOf(first,n), date=(d&&d.date)||'';
+      const num=date?date.slice(8).replace(/^0/,''):'';
+      const isToday=date===today;
+      return '<button class="pill'+(n===pick?' active':'')+'" type="button" data-day="'+n+'"'+
+             ' aria-pressed="'+(n===pick)+'">'+n.slice(0,3)+
+             (num?' <span class="hr-d">'+num+'</span>':'')+
+             (isToday?' <span class="hr-today">today</span>':'')+'</button>';
+    }).join('');
+    days.querySelectorAll('.pill').forEach(b=>b.addEventListener('click',e=>{
+      e.stopPropagation(); pick=b.dataset.day; renderDays(); renderDay();
+    }));
+  }
+
+  function renderDay(){
+    const isToday=(dayOf(locs[0],pick)||{}).date===today;
+    const shown=locs.filter(l=>known(dayOf(l,pick)));
+    const parents=shown.filter(l=>!l.parent_lid);
     const kids={};
-    locs.forEach(l=>{ if(l.parent_lid) (kids[l.parent_lid]=kids[l.parent_lid]||[]).push(l); });
-    const openNow=locs.filter(l=>{
-      const t=l.times||{};
-      return t.currently_open===true || (t.status||'').toLowerCase()==='24hours';
-    }).length;
-    summary.textContent=openNow?openNow+' of '+locs.length+' locations open now':'all locations closed';
+    shown.forEach(l=>{ if(l.parent_lid) (kids[l.parent_lid]=kids[l.parent_lid]||[]).push(l); });
     if(!parents.length){
-      out.innerHTML='<div class="cat-empty">LibCal returned no locations. Try again later, or check calendar.library.ucla.edu.</div>';
+      out.innerHTML='<div class="cat-empty">No hours are published for '+esc(pick)+'.</div>';
       return;
     }
     out.innerHTML=parents.map(p=>{
-      let h='<div class="hr-lib">'+row(p);
+      let h='<div class="hr-lib">'+row(p,pick,isToday);
       const sub=kids[p.lid]||[];
-      if(sub.length) h+='<div class="hr-sub">'+sub.map(k=>row(k,true)).join('')+'</div>';
+      if(sub.length) h+='<div class="hr-sub">'+sub.map(k=>row(k,pick,isToday)).join('')+'</div>';
       return h+'</div>';
     }).join('');
+  }
+
+  // The header carries today's count whatever day is being browsed: it is the answer to
+  // "is anything open", which does not change because the reader is looking at Saturday.
+  function renderSummary(){
+    const open=locs.filter(l=>{
+      const d=DAYS.map(n=>dayOf(l,n)).find(x=>x&&x.date===today);
+      if(!known(d)) return false;
+      const t=d.times||{};
+      return t.currently_open===true || (t.status||'').toLowerCase()==='24hours';
+    }).length;
+    const total=locs.filter(l=>{
+      const d=DAYS.map(n=>dayOf(l,n)).find(x=>x&&x.date===today);
+      return known(d);
+    }).length;
+    summary.textContent=open?open+' of '+total+' locations open now':'all locations closed';
   }
 
   async function load(){
@@ -3905,14 +3955,20 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
                   '<div class="hr-lib"><div class="skel" style="width:55%"></div></div>'+
                   '<div class="hr-lib"><div class="skel" style="width:40%"></div></div>';
     try{
-      const res=await fetch(HOURS);
+      const res=await fetch(GRID);
       if(!res.ok) throw new Error('LibCal returned HTTP '+res.status);
       const data=await res.json();
-      render(data.locations||[]);
-      statusEl.textContent='';
+      locs=(data.locations||[]).filter(l=>l.weeks&&l.weeks[0]);
+      if(!locs.length) throw new Error('LibCal returned no locations');
+      today=localDate();
+      const match=DAYS.find(n=>(dayOf(locs[0],n)||{}).date===today);
+      pick=match||DAYS[new Date().getDay()];
+      renderSummary(); renderDays(); renderDay();
+      statusEl.textContent=''; statusEl.classList.remove('err');
       loaded=true;
     }catch(e){
       out.innerHTML='';
+      if(days) days.innerHTML='';
       summary.textContent='hours unavailable';
       statusEl.innerHTML='Could not reach LibCal: '+esc(e.message||'network error')+'.';
       statusEl.classList.add('err');
@@ -3926,9 +3982,9 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     toggle.querySelector('.tgl').textContent=open?'Close':'Open';
     if(open && !loaded) load();
   });
-  /* The summary rides on the collapsed header, so it is fetched once on load rather than on
-     open: "is anything open" is the question most of the time, and it should not need a click.
-     One request, and the panel reuses the same render when opened. */
+  /* The summary rides on the collapsed header, so the week is fetched once on load rather than
+     on open: "is anything open" is the question most of the time, and it should not need a
+     click. One request covers all seven days, and switching days never touches the network. */
   load();
 })();
 </script>
