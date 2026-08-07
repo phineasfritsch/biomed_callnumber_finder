@@ -564,20 +564,20 @@ HTML = r"""<!DOCTYPE html>
        and CORS-open, so it needs no more infrastructure than the catalog search does. -->
   <div class="cat" id="art">
     <div class="cat-head" id="artHead">
-      <h2>Find an article <span class="h2-sub">DOI, PMID or ISSN</span></h2>
+      <h2>Find an article <span class="h2-sub">by title, or by DOI, PMID or ISSN</span></h2>
       <button class="btn ghost" type="button" id="artToggle" aria-expanded="false" aria-controls="artBody"><span class="tgl">Open</span></button>
     </div>
     <div class="cat-body" id="artBody" hidden>
-      <p class="cat-hint">Paste a DOI, a PubMed ID or an ISSN. This asks UCLA&rsquo;s link resolver who carries the full text, and for which years. A journal title goes to the catalog search instead.</p>
+      <p class="cat-hint">Search UCLA&rsquo;s article index by title or subject. Paste a DOI, a PubMed ID or an ISSN instead and it asks the link resolver who carries the full text, and for which years.</p>
       <div class="lookup art-lookup">
         <label for="artQ">Article:</label>
-        <input id="artQ" placeholder="10.1056/NEJMoa1816897 &middot; PMID 30883058 &middot; 0028-4793" autocomplete="off" spellcheck="false" enterkeyhint="search">
+        <input id="artQ" placeholder="blueberry antidepressant &middot; 10.1056/NEJMoa1816897 &middot; PMID 30883058" autocomplete="off" spellcheck="false" enterkeyhint="search">
         <button class="btn" type="button" id="artGo">Look up</button>
       </div>
       <div class="art-ex">Try
         <button class="cat-example" type="button" data-q="10.1056/NEJMoa1816897">a DOI</button>
         <button class="cat-example" type="button" data-q="0028-4793">an ISSN</button>
-        <button class="cat-example" type="button" data-q="10.1016/j.cell.2020.02.052">another DOI</button>
+        <button class="cat-example" type="button" data-q="blueberry antidepressant">a topic</button>
       </div>
       <div class="cat-status" id="artStatus" role="status" aria-live="polite"></div>
       <div class="cat-results" id="artOut"></div>
@@ -3790,46 +3790,94 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
 
      So a title is not resolved here at all. It is handed to the catalog search, which does
      rank titles properly, and the reader comes back with an identifier. */
-  async function look(){
-    let id=identify(input.value);
-    if(!id){
-      out.innerHTML=''; setStatus('Paste a DOI, a PubMed ID or an ISSN.');
-      return;
+  /* Article results, from Primo's index by way of `/api/articles`.
+
+     SRU indexes UCLA's own holdings and knows nothing about articles, and the OpenURL resolver
+     answers about a journal run rather than a paper. Neither can produce a result list. Primo's
+     index can, and it is the same index the official search uses, so a search here returns what
+     a reader would see there: title, authors, journal, volume, pages, peer review, open access. */
+  function fmtCite(d){
+    const bits=[];
+    if(d.jtitle) bits.push(esc(d.jtitle));
+    if(d.date)   bits.push(esc(String(d.date).slice(0,10)));
+    let vp='';
+    if(d.volume) vp+='Vol. '+esc(d.volume);
+    if(d.issue)  vp+=(vp?' ':'')+'('+esc(d.issue)+')';
+    if(d.pages)  vp+=(vp?', ':'')+'p. '+esc(String(d.pages).replace(/-$/,''));
+    if(vp) bits.push(vp);
+    return bits.join(' · ');
+  }
+
+  function renderArticles(data,q){
+    if(!data.docs.length){
+      out.innerHTML='<div class="cat-empty">No articles match &ldquo;'+esc(q)+'&rdquo; in UCLA&rsquo;s index. '+
+        'Check the spelling, or paste a DOI.</div>';
+      return 0;
     }
+    out.innerHTML=data.docs.map(d=>{
+      let h='<div class="prov"><div class="prov-h"><span class="prov-n">'+esc(d.title)+'</span>';
+      if(d.peer) h+='<span class="chip">Peer reviewed</span>';
+      if(d.oa)   h+='<span class="chip free">Open access</span>';
+      h+='</div>';
+      const au=(d.authors||[]).slice(0,4).join(' · ')+((d.authors||[]).length>4?' and others':'');
+      if(au)  h+='<div class="prov-c">'+esc(au)+'</div>';
+      const cite=fmtCite(d);
+      if(cite) h+='<div class="prov-c">'+cite+'</div>';
+      if(d.link) h+='<a class="go" href="'+esc(d.link)+'" target="_blank" rel="noopener noreferrer">View record</a>';
+      // A DOI is a question the resolver can answer precisely, so offer it rather than guess.
+      if(d.doi)  h+=' <button class="cat-example pick" type="button" data-doi="'+esc(d.doi)+'">Who has full text</button>';
+      return h+'</div>';
+    }).join('');
+    out.querySelectorAll('.pick').forEach(b=>b.addEventListener('click',()=>{
+      input.value=b.dataset.doi; look();
+    }));
+    return data.docs.length;
+  }
+
+  async function searchArticles(q,signal){
+    const res=await fetch('/api/articles?q='+encodeURIComponent(q)+'&limit=10',{signal});
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||('HTTP '+res.status));
+    return data;
+  }
+
+  async function look(){
+    const raw=(input.value||'').trim();
+    if(!raw){ out.innerHTML=''; setStatus('Paste a DOI, a PubMed ID, an ISSN, or search by title.'); return; }
+    const id=identify(raw);
     const mine=++seq;
     if(ctl) ctl.abort();
     ctl=new AbortController();
     go.disabled=true;
-    setStatus('Asking the resolver about this '+esc(id.label)+'…');
     out.innerHTML='<div class="prov"><div class="skel" style="width:60%"></div>'+
                   '<div class="skel" style="width:35%; margin-top:8px"></div></div>';
-    let via='';
     try{
-      if(id.kind==='title'){
-        out.innerHTML='<div class="cat-empty">The link resolver needs an identifier, not a title. '+
-          'Search the catalog for &ldquo;'+esc(id.value)+'&rdquo; to find the journal, then paste its ISSN or '+
-          'a DOI here.<br><button class="cat-example" type="button" id="artToCat">Search the catalog for this</button></div>';
-        const btn=document.getElementById('artToCat');
-        if(btn) btn.addEventListener('click',()=>{
-          const box=document.getElementById('q');
-          if(box){ box.value=id.value; if(window.catalogSearch) window.catalogSearch(); }
-        });
-        setStatus('');
-        go.disabled=false;
+      /* An identifier is a question about *access* and goes to the resolver, which names the
+         providers and their coverage. Anything else is a question about *what exists*, and
+         only the article index can answer that. */
+      if(id && id.kind!=='title'){
+        setStatus('Asking the resolver about this '+esc(id.label)+'…');
+        const res=await fetch(buildURL(id),{signal:ctl.signal});
+        if(!res.ok) throw new Error('the resolver returned HTTP '+res.status);
+        const svcs=parseServices(await res.text());
+        if(mine!==seq) return;
+        const n=render(svcs,id);
+        setStatus(n ? n+' provider'+(n===1?'':'s')+' for this '+esc(id.label)+' · '+esc(id.value)
+                    : 'Read as a '+esc(id.label)+': '+esc(id.value));
         return;
       }
-      const res=await fetch(buildURL(id),{signal:ctl.signal});
-      if(!res.ok) throw new Error('the resolver returned HTTP '+res.status);
-      const svcs=parseServices(await res.text());
+      setStatus('Searching UCLA’s article index…');
+      const data=await searchArticles(raw,ctl.signal);
       if(mine!==seq) return;
-      const n=render(svcs,id);
-      setStatus(n ? n+' provider'+(n===1?'':'s')+' for this '+esc(id.label)+' · '+esc(id.value)+esc(via)
-                  : 'Read as a '+esc(id.label)+': '+esc(id.value)+esc(via));
+      const n=renderArticles(data,raw);
+      if(n) setStatus(data.total.toLocaleString()+' article'+(data.total===1?'':'s')+' match “'+esc(raw)+
+                      '” · showing '+n+(data.cached?' · from cache':''));
+      else setStatus('');
     }catch(e){
       if(e.name==='AbortError') return;
       if(mine!==seq) return;
       out.innerHTML='';
-      setStatus('Could not reach the link resolver: '+esc(e.message||'network error')+'. Try again.',true);
+      setStatus('Could not reach the article index: '+esc(e.message||'network error')+'. Try again.',true);
     }finally{
       if(mine===seq) go.disabled=false;
     }

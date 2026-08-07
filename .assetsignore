@@ -46,3 +46,4 @@ ios/
 # Scans and other documents that landed here — the app serves index.html, not paperwork,
 # and "assets.directory" is the repo root, so anything not listed here is published.
 *.pdf
+src/
