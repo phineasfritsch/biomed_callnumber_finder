@@ -27,8 +27,6 @@
   header{display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:14px; border-bottom:2px solid var(--ink); padding-bottom:16px}
   h1{font-family:var(--disp); font-size:30px; font-weight:600; margin:0; letter-spacing:-0.4px; line-height:1.05}
   h1 .sub{display:block; font-size:11px; font-weight:400; color:var(--ink-soft); letter-spacing:1.6px; text-transform:uppercase; margin-top:6px}
-  .coverage{font-size:11px; color:var(--ink-soft); text-align:right; line-height:1.6}
-  .coverage .n{color:var(--accent); font-size:16px}
 
   /* The library picker is page context, not a search option, so it reads as a line above the
      box rather than as another control inside it. */
@@ -61,7 +59,9 @@
   .pill:hover{border-color:var(--ink-soft); color:var(--ink)}
   .pill.active{background:var(--ink); color:var(--paper); border-color:var(--ink)}
 
-  .levels{display:flex; flex-wrap:wrap; gap:5px; margin:22px 0 8px}
+  .levels{display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin:22px 0 8px}
+  .lvl-total{margin-left:auto; padding-left:12px; font-size:11px; color:var(--ink-faint); line-height:1.5; text-align:right}
+  .lvl-total .n{color:var(--accent); font-size:13px}
   .lvl{font-family:var(--mono); font-size:13px; font-weight:500; min-width:48px; padding:7px 5px 6px; text-align:center; background:var(--card); border:1px solid var(--line); border-radius:8px; cursor:pointer; color:var(--ink-soft)}
   .lvl:hover{border-color:var(--ink-soft); color:var(--ink)}
   .lvl.active{background:var(--ink); color:var(--paper); border-color:var(--ink); font-weight:600}
@@ -102,6 +102,39 @@
   .h2-sub{font-family:var(--mono); font-size:11px; font-weight:400; color:var(--ink-faint); letter-spacing:0.03em}
   .route-head .tag,.cat-head .tag{font-size:9.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--accent); background:var(--orange-soft); padding:2px 7px; border-radius:99px; margin-left:9px}
   .route-body,.cat-body{padding:0 16px 16px; border-top:1px solid var(--line)}
+
+  /* ── article access (OpenURL resolver) ── */
+  .art-lookup{margin-top:14px}
+  .prov .pick{margin-top:8px}
+  .art-ex{font-size:11px; color:var(--ink-soft); margin:8px 2px 0; display:flex; gap:7px; align-items:center; flex-wrap:wrap}
+  .prov{border:1px solid var(--line); border-radius:9px; padding:11px 13px; margin-top:9px; background:var(--paper)}
+  .prov-h{display:flex; align-items:baseline; gap:9px; flex-wrap:wrap}
+  .prov-n{font-weight:600; font-size:13.5px}
+  .prov-i{font-size:11px; color:var(--ink-soft)}
+  .prov-c{font-size:12px; color:var(--ink-soft); margin-top:4px; line-height:1.6}
+  .prov a.go{display:inline-block; margin-top:8px; font-size:12px; color:var(--accent); text-decoration:none;
+    border:1px solid var(--line); border-radius:7px; padding:6px 11px; min-height:34px; line-height:20px}
+  .prov a.go:hover{background:var(--orange-soft)}
+  .prov a.go:focus-visible{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft)}
+  .chip.free{background:var(--green-soft); color:var(--good)}
+
+  /* ── hours ── */
+  .hr-lib{border-top:1px solid var(--line); padding:10px 2px}
+  .hr-lib:first-child{border-top:0}
+  .hr-row{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}
+  .hr-n{font-weight:600; font-size:13.5px; flex:1 1 auto}
+  .hr-t{font-size:12.5px; color:var(--ink-soft)}
+  /* Status is a dot plus a word: colour alone must never carry the meaning. */
+  .hr-s{display:inline-flex; align-items:center; gap:6px; font-size:11px; text-transform:uppercase; letter-spacing:.6px}
+  .hr-s i{width:8px; height:8px; border-radius:99px; display:inline-block; background:var(--ink-faint)}
+  .hr-s.open{color:var(--good)}   .hr-s.open i{background:var(--good)}
+  .hr-s.shut{color:var(--accent)} .hr-s.shut i{background:var(--accent)}
+  .hr-sub{margin:6px 0 0 12px; padding-left:10px; border-left:2px solid var(--line)}
+  .hr-sub .hr-row{padding:3px 0}
+  .hr-sub .hr-n{font-weight:400; font-size:12.5px; color:var(--ink-soft)}
+  .skel{height:13px; border-radius:4px; background:var(--paper-2); animation:pulse 1.3s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+  @media (prefers-reduced-motion: reduce){ .skel{animation:none} }
   .route-hint,.cat-hint{font-size:12px; color:var(--ink-soft); line-height:1.65; margin:13px 0}
   .route-hint b,.cat-hint b{color:var(--ink)}
   .drop{display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:16px; border:1.5px dashed var(--line); border-radius:10px; background:var(--paper); transition:.15s}
@@ -266,7 +299,6 @@
     h1{font-size:22px; line-height:1.12}
     h1 .sub{letter-spacing:1.2px}
     header{gap:8px; padding-bottom:12px}
-    .coverage{text-align:left}
     .lookup{padding:10px; gap:7px}
     .lookup label{flex:1 0 100%}
     .lookup input{flex:1 1 100%; min-width:0; font-size:16px}
@@ -306,7 +338,6 @@
 <div class="wrap">
   <header>
     <h1>Shelfmark<span class="sub">the book, then the aisle</span></h1>
-    <div class="coverage" id="coverage"></div>
   </header>
 
   <!-- Which desk you are standing at decides what "here" means for every search on the page,
@@ -341,7 +372,7 @@
 
   <div class="lookup">
     <label for="q">Search:</label>
-    <input id="q" placeholder="call number, book title, author, ISBN…" autocomplete="off" autofocus
+    <input id="q" placeholder="call number, book title, author, ISBN, DOI…" autocomplete="off" autofocus
            enterkeyhint="search" spellcheck="false">
     <button class="btn" id="go">Search</button>
     <button class="btn ghost" id="clear">Clear</button>
@@ -362,6 +393,8 @@
       &nbsp;&nbsp;or a book:
       <b data-q="harrison's principles of internal medicine">harrison&rsquo;s principles</b> ·
       <b data-q="mesh:neoplasms year:2020+ shelf:yes">mesh:neoplasms year:2020+</b>
+      &nbsp;&nbsp;or an article:
+      <b data-q="10.1056/NEJMoa1816897">10.1056/NEJMoa1816897</b>
     </div>
   </div>
 
@@ -503,6 +536,44 @@
       <div class="cat-applied" id="catApplied" hidden></div>
       <div class="cat-status" id="catStatus" role="status" aria-live="polite"></div>
       <div class="cat-results" id="catResults"></div>
+    </div>
+  </div>
+
+  <!-- Electronic access. The shelf map answers "where is the print copy"; this answers the
+       other half, which the app had no answer for at all. Alma's OpenURL resolver is keyless
+       and CORS-open, so it needs no more infrastructure than the catalog search does. -->
+  <div class="cat" id="art">
+    <div class="cat-head" id="artHead">
+      <h2>Find an article <span class="h2-sub">DOI, PMID or ISSN</span></h2>
+      <button class="btn ghost" type="button" id="artToggle" aria-expanded="false" aria-controls="artBody"><span class="tgl">Open</span></button>
+    </div>
+    <div class="cat-body" id="artBody" hidden>
+      <p class="cat-hint">Paste a DOI, a PubMed ID or an ISSN. This asks UCLA&rsquo;s link resolver who carries the full text, and for which years. A journal title goes to the catalog search instead.</p>
+      <div class="lookup art-lookup">
+        <label for="artQ">Article:</label>
+        <input id="artQ" placeholder="10.1056/NEJMoa1816897 &middot; PMID 30883058 &middot; 0028-4793" autocomplete="off" spellcheck="false" enterkeyhint="search">
+        <button class="btn" type="button" id="artGo">Look up</button>
+      </div>
+      <div class="art-ex">Try
+        <button class="cat-example" type="button" data-q="10.1056/NEJMoa1816897">a DOI</button>
+        <button class="cat-example" type="button" data-q="0028-4793">an ISSN</button>
+        <button class="cat-example" type="button" data-q="10.1016/j.cell.2020.02.052">another DOI</button>
+      </div>
+      <div class="cat-status" id="artStatus" role="status" aria-live="polite"></div>
+      <div class="cat-results" id="artOut"></div>
+    </div>
+  </div>
+
+  <!-- Hours. Keyless, CORS-open, no personal data. The count of what is open rides on the
+       collapsed header, because "is anything open" is the whole question most of the time. -->
+  <div class="cat" id="hrs">
+    <div class="cat-head" id="hrsHead">
+      <h2>Library hours <span class="h2-sub" id="hrsSummary">loading&hellip;</span></h2>
+      <button class="btn ghost" type="button" id="hrsToggle" aria-expanded="false" aria-controls="hrsBody"><span class="tgl">Open</span></button>
+    </div>
+    <div class="cat-body" id="hrsBody" hidden>
+      <div class="cat-status" id="hrsStatus" role="status" aria-live="polite"></div>
+      <div id="hrsOut"></div>
     </div>
   </div>
 
@@ -924,6 +995,12 @@ function renderLevels(){
     b.onclick=()=>{ level=l; selected=null; flashId=null; syncCollectionToLevel(); renderLevels(); renderPlan(); renderDetail(); };
     el.appendChild(b);
   });
+  /* The total belongs beside the per-floor counts it is the sum of, not in the masthead of a
+     tool that also searches 21 libraries and answers article questions. */
+  const tot=document.createElement('div');
+  tot.className='lvl-total';
+  tot.innerHTML=`<span class="n">${Object.keys(DATA).length}</span> Biomed shelf faces mapped`;
+  el.appendChild(tot);
 }
 
 /* ===== detail panel ===== */
@@ -1014,12 +1091,6 @@ function locate(){
   }
 }
 
-/* ===== coverage summary ===== */
-function renderCoverage(){
-  const lv=Object.keys(levelsWithData).map(Number).sort((a,b)=>a-b);
-  document.getElementById('coverage').innerHTML=`<span class="n">${Object.keys(DATA).length}</span> Biomed shelf-sides mapped<br>levels ${lv.join(', ')}`;
-}
-
 document.getElementById('footer').innerHTML=
   'Type a call number as printed. Spaces and the Cutter dot are optional, so <code>QL737.C22</code>, <code>QL 737 C22</code> and <code>W1 JO600</code> all work. A W1 number needs the space after W1. '+
   'The locator finds the shelf whose range contains it, comparing class letters, then class number, then each Cutter as a decimal, so AM4733 sorts before AM477. '+
@@ -1032,8 +1103,7 @@ document.getElementById('footer').innerHTML=
   'The shelf map is surveyed by hand and the catalog data comes from UCLA\'s public SRU endpoint. '+
   'Not affiliated with, or endorsed by, the UCLA Library.</span>';
 
-/* ===== init ===== */
-renderCoverage(); renderLevels(); renderPlan(); renderDetail();
+/* ===== init ===== */ renderLevels(); renderPlan(); renderDetail();
 /* ===== one box =====
    Two searches used to sit on this page with a box each, and you had to know which question
    you were asking before you could ask it. There is now one field, and it decides: anything
@@ -1063,6 +1133,9 @@ function showRouted(kind,typed){
   el.innerHTML = kind==='shelf'
     ? 'Read as a call number and looked up on the shelf map. '+
       '<button type="button" class="linky" id="routeToCat">Search the catalog for this instead</button>'
+    : kind==='article'
+    ? 'Read as an article or journal identifier and sent to the link resolver. '+
+      '<button type="button" class="linky" id="routeToCat">Search the catalog for this instead</button>'
     : 'Searched the catalog. '+
       '<button type="button" class="linky" id="routeToShelf">Treat it as a call number instead</button>';
   const a=document.getElementById('routeToCat');
@@ -1070,11 +1143,26 @@ function showRouted(kind,typed){
   const b=document.getElementById('routeToShelf');
   if(b) b.onclick=()=>{ showRouted('shelf'); locate(); };
 }
+/* A DOI, a PubMed ID or an ISSN identifies an *article or a journal run*, which the catalog
+   answers badly and the link resolver answers exactly. Recognised here so the one box keeps
+   being the one box.
+
+   Length is what separates these from an ISBN: 10 or 13 digits is a book and belongs to the
+   catalog, 8 with a hyphen is an ISSN, 7 or 8 bare is a PubMed ID. */
+function looksLikeArticle(s){
+  const t=(s||'').trim();
+  if(/\b10\.\d{4,9}\/\S+/i.test(t)) return true;              // DOI, bare or inside a URL
+  if(/^pmid[:\s]*\d{7,8}$/i.test(t)) return true;
+  if(/^\d{4}-\d{3}[\dxX]$/.test(t)) return true;              // ISSN, hyphenated
+  if(/^\d{7,8}$/.test(t)) return true;                        // bare PMID; ISBNs are 10 or 13
+  return false;
+}
 function unifiedSearch(){
   const t=document.getElementById('q').value.trim();
   if(!t){ showRouted(''); document.getElementById('result').innerHTML=''; return; }
   // The section pills are an explicit instruction about the shelf map; honour them.
   if(collection!=='stacks' || looksLikeCallNumber(t)){ showRouted('shelf',t); locate(); return; }
+  if(looksLikeArticle(t) && window.articleLookup){ showRouted('article',t); window.articleLookup(t); return; }
   showRouted('catalog',t);
   if(window.catalogSearch) window.catalogSearch();
 }
@@ -3575,6 +3663,273 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
   let saved='biomed';
   try{ saved=localStorage.getItem('cat.library')||'biomed'; }catch(e){}
   setLibrary(saved,false);
+})();
+
+/* ===== article access, via Alma's OpenURL resolver =====
+   The shelf map answers "where is the print copy". This answers the other half — is there
+   electronic access, through whom, and for which years — which the app previously had no
+   answer for at all.
+
+   `/view/uresolver/<INST>/openurl` is keyless and sends `Access-Control-Allow-Origin: *`, so
+   this costs no server and no credential, exactly like the SRU search. Probed 2026-08-06. */
+(function(){
+  const $=id=>document.getElementById(id);
+  const root=$('art'); if(!root) return;
+  const head=$('artHead'), body=$('artBody'), toggle=$('artToggle'),
+        input=$('artQ'), go=$('artGo'), statusEl=$('artStatus'), out=$('artOut');
+  const RESOLVER='https://ucla.alma.exlibrisgroup.com/view/uresolver/01UCS_LAL/openurl';
+  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  let seq=0, ctl=null;
+
+  function setStatus(msg,err){ statusEl.innerHTML=msg||''; statusEl.classList.toggle('err',!!err); }
+
+  /* What the reader pasted decides which OpenURL key it becomes. A DOI and a PMID both
+     identify one article; an ISSN or a title identifies the journal, and the resolver answers
+     the coverage question for the whole run. Getting this wrong sends an empty context object,
+     which the resolver answers with no services and which reads as "no access". */
+  function identify(raw){
+    const s=(raw||'').trim();
+    if(!s) return null;
+    let m=s.match(/\b(10\.\d{4,9}\/[^\s"'<>]+)/i);          // DOI, bare or inside a URL
+    if(m) return {kind:'doi', label:'DOI', value:m[1].replace(/[.,;]+$/,''), key:'rft_id', prefix:'info:doi/'};
+    m=s.match(/^(?:pmid[:\s]*)?(\d{7,8})$/i);
+    if(m) return {kind:'pmid', label:'PubMed ID', value:m[1], key:'rft_id', prefix:'info:pmid/'};
+    m=s.match(/\b(\d{4})[-–\s]?(\d{3}[\dxX])\b/);
+    if(m) return {kind:'issn', label:'ISSN', value:m[1]+'-'+m[2].toUpperCase(), key:'rft.issn'};
+    return {kind:'title', label:'journal title', value:s, key:'rft.jtitle'};
+  }
+
+  function buildURL(id){
+    const p=new URLSearchParams({'url_ver':'Z39.88-2004', 'svc_dat':'CTO', 'svc.fulltext':'yes'});
+    p.set(id.key, (id.prefix||'')+id.value);
+    if(id.kind==='doi'||id.kind==='pmid') p.set('rft.genre','article');
+    else p.set('rft.genre','journal');
+    return RESOLVER+'?'+p.toString();
+  }
+
+  // The resolver answers in its own namespace; read <key id="..."> pairs per context_service.
+  function parseServices(xml){
+    const doc=new DOMParser().parseFromString(xml,'application/xml');
+    if(doc.getElementsByTagName('parsererror').length) throw new Error('the resolver sent a response we could not read');
+    const all=doc.getElementsByTagName('*'), svcs=[];
+    for(let i=0;i<all.length;i++){
+      const el=all[i];
+      if(el.localName!=='context_service') continue;
+      const type=el.getAttribute('service_type')||'';
+      const keys={}, kk=el.getElementsByTagName('*');
+      for(let j=0;j<kk.length;j++){
+        if(kk[j].localName!=='key') continue;
+        const id=kk[j].getAttribute('id');
+        if(id && keys[id]===undefined) keys[id]=(kk[j].textContent||'').trim();
+      }
+      svcs.push({type, keys});
+    }
+    // resolution_url sits alongside, one per service, in document order.
+    const urls=[];
+    for(let i=0;i<all.length;i++) if(all[i].localName==='resolution_url') urls.push((all[i].textContent||'').trim());
+    svcs.forEach((s,i)=>{ s.url=s.keys['Authentication']||urls[i]||''; });
+    return svcs;
+  }
+
+  // "Available from 01/01/1990 volume: 322 issue: 1.<br>" — the resolver embeds markup in a
+  // field that is otherwise plain text, so it is stripped rather than rendered.
+  const clean=s=>String(s||'').replace(/<br\s*\/?>/gi,' ').replace(/<[^>]*>/g,'').replace(/\s+/g,' ').trim();
+
+  function render(svcs,id){
+    const full=svcs.filter(s=>s.type==='getFullTxt');
+    if(!full.length){
+      out.innerHTML='<div class="cat-empty">No electronic full text at UCLA for this '+esc(id.label)+
+        '. It may still be held in print; search the catalog above by title. '+
+        'Interlibrary loan can usually get an article UCLA does not license.</div>';
+      return 0;
+    }
+    out.innerHTML=full.map(s=>{
+      const k=s.keys;
+      const name=k['package_public_name']||k['package_display_name']||k['package_name']||'Unnamed package';
+      const iface=k['interface_name']||'';
+      const cov=clean(k['Availability']);
+      const free=k['Is_free']==='1';
+      const mat=(k['electronic_material_type']||'').toLowerCase();
+      let h='<div class="prov"><div class="prov-h"><span class="prov-n">'+esc(name)+'</span>';
+      if(iface && iface!==name) h+='<span class="prov-i">via '+esc(iface)+'</span>';
+      if(free) h+='<span class="chip free">Free to read</span>';
+      if(mat && mat!=='journal') h+='<span class="chip">'+esc(mat)+'</span>';
+      h+='</div>';
+      if(cov) h+='<div class="prov-c">'+esc(cov)+'</div>';
+      if(s.url) h+='<a class="go" href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer">Open at '+esc(iface||name)+'</a>';
+      return h+'</div>';
+    }).join('');
+    return full.length;
+  }
+
+  /* The resolver does not answer on `rft.jtitle`, and there is no cheap way to ask SRU for
+     "the serial whose title *is* Nature": `alma.title="Nature"` matches 292 records, none of
+     them the journal, because the phrase relation is not anchored and the only sort available
+     is alphabetical. Guessing from that list produced "JAMA" -> Archives of Dermatology.
+
+     So a title is not resolved here at all. It is handed to the catalog search, which does
+     rank titles properly, and the reader comes back with an identifier. */
+  async function look(){
+    let id=identify(input.value);
+    if(!id){
+      out.innerHTML=''; setStatus('Paste a DOI, a PubMed ID or an ISSN.');
+      return;
+    }
+    const mine=++seq;
+    if(ctl) ctl.abort();
+    ctl=new AbortController();
+    go.disabled=true;
+    setStatus('Asking the resolver about this '+esc(id.label)+'…');
+    out.innerHTML='<div class="prov"><div class="skel" style="width:60%"></div>'+
+                  '<div class="skel" style="width:35%; margin-top:8px"></div></div>';
+    let via='';
+    try{
+      if(id.kind==='title'){
+        out.innerHTML='<div class="cat-empty">The link resolver needs an identifier, not a title. '+
+          'Search the catalog for &ldquo;'+esc(id.value)+'&rdquo; to find the journal, then paste its ISSN or '+
+          'a DOI here.<br><button class="cat-example" type="button" id="artToCat">Search the catalog for this</button></div>';
+        const btn=document.getElementById('artToCat');
+        if(btn) btn.addEventListener('click',()=>{
+          const box=document.getElementById('q');
+          if(box){ box.value=id.value; if(window.catalogSearch) window.catalogSearch(); }
+        });
+        setStatus('');
+        go.disabled=false;
+        return;
+      }
+      const res=await fetch(buildURL(id),{signal:ctl.signal});
+      if(!res.ok) throw new Error('the resolver returned HTTP '+res.status);
+      const svcs=parseServices(await res.text());
+      if(mine!==seq) return;
+      const n=render(svcs,id);
+      setStatus(n ? n+' provider'+(n===1?'':'s')+' for this '+esc(id.label)+' · '+esc(id.value)+esc(via)
+                  : 'Read as a '+esc(id.label)+': '+esc(id.value)+esc(via));
+    }catch(e){
+      if(e.name==='AbortError') return;
+      if(mine!==seq) return;
+      out.innerHTML='';
+      setStatus('Could not reach the link resolver: '+esc(e.message||'network error')+'. Try again.',true);
+    }finally{
+      if(mine===seq) go.disabled=false;
+    }
+  }
+
+  head.addEventListener('click',()=>{
+    const open=body.hidden;
+    body.hidden=!open;
+    toggle.setAttribute('aria-expanded',String(open));
+    toggle.querySelector('.tgl').textContent=open?'Close':'Open';
+    if(open) input.focus();
+  });
+  /* Driven from the page's single search field, the same way `catalogSearch` is: open the
+     panel if it is shut, because a result nobody can see is not a result, and scroll to it
+     only when the reader is not already looking at it. */
+  window.articleLookup=function(text){
+    if(text!==undefined) input.value=text;
+    if(body.hidden) head.click();
+    look();
+    const r=root.getBoundingClientRect();
+    if(r.top<0 || r.top>window.innerHeight*0.6) root.scrollIntoView({behavior:'smooth',block:'start'});
+  };
+  go.addEventListener('click',e=>{ e.stopPropagation(); look(); });
+  input.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); look(); } });
+  root.querySelectorAll('.art-ex .cat-example').forEach(b=>{
+    b.addEventListener('click',e=>{ e.stopPropagation(); input.value=b.dataset.q||''; look(); });
+  });
+})();
+
+/* ===== hours, from LibCal =====
+   `api_hours_today.php` is keyless, CORS-open and carries no personal data at all. Departments
+   nest under their library by `parent_lid`, which is the only structure in the payload and the
+   only thing that makes it readable. Probed 2026-08-06. */
+(function(){
+  const $=id=>document.getElementById(id);
+  const root=$('hrs'); if(!root) return;
+  const head=$('hrsHead'), body=$('hrsBody'), toggle=$('hrsToggle'),
+        summary=$('hrsSummary'), statusEl=$('hrsStatus'), out=$('hrsOut');
+  const HOURS='https://api2.libcal.com/api_hours_today.php?iid=3244&lid=0&format=json';
+  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  let loaded=false, loading=false;
+
+  /* Status is a dot *and* a word. `currently_open` is the field to trust: `status` says
+     "open" for a location that opens later today, which at 7am is the opposite of the truth. */
+  function statusOf(loc){
+    const t=loc.times||{}, s=(t.status||'').toLowerCase();
+    if(s==='24hours') return {cls:'open', word:'Open 24 hours'};
+    if(s==='byapp')   return {cls:'', word:'By appointment'};
+    if(t.currently_open===true)  return {cls:'open', word:'Open now'};
+    if(s==='closed' || t.currently_open===false) return {cls:'shut', word:'Closed'};
+    return {cls:'', word:esc(t.status||'unknown')};
+  }
+
+  /* LibCal returns `not-set` for locations whose hours nobody has filled in. Rendering those
+     as "unknown" pads the list with rows that answer nothing, so they are dropped and the
+     counts are computed over what is left. */
+  const known=l=>((l.times||{}).status||'').toLowerCase()!=='not-set';
+
+  function row(loc,sub){
+    const s=statusOf(loc), when=esc(loc.rendered||(loc.times&&loc.times.status)||'');
+    return '<div class="hr-row">'+
+      '<span class="hr-n">'+esc(loc.name||'Unnamed location')+'</span>'+
+      (when?'<span class="hr-t">'+when+'</span>':'')+
+      '<span class="hr-s '+s.cls+'"><i></i>'+s.word+'</span></div>';
+  }
+
+  function render(all){
+    const locs=all.filter(known);
+    const parents=locs.filter(l=>!l.parent_lid);
+    const kids={};
+    locs.forEach(l=>{ if(l.parent_lid) (kids[l.parent_lid]=kids[l.parent_lid]||[]).push(l); });
+    const openNow=locs.filter(l=>{
+      const t=l.times||{};
+      return t.currently_open===true || (t.status||'').toLowerCase()==='24hours';
+    }).length;
+    summary.textContent=openNow?openNow+' of '+locs.length+' locations open now':'all locations closed';
+    if(!parents.length){
+      out.innerHTML='<div class="cat-empty">LibCal returned no locations. Try again later, or check calendar.library.ucla.edu.</div>';
+      return;
+    }
+    out.innerHTML=parents.map(p=>{
+      let h='<div class="hr-lib">'+row(p);
+      const sub=kids[p.lid]||[];
+      if(sub.length) h+='<div class="hr-sub">'+sub.map(k=>row(k,true)).join('')+'</div>';
+      return h+'</div>';
+    }).join('');
+  }
+
+  async function load(){
+    if(loading) return;
+    loading=true;
+    setTimeout(()=>{ if(loading) statusEl.textContent='Asking LibCal…'; },300);
+    out.innerHTML='<div class="hr-lib"><div class="skel" style="width:45%"></div></div>'+
+                  '<div class="hr-lib"><div class="skel" style="width:55%"></div></div>'+
+                  '<div class="hr-lib"><div class="skel" style="width:40%"></div></div>';
+    try{
+      const res=await fetch(HOURS);
+      if(!res.ok) throw new Error('LibCal returned HTTP '+res.status);
+      const data=await res.json();
+      render(data.locations||[]);
+      statusEl.textContent='';
+      loaded=true;
+    }catch(e){
+      out.innerHTML='';
+      summary.textContent='hours unavailable';
+      statusEl.innerHTML='Could not reach LibCal: '+esc(e.message||'network error')+'.';
+      statusEl.classList.add('err');
+    }finally{ loading=false; }
+  }
+
+  head.addEventListener('click',()=>{
+    const open=body.hidden;
+    body.hidden=!open;
+    toggle.setAttribute('aria-expanded',String(open));
+    toggle.querySelector('.tgl').textContent=open?'Close':'Open';
+    if(open && !loaded) load();
+  });
+  /* The summary rides on the collapsed header, so it is fetched once on load rather than on
+     open: "is anything open" is the question most of the time, and it should not need a click.
+     One request, and the panel reuses the same render when opened. */
+  load();
 })();
 </script>
 </body>
