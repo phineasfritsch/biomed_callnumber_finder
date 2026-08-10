@@ -640,6 +640,18 @@ const noDocs = JSON.stringify({ info: { total: 0, totalResultsLocal: 0, totalRes
   const ESCAPED = AZDOC.replace(/"/g, '\\"').replace(/\//g, '\\/');
   eq('an escaped payload reads the same', H.parseAZ(ESCAPED).map(i => i.name), items.map(i => i.name));
 
+  /* Everything outside ASCII arrives as `\uXXXX`, and a database with a Japanese title in its
+     name shipped as the literal characters "近代". */
+  const JP = '<ul>' + rec('https://jp.example/', 'Kindai seishin ry\\u014dh\\u014d \\u8fd1\\u4ee3', {}) + '</ul>';
+  eq('a name outside ASCII is decoded', H.parseAZ(JP).map(i => i.name), ['Kindai seishin ryōhō 近代']);
+  // Below U+00A0 is the punctuation the parser is about to read; decoding it would move the
+  // boundaries of the attributes being matched.
+  const QUOTED = '<ul>' + rec('https://q.example/', 'Straight \\u0022quoted\\u0022 name', {}) + '</ul>';
+  eq('an escaped quote is left alone', H.parseAZ(QUOTED).map(i => i.name), ['Straight \\u0022quoted\\u0022 name']);
+  // A character above the BMP is two escapes, both above the floor, so the pair survives.
+  const PAIR = '<ul>' + rec('https://p.example/', 'Music \\ud83c\\udfb5 Online', {}) + '</ul>';
+  eq('a surrogate pair survives', H.parseAZ(PAIR).map(i => i.name), ['Music \u{1F3B5} Online']);
+
   reset();
   upstream({ body: AZDOC, ct: 'text/javascript' });
   r = await call('/api/databases');

@@ -520,7 +520,19 @@ const AZ_REC = new RegExp(
   'g');
 
 function parseAZ(raw) {
-  const html = raw.replace(/\\\//g, '/').replace(/\\"/g, Q).replace(/\\n/g, '\n').replace(/\\t/g, ' ');
+  const html = raw
+    .replace(/\\\//g, '/').replace(/\\"/g, Q).replace(/\\n/g, '\n').replace(/\\t/g, ' ')
+    /* The payload is a JSON string, so everything outside ASCII arrives as `\uXXXX`. Without this
+       a Japanese title shipped as the literal text "Kindai seishin ryōhō kirokushū
+       近代...", which is not a name anyone can read or search for.
+       Only code points at or above U+00A0 are decoded: below that lies the structural punctuation
+       this parser is about to read — a `"` turning into a quote partway through would move
+       the boundaries of the very attributes being matched. Nothing legitimate escapes ASCII that
+       way here, and a surrogate pair is two escapes both above the floor, so it survives. */
+    .replace(/\\u([0-9a-fA-F]{4})/g, (m, hex) => {
+      const c = parseInt(hex, 16);
+      return c >= 0xA0 ? String.fromCharCode(c) : m;
+    });
   const hits = [];
   let m;
   AZ_REC.lastIndex = 0;

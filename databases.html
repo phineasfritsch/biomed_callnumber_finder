@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Databases A–Z — Shelfmark</title>
-<meta name="description" content="All 1,354 databases UCLA licenses or links to, filterable by name, with the ones that need a campus login marked and the library's own best bets flagged.">
+<meta name="description" content="All 1,360 databases UCLA licenses or links to, filterable by name, with the ones that need a campus login marked and the library's own best bets flagged.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="32x32">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -14,7 +14,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Shelfmark">
 <meta property="og:title" content="Databases A–Z — Shelfmark">
-<meta property="og:description" content="All 1,354 databases UCLA licenses or links to, filterable by name, with the ones that need a campus login marked and the library's own best bets flagged.">
+<meta property="og:description" content="All 1,360 databases UCLA licenses or links to, filterable by name, with the ones that need a campus login marked and the library's own best bets flagged.">
 <meta property="og:url" content="https://shelfmark.phineasfritsch.com/databases">
 <meta property="og:image" content="https://shelfmark.phineasfritsch.com/og-card.png">
 <meta property="og:image:width" content="1200">
@@ -97,12 +97,13 @@
 </div>
 <script>
 /* ===== Databases A-Z =====
-   The worker parses LibGuides' widget once a day and hands back the list as JSON; this panel is
+   The worker parses LibGuides' widget once a day and hands back the list as JSON; this page is
    the reader's end of that. Three things worth saying about the shape:
 
-   - It is fetched on first open, not on load. Roughly 1,350 entries is ~190 KB of JSON, which is
-     not much next to the 1.17 MB of markup the worker reads to get it, but it is a lot to spend
-     on someone who came here to find a book on a shelf. Once fetched it is kept for the session.
+   - It is fetched on load, because this page is the list and arriving at it is the request. That
+     is 1,360 entries and about 190 KB of JSON — not much next to the 1.17 MB of markup the worker
+     reads to get it, and it would have been too much to spend on someone who came to the search
+     page to find a book, which is why this used to be a panel that waited to be opened.
    - Filtering is local. The whole list is already in hand, so a keystroke is a filter and not a
      request, and the worker's day-long cache does not need to know.
    - What the feed carries is a name, a link, whether UCLA has to log you in, and whether the
