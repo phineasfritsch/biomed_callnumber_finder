@@ -1,0 +1,5 @@
+# Local wrangler state: build output, miniflare caches, and cache/wrangler-account.json,
+# which carries the account id and email. .assetsignore already keeps it off the site;
+# this keeps it out of the repo.
+.wrangler/
+node_modules/
