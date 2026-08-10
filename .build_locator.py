@@ -134,6 +134,23 @@ HTML = r"""<!DOCTYPE html>
   .prov a.go:focus-visible{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft)}
   .chip.free{background:var(--green-soft); color:var(--good)}
 
+  /* An article card is a link first. The title carries the click, the provider buttons are
+     there for the reader who wants a particular one, and nothing needs a round trip. */
+  a.prov-n{color:var(--ink); text-decoration:none; border-bottom:1px solid var(--line)}
+  a.prov-n:hover{color:var(--accent); border-bottom-color:var(--accent)}
+  a.prov-n:focus-visible{outline:none; color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft); border-radius:3px}
+  .art-links{display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:9px}
+  .art-links a.go,.art-links .go{margin-top:0}
+  .art-links a.at{display:inline-block; font-size:11.5px; color:var(--accent); background:var(--card); text-decoration:none;
+    border:1px solid var(--line); border-radius:99px; padding:6px 11px; min-height:32px; line-height:19px}
+  .art-links a.at:hover{background:var(--orange-soft)}
+  .art-links a.at:focus-visible{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft)}
+  .art-links a.at.free{border-color:#bcce9e; background:var(--green-soft); color:var(--good)}
+  .art-links a.at.free:hover{border-color:var(--green)}
+  .art-links .rec{font-size:11.5px; color:var(--ink-soft); text-decoration:none; border-bottom:1px solid var(--line); padding-bottom:1px}
+  .art-links .rec:hover{color:var(--accent)}
+  .art-wait{font-size:11px; color:var(--ink-faint)}
+
   /* ── hours ── */
   .hr-when{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:14px; font-size:11.5px; color:var(--ink-soft)}
   .hr-when input[type=date]{font-family:var(--mono); font-size:12px; color:var(--ink); background:var(--card);
@@ -3866,8 +3883,15 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       bindWider(q);
       return 0;
     }
-    out.innerHTML=data.docs.map(d=>{
-      let h='<div class="prov"><div class="prov-h"><span class="prov-n">'+esc(d.title)+'</span>';
+    /* The title is the link. Asking a reader to click "Who has full text", wait for a second
+       search, and then pick a provider put two steps between a result and the paper, when a
+       DOI already resolves to the publisher on its own. So every card opens on click from the
+       moment it is drawn, and the resolver runs behind it to say who else carries it. */
+    out.innerHTML=data.docs.map((d,i)=>{
+      const href=d.doi ? 'https://doi.org/'+encodeURI(d.doi) : (d.link||'');
+      let h='<div class="prov art-card" data-i="'+i+'"><div class="prov-h">'+
+        (href ? '<a class="prov-n" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+esc(d.title)+'</a>'
+              : '<span class="prov-n">'+esc(d.title)+'</span>');
       /* "Not at UCLA" beside "Free anywhere" is a contradiction on the page even though both
          fields are true: an open access paper is readable whether or not UCLA holds it, so
          holdings are not the answer to give. Open access wins that row outright. */
@@ -3880,16 +3904,71 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       if(au)  h+='<div class="prov-c">'+esc(au)+'</div>';
       const cite=fmtCite(d);
       if(cite) h+='<div class="prov-c">'+cite+'</div>';
-      if(d.link) h+='<a class="go" href="'+esc(d.link)+'" target="_blank" rel="noopener noreferrer">View record</a>';
-      // A DOI is a question the resolver can answer precisely, so offer it rather than guess.
-      if(d.doi)  h+=' <button class="cat-example pick" type="button" data-doi="'+esc(d.doi)+'">Who has full text</button>';
+      h+='<div class="art-links">'+
+         (d.link?'<a class="rec" href="'+esc(d.link)+'" target="_blank" rel="noopener noreferrer">Record</a>':'')+
+         ((d.doi||d.issn)?'<span class="art-wait">finding who carries it…</span>':'')+'</div>';
       return h+'</div>';
     }).join('')+wider(data,q);
-    out.querySelectorAll('.pick').forEach(b=>b.addEventListener('click',()=>{
-      input.value=b.dataset.doi; look();
-    }));
     bindWider(q);
+    resolveAll(data.docs);
     return data.docs.length;
+  }
+
+  /* Who carries this paper, per card, asked in parallel once the list is already on screen.
+     The resolver is keyless and CORS-open, so this costs no server; ten of them answer in about
+     the time one search takes, and nothing on the page is waiting on them. */
+  async function resolveAll(docs){
+    const mine=seq, cards=out.querySelectorAll('.art-card');
+    await Promise.all(docs.map(async (d,i)=>{
+      const box=cards[i] && cards[i].querySelector('.art-links');
+      if(!box) return;
+      const wait=box.querySelector('.art-wait');
+      /* Only a DOI is asked about. Given an ISSN the resolver answers about the journal, and
+         the links it hands back land on a table of contents or a publisher's front page —
+         verified: eLife's ISSN returns doaj.org/toc/…, elifesciences.org, and a PMC journal
+         page, none of which is the paper. A button that says "Open at" had better open it. */
+      if(!d.doi){ if(wait) wait.remove(); return; }
+      let list=[];
+      try{ list=await targetsFor(d,ctl?ctl.signal:undefined); }
+      catch(e){ if(e.name==='AbortError') return; }
+      if(mine!==seq) return;                       // a newer search owns the panel now
+      if(wait) wait.remove();
+      if(!list.length) return;
+      /* An entitled link beats a bare DOI off campus, so the title is repointed at the first
+         provider once one is known. On campus both work; off campus only this one does. */
+      const title=cards[i].querySelector('a.prov-n');
+      if(title) title.href=list[0].url;
+      box.insertAdjacentHTML('afterbegin', list.map(t=>
+        '<a class="at'+(t.free?' free':'')+'" href="'+esc(t.url)+'" target="_blank" rel="noopener noreferrer"'+
+        (t.cov?' title="'+esc(t.name+(t.cov?' — '+t.cov:''))+'"':'')+'>Open at '+esc(t.via||t.name)+'</a>').join(''));
+    }));
+  }
+
+  /* One button per interface, not per package. NEJM alone comes back as five services — Ovid,
+     ProQuest, Highwire, and two NEJM packages split at 1989 — and five buttons for what is one
+     publisher is the list being loud about the library's licensing rather than about the paper.
+     Free-to-read providers sort first because they are the ones that work from anywhere. */
+  /* Not everything the resolver lists is a place to read a paper. CLOCKSS and Portico are dark
+     preservation archives, and DOAJ and the ISSN Centre's ROAD are registries — all four are
+     marked free, so they sorted to the front and became the link the title pointed at. They are
+     dropped rather than demoted: a reader has no use for a button that opens a catalogue. */
+  const NOT_A_READER=/clockss|portico|lockss|doaj|issn international|^road:|directory of open access/i;
+
+  async function targetsFor(d,signal){
+    const res=await fetch(buildURL({kind:'doi', key:'rft_id', prefix:'info:doi/', value:d.doi}),{signal});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const seen=new Set(), list=[];
+    parseServices(await res.text()).filter(s=>s.type==='getFullTxt').forEach(s=>{
+      const name=clean(s.keys['package_public_name']||s.keys['package_display_name']||'');
+      const via=clean(s.keys['interface_name']||'');
+      const k=(via||name).toLowerCase();
+      if(!s.url || !k || seen.has(k)) return;
+      if(NOT_A_READER.test(via) || NOT_A_READER.test(name)) return;
+      seen.add(k);
+      list.push({name:name||via, via:via, url:s.url, free:s.keys['Is_free']==='1', cov:clean(s.keys['Availability'])});
+    });
+    list.sort((a,b)=>(b.free?1:0)-(a.free?1:0));
+    return list;
   }
 
   /* Said once under the list, not on every row. The default search is holdings-only, so every

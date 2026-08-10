@@ -56,8 +56,22 @@ function slim(doc) {
     ? 'https://search.library.ucla.edu/discovery/fulldisplay?docid=' + encodeURIComponent(recordid) +
       '&context=' + context + '&vid=' + VID
     : '';
+  /* Primo joins a record's title variants with a slash, and for the JAMA reply above that
+     printed the same sentence three times before the part that differed. Exact repeats are
+     dropped; anything that actually differs is kept, because a slash in a title is ordinary.
+     A variant that is only the start of another is dropped too: JAMA's reply came back as the
+     article title, then the same title again with "-Reply" on the end, and the shorter one adds
+     nothing except length. */
+  const title = String(first(d.title)).split('/').filter((p, i, all) => {
+    const k = p.trim().toLowerCase();
+    if (!k) return false;
+    return !all.some((x, j) => {
+      const o = x.trim().toLowerCase();
+      return o !== k ? o.startsWith(k) : j < i;      // a longer variant, or an earlier identical one
+    });
+  }).join('/').trim();
   return {
-    title: first(d.title),
+    title: title,
     authors: list(d.creator).length ? list(d.creator) : list(d.contributor),
     jtitle: first(a.jtitle) || first(d.ispartof),
     volume: first(a.volume),
@@ -76,6 +90,23 @@ function slim(doc) {
   };
 }
 
+/* The same paper twice is one paper. Primo's central index already merges most duplicates, so
+   this catches the rest: identical DOI, or identical title and year where a DOI is missing.
+   Cheap, and the alternative is two cards that open the same article. */
+function dedupe(docs) {
+  const seen = new Set(), out = [];
+  for (const d of docs) {
+    const key = d.doi
+      ? 'doi:' + String(d.doi).toLowerCase()
+      : 'tt:' + String(d.title).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim() +
+        '|' + String(d.date || '').slice(0, 4);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(d);
+  }
+  return out;
+}
+
 async function articles(request, url, ctx) {
   const q = (url.searchParams.get('q') || '').trim();
   if (!q) return json({ error: 'q is required' }, 400);
@@ -92,7 +123,8 @@ async function articles(request, url, ctx) {
   up.searchParams.set('tab', 'LibraryCatalog');
   up.searchParams.set('sort', 'rank');
   up.searchParams.set('lang', 'en');
-  up.searchParams.set('limit', String(limit));
+  // A few spare rows so that dropping duplicates does not hand back a short page.
+  up.searchParams.set('limit', String(Math.min(limit + 5, 30)));
   up.searchParams.set('offset', String(offset));
   if (url.searchParams.get('articlesOnly') !== 'no')
     up.searchParams.set('qInclude', 'facet_rtype,exact,articles');
@@ -148,7 +180,7 @@ async function articles(request, url, ctx) {
     local: info.totalResultsLocal,
     central: info.totalResultsPC,
     beyond: beyond,          // so the page can say which of the two searches it is showing
-    docs: (data.docs || []).map(slim).filter(d => d.title),
+    docs: dedupe((data.docs || []).map(slim).filter(d => d.title)).slice(0, limit),
   };
 
   const stored = json(out);
