@@ -4,9 +4,45 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Shelfmark</title>
+<meta name="description" content="Find a book or an article at UCLA, then find the shelf it is on. Search the catalog, see which library holds a copy, and get the exact shelf face in the Biomed stacks.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="canonical" href="https://shelfmark.phineasfritsch.com/">
+<!-- The page is one colour scheme by choice. Saying so keeps a dark-mode browser from painting
+     its own chrome on the selects and the date picker, which came out near-black on paper. -->
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#f3efe4">
+<!-- Shared anywhere, this is what gets shown. Without it a link to a 330 KB single-page tool
+     previews as a bare URL, which reads like something nobody wants to click. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shelfmark">
+<meta property="og:title" content="Shelfmark — the book, then the aisle">
+<meta property="og:description" content="Find a book or an article at UCLA, then find the shelf it is on. Search the catalog, see which library holds a copy, and get the exact shelf face in the Biomed stacks.">
+<meta property="og:url" content="https://shelfmark.phineasfritsch.com/">
+<meta property="og:image" content="https://shelfmark.phineasfritsch.com/og-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Shelfmark — the book, then the aisle. A row of library stacks in the site's palette.">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- The web font sheet used to be an ordinary stylesheet link, which meant nothing painted until
+     Google answered: 803 ms of a 3.5 s first paint, on a page whose own HTML arrives in 50 ms.
+     Nothing here needs Fraunces to be readable, so the sheet is fetched at high priority and
+     applied when it lands, instead of holding the page hostage while it travels. `media="print"`
+     is what makes it non-blocking; the onload swaps it back to every medium. The families both
+     name a system fallback, so the wait is a change of typeface rather than invisible text. -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap">
+<!-- The two font files themselves, fetched alongside the sheet that would otherwise have to
+     arrive first and name them. Without this the browser learns these URLs only after a round
+     trip to Google, and the typeface lands after the page has already painted in Georgia and
+     the system monospace: every line then re-measures at once, which moved the shelf map down
+     the page and was the whole of a 0.375 layout shift on desktop. -->
+<link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/splinesansmono/v13/R70BjzAei_CDNLfgZxrW6wrZOF2WX5KZmE-Z-lw.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/fraunces/v38/6NU78FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0KxC9TeP2Xz5c.woff2">
+<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap"></noscript>
 <style>
   :root{
     --paper:#f3efe4; --paper-2:#ece6d6; --card:#fbf9f3;
@@ -16,17 +52,68 @@
     --char:#3a3631; --char-soft:#d7d2c8;
     --slate:#6a7080; --slate-soft:#cdd2dc;
     --accent:#7a2e1e; --good:#3b6d3b; --hi:#1d9e75;
-    --ink-faint:#9a9080; --r:12px;
-    --mono:'Spline Sans Mono', ui-monospace, monospace;
-    --disp:'Fraunces', Georgia, serif;
+    /* The quietest of the three text tiers, darkened from #9a9080. At 11px it needs 4.5:1 to be
+       readable and it had 2.7:1 on paper, which is the kind of grey that looks like restraint on
+       a designer's monitor and like nothing at all in a library at arm's length. This clears 4.5
+       against all three surfaces (paper 4.93, card 5.38, paper-2 4.54). It sits closer to
+       --ink-soft than it used to, which is the honest cost: three visibly distinct greys cannot
+       all pass AA on a light background, so the tier that had to give was the decorative one. */
+    --ink-faint:#6f6656; --r:12px;
+    /* The fallbacks are chosen to break lines in the same places as the real fonts, not because
+       anyone would pick them for looks.
+
+       Loading the web fonts without blocking the first paint means the page is laid out twice:
+       once in whatever is already on the machine, then again when Fraunces and Spline Sans Mono
+       land. If the two layouts wrap text differently, everything below the rewrapped line jumps,
+       and on this page that meant the 615px shelf map sliding down for a layout shift of 0.37 on
+       desktop, which is well into the range a reader notices and swears at.
+
+       Measured at 100px over a 40-character sample: Spline Sans Mono advances 0.600em per
+       character and Courier New advances exactly the same, while ui-monospace resolves to 0.522em
+       on this machine and Consolas to 0.550em. So Courier New goes first: it is the one stand-in
+       that puts every mono line break exactly where the real font will put it. Fraunces is
+       narrower than any installed serif, so its stand-in is scaled to match instead, defined
+       below as `disp-fallback`. Line heights are unitless throughout, so they scale with the
+       font size rather than with the font's own metrics and need no matching. */
+    --mono:'Spline Sans Mono', 'Courier New', ui-monospace, monospace;
+    --disp:'Fraunces', 'disp-fallback', Georgia, serif;
+  }
+  /* Times New Roman and its metric clones are 8% wider than Fraunces over the same text, so they
+     are asked to render 8% smaller while standing in for it. Unsupported anywhere `size-adjust`
+     is missing, where this rule is skipped and Georgia takes over as before. */
+  @font-face{
+    font-family:'disp-fallback';
+    src:local('Times New Roman'), local('Tinos'), local('Liberation Serif'), local('Times');
+    size-adjust:92%;
+    ascent-override:90%;
+    descent-override:22%;
   }
   *{box-sizing:border-box}
   body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--mono); font-size:13px; line-height:1.5; -webkit-font-smoothing:antialiased;
     background-image:radial-gradient(var(--paper-2) 0.5px, transparent 0.5px); background-size:14px 14px;}
   .wrap{max-width:1060px; margin:0 auto; padding:30px 22px 80px}
   header{display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:14px; border-bottom:2px solid var(--ink); padding-bottom:16px}
+  /* The mark is drawn inline rather than fetched: it is smaller than the request that would
+     collect it, and it inherits --ink and --accent instead of hardcoding them twice. */
+  .brand{display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--ink)}
+  /* The wordmark only. The tagline under it keeps its own quieter colour, and the mark keeps its
+     accent spine, so the hover reads as one word lighting up rather than the whole block moving. */
+  a.brand:hover h1{color:var(--accent)}
+  a.brand:focus-visible{outline:none; border-radius:6px; box-shadow:0 0 0 3px var(--orange-soft)}
+  .brand .mark{flex:none; width:38px; height:38px; display:block}
+  .brand .mark .stack{fill:var(--ink)}
+  .brand .mark .marked{fill:var(--accent)}
   h1{font-family:var(--disp); font-size:30px; font-weight:600; margin:0; letter-spacing:-0.4px; line-height:1.05}
-  h1 .sub{display:block; font-size:11px; font-weight:400; color:var(--ink-soft); letter-spacing:1.6px; text-transform:uppercase; margin-top:6px}
+  h1 .sub{display:block; font-size:12px; font-weight:400; color:var(--ink-soft); letter-spacing:1.6px; text-transform:uppercase; margin-top:6px}
+  /* Duplicated in prose.css, which is what a site with no build step costs. Any change here has
+     to be made there as well, or the bar stops matching between the tool and the two pages. */
+  .site-nav{display:flex; gap:6px; flex-wrap:wrap}
+  .site-nav a{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.09em;
+    text-decoration:none; color:var(--ink-soft); background:var(--card); border:1px solid var(--line);
+    border-radius:99px; padding:7px 13px; min-height:32px; line-height:18px}
+  .site-nav a:hover{border-color:var(--ink-soft); color:var(--ink)}
+  .site-nav a:focus-visible{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft)}
+  .site-nav a[aria-current="page"]{background:var(--ink); border-color:var(--ink); color:var(--paper)}
 
   /* The library picker is page context, not a search option, so it reads as a line above the
      box rather than as another control inside it. */
@@ -35,7 +122,7 @@
   .whereami select{font:inherit; font-size:13px; font-weight:500; padding:7px 10px; border:1px solid var(--line);
     border-radius:8px; background:var(--card); color:var(--ink); max-width:100%}
   .whereami select:focus-visible{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft)}
-  .whereami-note{font-size:11px; color:var(--ink-faint)}
+  .whereami-note{font-size:12px; color:var(--ink-faint)}
   .lookup{display:flex; gap:8px; align-items:center; margin:10px 0 10px; padding:12px 14px; background:var(--card); border:1px solid var(--line); border-radius:var(--r); flex-wrap:wrap}
   .lookup label{font-size:11px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:1px}
   .lookup input{flex:1; font-family:var(--mono); font-size:15px; padding:11px 13px; border:1px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink); min-width:180px}
@@ -49,9 +136,13 @@
   .hit .loc{font-size:13px; font-weight:600; color:var(--ink)}
   .hit .rng{font-size:12px; color:var(--ink-soft); margin-top:4px; letter-spacing:.2px}
   .miss{font-size:13px; color:var(--accent); padding:8px 2px}
-  .examples{font-size:11px; color:var(--ink-soft); margin-top:8px}
-  .examples b{color:var(--ink); font-weight:500; cursor:pointer; border-bottom:1px dotted var(--ink-faint)}
-  .examples b:hover{color:var(--accent); border-color:var(--accent)}
+  .examples{font-size:12px; color:var(--ink-soft); margin-top:8px}
+  /* These were <b> elements with a click handler: they looked like controls, behaved like
+     controls, and could not be reached with a keyboard or announced as anything. */
+  .examples .ex{font:inherit; font-weight:500; color:var(--ink); background:none; border:0; padding:0;
+    cursor:pointer; border-bottom:1px dotted var(--ink-faint)}
+  .examples .ex:hover{color:var(--accent); border-color:var(--accent)}
+  .examples .ex:focus-visible{outline:none; border-radius:3px; box-shadow:0 0 0 3px var(--orange-soft)}
 
   .sect{display:flex; gap:6px; align-items:center; margin:8px 2px 0; flex-wrap:wrap}
   .sect-label{font-size:11px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:1px; margin-right:4px}
@@ -60,10 +151,11 @@
   .pill.active{background:var(--ink); color:var(--paper); border-color:var(--ink)}
 
   .levels{display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin:22px 0 8px}
-  .lvl-total{margin-left:auto; padding-left:12px; font-size:11px; color:var(--ink-faint); line-height:1.5; text-align:right}
+  .lvl-total{margin-left:auto; padding-left:12px; font-size:12px; color:var(--ink-faint); line-height:1.5; text-align:right}
   .lvl-total .n{color:var(--accent); font-size:13px}
   .lvl{font-family:var(--mono); font-size:13px; font-weight:500; min-width:48px; padding:7px 5px 6px; text-align:center; background:var(--card); border:1px solid var(--line); border-radius:8px; cursor:pointer; color:var(--ink-soft)}
   .lvl:hover{border-color:var(--ink-soft); color:var(--ink)}
+  .lvl:focus-visible{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft)}
   .lvl.active{background:var(--ink); color:var(--paper); border-color:var(--ink); font-weight:600}
   .lvl.empty{opacity:.45}
   .lvl.special{opacity:1; border-style:dashed; border-color:var(--ink-soft)}
@@ -73,6 +165,9 @@
   .stage{margin-top:6px; background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:8px 12px 12px}
   svg{display:block; width:100%; height:auto}
   .shelf{cursor:pointer}
+  .shelf:focus{outline:none}
+  .shelf:focus-visible .frame{stroke:var(--accent); stroke-width:2.6}
+  .shelf:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
   .shelf .frame{fill:none; stroke:var(--ink); stroke-width:1.4}
   .shelf.absent{cursor:default}
   .shelf.absent .frame{stroke:var(--line); stroke-dasharray:3 4; stroke-width:1}
@@ -88,10 +183,14 @@
   .detail .face-row{display:flex; gap:12px; padding:8px 0; border-top:1px solid var(--line); font-size:13px}
   .detail .face-row .fl{min-width:64px; color:var(--ink-soft); text-transform:uppercase; font-size:11px; letter-spacing:.5px; padding-top:1px}
   .detail .face-row .rg{font-weight:500}
-  footer{margin-top:28px; padding-top:16px; border-top:1px solid var(--line); font-size:11px; color:var(--ink-soft); line-height:1.75; max-width:760px}
-  footer .by{display:block; margin-top:12px; color:var(--ink-faint)}
+  /* 12px, not 11px. The footer is the longest prose on the page — 85% of the document's text by
+     Lighthouse's count — and it was the one block set below the size a phone can comfortably
+     read. Everything else here is a label; this is meant to be read. */
+  footer{margin-top:28px; padding-top:16px; border-top:1px solid var(--line); font-size:12px; color:var(--ink-soft); line-height:1.75; max-width:760px}
+  footer a{color:var(--accent)}
+  footer .by{display:block; margin-top:10px; color:var(--ink-faint)}
   footer .by a{color:var(--ink-soft)}
-  .legend{display:flex; gap:14px; flex-wrap:wrap; margin-top:12px; padding-left:2px; font-size:11px; color:var(--ink-soft)}
+  .legend{display:flex; gap:14px; flex-wrap:wrap; margin-top:12px; padding-left:2px; font-size:12px; color:var(--ink-soft)}
   .legend span{display:inline-flex; align-items:center; gap:6px}
   .sw{width:11px; height:11px; border-radius:3px; display:inline-block; border:1px solid rgba(0,0,0,.12)}
 
@@ -99,7 +198,7 @@
   .route,.cat{margin:18px 0 6px; background:var(--card); border:1px solid var(--line); border-radius:var(--r); overflow:hidden}
   .route-head,.cat-head{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 16px; cursor:pointer}
   .route-head h2,.cat-head h2{font-family:var(--disp); font-size:17px; font-weight:600; margin:0; display:flex; align-items:baseline; gap:9px; flex-wrap:wrap}
-  .h2-sub{font-family:var(--mono); font-size:11px; font-weight:400; color:var(--ink-faint); letter-spacing:0.03em}
+  .h2-sub{font-family:var(--mono); font-size:12px; font-weight:400; color:var(--ink-faint); letter-spacing:0.03em}
   .route-head .tag,.cat-head .tag{font-size:9.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--accent); background:var(--orange-soft); padding:2px 7px; border-radius:99px; margin-left:9px}
   .route-body,.cat-body{padding:0 16px 16px; border-top:1px solid var(--line)}
 
@@ -108,7 +207,46 @@
   .prov .pick{margin-top:8px}
   .prov-note{font-size:11.5px; color:var(--ink-soft); margin-top:11px; padding-left:2px; line-height:1.8}
   .prov-note .chip{margin:0 1px}
-  .art-ex{font-size:11px; color:var(--ink-soft); margin:8px 2px 0; display:flex; gap:7px; align-items:center; flex-wrap:wrap}
+  .art-ex{font-size:12px; color:var(--ink-soft); margin:8px 2px 0; display:flex; gap:7px; align-items:center; flex-wrap:wrap}
+  .art-ftog{margin-left:auto}
+  .art-ftog[aria-expanded="true"]{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+  .art-filters{margin:10px 0 0; padding:11px 13px 13px; background:var(--card); border:1px solid var(--line); border-radius:var(--r)}
+  .af-row{display:flex; gap:14px; align-items:flex-end; flex-wrap:wrap}
+  .af-row + .af-row{margin-top:11px; padding-top:11px; border-top:1px dashed var(--line)}
+  .af{display:flex; flex-direction:column; gap:4px; font-size:10.5px; letter-spacing:.07em;
+    text-transform:uppercase; color:var(--ink-soft)}
+  .af select,.af input{font:inherit; font-family:var(--mono); font-size:12.5px; letter-spacing:0;
+    text-transform:none; padding:6px 8px; border:1px solid var(--line); border-radius:7px;
+    background:var(--paper); color:var(--ink)}
+  .af input{width:64px}
+  .af select:focus-visible,.af input:focus-visible{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft)}
+  .af-years{display:flex; gap:8px; align-items:flex-end}
+  .af-quick{display:flex; gap:5px; align-items:center; flex-wrap:wrap}
+  .af-quick .pill{padding:5px 11px}
+  .af-check{display:flex; gap:6px; align-items:center; font-size:12px; color:var(--ink); cursor:pointer}
+  .af-check input{accent-color:var(--accent); width:15px; height:15px; margin:0}
+  /* A filter set from a result rather than from a control needs to be visible somewhere, or the
+     next search narrows for a reason the reader cannot see. */
+  .af-jt{font-size:11.5px; color:var(--ink-soft); background:var(--orange-soft); border:1px solid var(--line);
+    border-radius:99px; padding:4px 6px 4px 11px; display:inline-flex; gap:6px; align-items:center}
+  .af-jt b{color:var(--ink); font-weight:500}
+  /* `display` on a class outranks the `hidden` attribute's UA rule, so an empty "Journal: ×"
+     chip sat in the row whenever no journal was set. Said again at higher specificity. */
+  .af-jt[hidden]{display:none}
+  .af-x{font:inherit; font-size:14px; line-height:1; padding:0 5px; color:var(--ink-soft); background:none;
+    border:none; cursor:pointer; border-radius:99px}
+  .af-x:hover{color:var(--accent)}
+  .af-clear{margin-left:auto}
+  /* The journal is a filter you can apply, so it looks like the other soft controls on the page
+     rather than like the citation text it sits inside. */
+  .art-jt{font:inherit; color:inherit; background:none; border:none; padding:0; cursor:pointer;
+    border-bottom:1px dotted var(--ink-faint)}
+  .art-jt:hover{color:var(--accent); border-color:var(--accent)}
+  @media (max-width:560px){
+    .af-row{gap:10px}
+    .af-clear{margin-left:0}
+    .art-ftog{margin-left:0}
+  }
   .prov{border:1px solid var(--line); border-radius:9px; padding:11px 13px; margin-top:9px; background:var(--paper)}
   .prov-h{display:flex; align-items:baseline; gap:9px; flex-wrap:wrap}
   .prov-n{font-weight:600; font-size:13.5px}
@@ -125,17 +263,66 @@
   a.prov-n{color:var(--ink); text-decoration:none; border-bottom:1px solid var(--line)}
   a.prov-n:hover{color:var(--accent); border-bottom-color:var(--accent)}
   a.prov-n:focus-visible{outline:none; color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft); border-radius:3px}
-  .art-links{display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:9px}
-  .art-links a.go,.art-links .go{margin-top:0}
-  .art-links a.at{display:inline-block; font-size:11.5px; color:var(--accent); background:var(--card); text-decoration:none;
+  /* Results are a list, so they are drawn as one. Ten bordered, filled cards each holding two
+     chips and up to eight buttons put a box around every line of text on the page and left the
+     reader nothing to scan down; hairlines and one action per row do the same work quietly. */
+  .art-list{margin-top:12px; border-top:1px solid var(--line)}
+  .hit-row{padding:12px 6px 13px; border-bottom:1px solid var(--line); transition:background .15s}
+  .hit-row:hover{background:var(--card)}
+  .hr-top{display:flex; gap:10px; align-items:baseline; justify-content:space-between}
+  .hr-t{font-size:13.5px; font-weight:600; line-height:1.45; color:var(--ink); text-decoration:none;
+    border-bottom:1px solid transparent}
+  a.hr-t:hover{color:var(--accent); border-color:var(--accent)}
+  a.hr-t:focus-visible{outline:none; color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft)}
+  .hr-top .chip{flex:none}
+  .hr-m{font-size:11.5px; color:var(--ink-soft); margin-top:5px; line-height:1.55}
+  .hr-etal{color:var(--ink-faint)}
+  .hr-a{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px}
+  /* One primary action per row, sized for a thumb. Ink by default; green only when the link
+     behind it opens for anybody, so the colour keeps meaning something. */
+  .hr-go{font-family:var(--mono); font-size:11px; font-weight:600; text-transform:uppercase;
+    letter-spacing:.8px; text-decoration:none; padding:8px 14px; min-height:34px; line-height:18px;
+    border:1px solid var(--ink); border-radius:8px; background:var(--ink); color:var(--paper)}
+  .hr-go:hover{opacity:.88}
+  .hr-go:focus-visible{outline:none; box-shadow:0 0 0 3px var(--orange-soft)}
+  .hr-go.free{background:var(--good); border-color:var(--good)}
+  .hr-via{font-size:12px; color:var(--ink-faint)}
+  .hr-more{font-size:12px; margin-top:7px}
+  /* No underline at rest: ten of these down a page drew ten dotted rules that read as dividers
+     between rows that already have one. The caret carries the affordance. */
+  .hr-more summary{cursor:pointer; color:var(--ink-soft); list-style:none; padding:6px 2px;
+    display:inline-block; border-bottom:1px solid transparent}
+  .hr-more summary:hover{border-bottom-style:dotted}
+  .hr-more summary::-webkit-details-marker{display:none}
+  .hr-more summary::after{content:' \25b8'}
+  .hr-more[open] summary::after{content:' \25be'}
+  .hr-more summary:hover{color:var(--accent); border-color:var(--accent)}
+  .hr-more summary:focus-visible{outline:none; color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft)}
+  .hr-more[hidden]{display:none}
+  /* `display` on a closed `<details>`'s content beats the UA rule that hides it, so setting
+     `display:flex` here put every provider pill back on the page with the disclosure shut —
+     the exact clutter it exists to fold away. The flex row is only turned on when open. */
+  .hr-list{display:none; gap:6px; flex-wrap:wrap; padding:9px 0 3px}
+  .hr-more[open] .hr-list{display:flex}
+  /* Under the list, not floating beside it: this is the end of the results, and saying how many of
+     how many are on screen is the other half of the offer. */
+  .art-more{display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:14px}
+  .art-more .btn{padding:9px 15px}
+  .art-more-n{font-size:12px; color:var(--ink-faint)}
+  @media (max-width:560px){
+    .hr-top{flex-direction:column; gap:5px}
+  }
+  /* The secondary ways in, inside a row's disclosure. The identifier lookup lists providers as
+     its whole answer and styles them as `.prov` cards; these are the same links demoted. */
+  .hr-list a.at{display:inline-block; font-size:11.5px; color:var(--accent); background:var(--card); text-decoration:none;
     border:1px solid var(--line); border-radius:99px; padding:6px 11px; min-height:32px; line-height:19px}
-  .art-links a.at:hover{background:var(--orange-soft)}
-  .art-links a.at:focus-visible{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft)}
-  .art-links a.at.free{border-color:#bcce9e; background:var(--green-soft); color:var(--good)}
-  .art-links a.at.free:hover{border-color:var(--green)}
-  .art-links .rec{font-size:11.5px; color:var(--ink-soft); text-decoration:none; border-bottom:1px solid var(--line); padding-bottom:1px}
-  .art-links .rec:hover{color:var(--accent)}
-  .art-wait{font-size:11px; color:var(--ink-faint)}
+  .hr-list a.at:hover{background:var(--orange-soft)}
+  .hr-list a.at:focus-visible{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft)}
+  .hr-list a.at.free{border-color:#bcce9e; background:var(--green-soft); color:var(--good)}
+  .hr-list a.at.free:hover{border-color:var(--green)}
+  /* The catalogue record is somewhere to go, not somewhere to read: same pill, quieter ink. */
+  .hr-list a.at.rec{color:var(--ink-soft)}
+  .hr-list a.at.rec:hover{color:var(--accent)}
 
   /* ── hours ── */
   .hr-when{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:14px; font-size:11.5px; color:var(--ink-soft)}
@@ -220,6 +407,11 @@
 
   /* ── catalog search (Alma SRU) ── */
   .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0}
+  /* Out of the way until it is tabbed to, which is the first thing a keyboard reader does and
+     the only way past a masthead and a twenty-one-item library select. */
+  .skip{position:absolute; left:-9999px; top:0; z-index:10; background:var(--card); color:var(--accent);
+    font-size:13px; padding:11px 16px; border:1px solid var(--accent); border-radius:0 0 8px 0; text-decoration:none}
+  .skip:focus{left:0}
   .cat-form{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:12px 0 0}
   .cat-form input{flex:1 1 240px; min-width:0; font-family:var(--mono); font-size:15px; padding:11px 13px; border:1px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink)}
   .cat-form input:focus-visible,.cat-form input:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft)}
@@ -228,9 +420,24 @@
   .chk{display:inline-flex; align-items:center; gap:7px; font-size:12px; color:var(--ink-soft); cursor:pointer; min-height:32px}
   .chk input{width:16px; height:16px; accent-color:var(--accent); cursor:pointer}
   .cat-status{font-size:12px; color:var(--ink-soft); min-height:18px; margin:11px 2px 0; line-height:1.65}
-  .cat-diag{display:block; margin-top:4px; font-size:11px; color:var(--ink-faint)}
+  .cat-diag{display:block; margin-top:4px; font-size:12px; color:var(--ink-faint)}
   .cat-status.err{color:var(--accent)}
   .cat-results{margin-top:10px}
+
+  /* A-Z list. One line each, because the feed carries a name and a link and nothing else, and a
+     card would be mostly padding around two words. */
+  .db-filters{display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin:9px 0 0}
+  .db-list{margin:10px 0 0; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--paper)}
+  .db-row{display:flex; align-items:baseline; gap:9px; flex-wrap:wrap; padding:9px 13px; border-bottom:1px solid var(--line)}
+  .db-row:last-child{border-bottom:0}
+  .db-row:nth-child(even){background:var(--paper-2)}
+  .db-row a{font-size:13.5px; color:var(--accent); text-decoration:none; border-bottom:1px solid transparent}
+  .db-row a:hover{border-bottom-color:var(--accent)}
+  .db-row a:focus-visible{outline:none; border-radius:3px; box-shadow:0 0 0 3px var(--orange-soft)}
+  .db-tag{font-family:var(--mono); font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; padding:2px 7px; border-radius:99px; border:1px solid var(--line); color:var(--ink-faint); background:var(--card); white-space:nowrap}
+  .db-tag.best{border-color:#bcce9e; background:var(--green-soft); color:var(--good)}
+  .db-tag.open{border-color:var(--accent); color:var(--accent); background:var(--orange-soft)}
+  .db-more{margin:10px 2px 0; font-size:12px; color:var(--ink-soft)}
 
   .chk-note{color:var(--ink-faint)}
   .work{border:1px solid var(--line); border-radius:10px; overflow:hidden; margin:9px 0; background:var(--paper)}
@@ -274,6 +481,20 @@
   .nofind,.elsewhere{font-size:11.5px; border:1px solid var(--line); border-radius:8px; padding:8px 11px; margin-top:6px; line-height:1.6}
   .nofind{color:var(--accent); background:var(--orange-soft)}
   .elsewhere{color:var(--ink-soft); background:var(--paper-2)}
+  /* Indeterminate on purpose. A search here is a chain of requests whose length is not known
+     when it starts — how many depends on what the catalog says to the first one — so a filling
+     bar would have to invent a denominator, and a bar that reaches the end and sits there is
+     worse than no bar. This says "still working" and leaves the account of *what* is being
+     worked on to the status line underneath, which already narrates each step. */
+  .busy{height:3px; margin:10px 2px 0; border-radius:99px; background:var(--paper-2); overflow:hidden}
+  .busy[hidden]{display:none}
+  .busy::after{content:''; display:block; width:36%; height:100%; border-radius:99px;
+    background:var(--accent); animation:busy-slide 1.15s ease-in-out infinite}
+  /* Transform only, so this never costs a layout pass while requests are in flight. */
+  @keyframes busy-slide{
+    0%{transform:translateX(-100%)}
+    100%{transform:translateX(315%)}
+  }
   .cat-empty{font-size:12.5px; color:var(--ink-soft); background:var(--paper-2); border:1px solid var(--line); border-radius:8px; padding:12px 14px; line-height:1.7}
   .cat-empty .k{color:var(--ink)}
   .cat-more{display:flex; justify-content:center; margin:12px 0 2px}
@@ -341,37 +562,82 @@
     .drop{padding:13px}
     .drop .btn{flex:1 1 auto}
     .route-head,.cat-head{padding:11px 13px}
+    /* The panel subtitles sit inline beside the heading and wrap onto a second line when they are
+       long. That is fine until one of them changes after load: "loading…" fits on the heading's
+       line, "20 of 27 locations open now" does not, so the hours header grew a line the moment
+       LibCal answered and shoved every panel below it down the page. That single reflow was the
+       whole of this page's 0.068 layout shift on a phone. Given a line of its own from the start,
+       the box is the same height before and after the text arrives. */
+    .route-head h2,.cat-head h2{display:block}
+    .route-head h2 .h2-sub,.cat-head h2 .h2-sub{display:block; margin-top:3px}
     .route-body,.cat-body{padding:0 13px 14px}
     .detail{padding:14px 15px}
     .itin-steps .sd,.itin-steps .sat,.itin-steps .scn,.itin-steps .srng{flex:1 1 100%; min-width:0; margin-left:0}
-    /* 16px keeps iOS from auto-zooming the field; 44px is the Apple/Material tap floor */
+    /* 16px keeps iOS from auto-zooming the field. The 44px tap floor is not here — it belongs to
+       fingers rather than to narrow windows, so it lives in the pointer:coarse block below. */
     .cat-form input{font-size:16px; flex:1 1 100%}
-    .cat-form .btn{flex:1 1 0; min-height:44px}
-    .cat-modes .pill{min-height:44px; padding:8px 16px}
-    .cat-scope .pill{min-height:44px; padding:8px 16px}
-    .whereami select{font-size:16px; min-height:44px; flex:1 1 100%}
+    .cat-form .btn{flex:1 1 0}
+    .whereami select{font-size:16px; flex:1 1 100%}
     .whereami-note{flex:1 1 100%}
     .filt{grid-template-columns:1fr}
     .filt .f input,.filt .f select{font-size:16px}
     .cheat{grid-template-columns:1fr; gap:2px 0}
     .cheat>div:nth-child(even){padding-bottom:7px}
-    .cat-head .btn{min-height:44px}
-    .chk{min-height:44px}
     .work-h{padding:9px 11px; gap:10px}
     .cover{width:74px; height:111px}
     .lib{padding:9px 11px}
   }
+  /* A tap target is about the finger, not the window. These used to live inside the 620px block,
+     so a tablet — a touch screen with room on it — got the 32px mouse-sized pills. */
+  @media (pointer:coarse){
+    .cat-form .btn,.cat-head .btn,.route-head .btn{min-height:44px}
+    .cat-modes .pill,.cat-scope .pill,.sect .pill,.af-quick .pill,.hr-days .pill{min-height:44px; padding:8px 16px}
+    .whereami select{min-height:44px}
+    .chk{min-height:44px}
+    .lvl{min-height:44px}
+    .cat-example{min-height:44px; padding:9px 14px}
+    .examples .ex{display:inline-block; padding:6px 0; min-height:34px}
+  }
   @media (prefers-reduced-motion:reduce){
     *,*::before,*::after{animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important}
+    /* That rule stops the bar's animation dead, which would leave a short accent stub parked at
+       the left of the track and reading as "36% done, stuck". A hatch across the whole width is
+       a texture rather than a measurement: it says something is happening without claiming how
+       much of it is finished, and it needs no motion to say it. */
+    .busy::after{width:100%;
+      background:repeating-linear-gradient(90deg, var(--accent) 0 5px, var(--paper-2) 5px 10px)}
   }
 </style>
 </head>
 <body>
+<a class="skip" href="#main">Skip to the search</a>
 <div class="wrap">
   <header>
-    <h1>Shelfmark<span class="sub">the book, then the aisle</span></h1>
+    <!-- A link to the tool from the tool, which is a reload rather than a journey, but it makes the
+         mark behave the same here as it does on the other two pages: the same hover, the same focus
+         ring, the same thing to click when you want to get back to the start. -->
+    <a class="brand" href="/">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+        <g class="stack">
+          <rect x="6.5" y="9" width="5" height="16.5" rx="1"/>
+          <rect x="20.5" y="9" width="5" height="16.5" rx="1"/>
+          <rect x="4" y="25.5" width="24" height="3" rx="1.2"/>
+        </g>
+        <path class="marked" d="M13.5 5.6h5v19.9L16 22.6l-2.5 2.9Z"/>
+      </svg>
+      <h1>Shelfmark<span class="sub">the book, then the aisle</span></h1>
+    </a>
+    <!-- The same three links, in the same order, at the same size, on all three pages. The tool
+         had no nav at all while the other two did, which made arriving from one of them feel like
+         leaving the site. -->
+    <nav class="site-nav">
+      <a href="/" aria-current="page">The tool</a>
+      <a href="/about">How to use</a>
+      <a href="/methodology">Methodology</a>
+    </nav>
   </header>
 
+  <main id="main">
   <!-- Which desk you are standing at decides what "here" means for every search on the page,
        so it sits above the search box rather than inside a panel that starts closed. -->
   <div class="whereami">
@@ -404,29 +670,31 @@
 
   <div class="lookup">
     <label for="q">Search:</label>
-    <input id="q" placeholder="call number, book title, author, ISBN, DOI…" autocomplete="off" autofocus
+    <!-- No `autofocus`: on a phone it opened the keyboard over the page on every load, before
+         anyone had decided they wanted to type. -->
+    <input id="q" placeholder="call number, book title, author, ISBN, DOI…" autocomplete="off"
            enterkeyhint="search" spellcheck="false">
-    <button class="btn" id="go">Search</button>
-    <button class="btn ghost" id="clear">Clear</button>
+    <button class="btn" type="button" id="go">Search</button>
+    <button class="btn ghost" type="button" id="clear">Clear</button>
   </div>
   <div class="routed" id="routed" hidden></div>
-  <div class="sect" id="sect">
+  <div class="sect" id="sect" role="group" aria-label="Which part of Biomed to search">
     <span class="sect-label">Biomed map:</span>
-    <button class="pill active" data-coll="stacks">Main stacks</button>
-    <button class="pill" data-coll="ref">Reference · L4</button>
-    <button class="pill" data-coll="spec">Special Collections · L9</button>
+    <button class="pill active" type="button" data-coll="stacks" aria-pressed="true">Main stacks</button>
+    <button class="pill" type="button" data-coll="ref" aria-pressed="false">Reference · L4</button>
+    <button class="pill" type="button" data-coll="spec" aria-pressed="false">Special Collections · L9</button>
   </div>
-  <div class="result" id="result">
+  <div class="result" id="result" role="status" aria-live="polite">
     <div class="examples">Try a call number:
-      <b data-q="QL737.C22 M616g">QL737.C22</b> ·
-      <b data-q="W1 BI700">W1 BI700</b> ·
-      <b data-q="QW 4 S851b">QW 4 S851b</b> ·
-      <b data-q="BF 400">BF 400</b>
+      <button class="ex" type="button" data-q="QL737.C22 M616g">QL737.C22</button> ·
+      <button class="ex" type="button" data-q="W1 BI700">W1 BI700</button> ·
+      <button class="ex" type="button" data-q="QW 4 S851b">QW 4 S851b</button> ·
+      <button class="ex" type="button" data-q="BF 400">BF 400</button>
       &nbsp;&nbsp;or a book:
-      <b data-q="harrison's principles of internal medicine">harrison&rsquo;s principles</b> ·
-      <b data-q="mesh:neoplasms year:2020+ shelf:yes">mesh:neoplasms year:2020+</b>
+      <button class="ex" type="button" data-q="harrison's principles of internal medicine">harrison&rsquo;s principles</button> ·
+      <button class="ex" type="button" data-q="mesh:neoplasms year:2020+ shelf:yes">mesh:neoplasms year:2020+</button>
       &nbsp;&nbsp;or an article:
-      <b data-q="10.1056/NEJMoa1816897">10.1056/NEJMoa1816897</b>
+      <button class="ex" type="button" data-q="10.1056/NEJMoa1816897">10.1056/NEJMoa1816897</button>
     </div>
   </div>
 
@@ -566,6 +834,9 @@
       </details>
 
       <div class="cat-applied" id="catApplied" hidden></div>
+      <!-- The catalog answers one question with up to 25 sequential requests, so "working on it"
+           has to be visible without waiting for the next sentence of status text to arrive. -->
+      <div class="busy" id="catBusy" hidden aria-hidden="true"></div>
       <div class="cat-status" id="catStatus" role="status" aria-live="polite"></div>
       <div class="cat-results" id="catResults"></div>
     </div>
@@ -590,7 +861,85 @@
         <button class="cat-example" type="button" data-q="10.1056/NEJMoa1816897">a DOI</button>
         <button class="cat-example" type="button" data-q="0028-4793">an ISSN</button>
         <button class="cat-example" type="button" data-q="blueberry antidepressant">a topic</button>
+        <button class="cat-example art-ftog" type="button" id="artFTog" aria-expanded="false" aria-controls="artFilters">Filters</button>
       </div>
+
+      <!-- Filters are shut by default and say their own count when shut, because the panel's
+           short path is a pasted DOI and nothing here applies to one: an identifier goes to the
+           resolver, which knows about one article and has nothing to narrow. -->
+      <div class="art-filters" id="artFilters" hidden>
+        <div class="af-row">
+          <label class="af" for="afField">Search in
+            <select id="afField">
+              <option value="any">Everything</option>
+              <option value="title">Title</option>
+              <option value="creator">Author</option>
+              <option value="sub">Subject</option>
+            </select>
+          </label>
+          <label class="af" for="afType">Kind
+            <select id="afType">
+              <option value="articles">Journal articles</option>
+              <option value="reviews">Reviews</option>
+              <option value="book_chapters">Book chapters</option>
+              <option value="conference_proceedings">Conference papers</option>
+              <option value="dissertations">Dissertations</option>
+              <option value="newspaper_articles">Newspaper articles</option>
+              <option value="books">Books</option>
+              <option value="any">Anything</option>
+            </select>
+          </label>
+          <label class="af" for="afSort">Order
+            <select id="afSort">
+              <option value="rank">Best match</option>
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="title">Title</option>
+              <option value="author">Author</option>
+            </select>
+          </label>
+          <label class="af" for="afLang">Language
+            <select id="afLang">
+              <option value="">Any</option>
+              <option value="eng">English</option>
+              <option value="chi">Chinese</option>
+              <option value="fre">French</option>
+              <option value="ger">German</option>
+              <option value="ita">Italian</option>
+              <option value="jpn">Japanese</option>
+              <option value="kor">Korean</option>
+              <option value="por">Portuguese</option>
+              <option value="rus">Russian</option>
+              <option value="spa">Spanish</option>
+            </select>
+          </label>
+        </div>
+        <div class="af-row">
+          <span class="af-years">
+            <label class="af" for="afFrom">Published from
+              <input id="afFrom" inputmode="numeric" maxlength="4" placeholder="1998" autocomplete="off">
+            </label>
+            <label class="af" for="afTo">to
+              <input id="afTo" inputmode="numeric" maxlength="4" placeholder="2026" autocomplete="off">
+            </label>
+          </span>
+          <span class="af-quick">
+            <button class="pill" type="button" data-years="5">Last 5 years</button>
+            <button class="pill" type="button" data-years="10">Last 10 years</button>
+            <button class="pill" type="button" data-years="">Any year</button>
+          </span>
+        </div>
+        <div class="af-row">
+          <label class="af-check"><input type="checkbox" id="afPeer"> Peer reviewed</label>
+          <label class="af-check"><input type="checkbox" id="afOa"> Free to read anywhere</label>
+          <!-- The journal filter has no field of its own on purpose: the index matches the exact
+               string it stores, so "The Lancet" finds 26 papers and "lancet" finds none. It is
+               set by clicking the journal on a result, where that exact string is already known. -->
+          <span class="af-jt" id="afJtWrap" hidden>Journal: <b id="afJtName"></b><button class="af-x" type="button" id="afJtClear" aria-label="Clear the journal filter">&times;</button></span>
+          <button class="cat-example af-clear" type="button" id="afClear" hidden>Clear filters</button>
+        </div>
+      </div>
+      <div class="busy" id="artBusy" hidden aria-hidden="true"></div>
       <div class="cat-status" id="artStatus" role="status" aria-live="polite"></div>
       <div class="cat-results" id="artOut"></div>
     </div>
@@ -616,10 +965,33 @@
     </div>
   </div>
 
+  <!-- The A-Z list. Fetched on first open rather than on load: it is the whole inventory, and
+       nobody is owed it until they ask. What LibGuides publishes is names, links and one access
+       fact each — there are no descriptions in the feed, so none are promised here. -->
+  <div class="cat" id="db">
+    <div class="cat-head" id="dbHead">
+      <h2>Databases A&ndash;Z <span class="h2-sub" id="dbSummary">everything UCLA licenses, plus what is open to anyone</span></h2>
+      <button class="btn ghost" type="button" id="dbToggle" aria-expanded="false" aria-controls="dbBody"><span class="tgl">Open</span></button>
+    </div>
+    <div class="cat-body" id="dbBody" hidden>
+      <div class="cat-form">
+        <label class="sr-only" for="dbQ">Filter databases by name</label>
+        <input id="dbQ" type="search" placeholder="PubMed, Embase, Scopus&hellip;" autocomplete="off" spellcheck="false" enterkeyhint="search">
+        <button class="btn ghost" type="button" id="dbClear">Clear</button>
+      </div>
+      <div class="db-filters" role="group" aria-label="Narrow the list">
+        <label class="chk"><input type="checkbox" id="dbBest"> Best bets only</label>
+        <label class="chk"><input type="checkbox" id="dbOpen"> Open to anyone</label>
+      </div>
+      <div class="cat-status" id="dbStatus" role="status" aria-live="polite"></div>
+      <div id="dbOut"></div>
+    </div>
+  </div>
+
   <div class="route" id="route">
     <div class="route-head" id="routeHead">
       <h2>Plan a pickup walk <span class="h2-sub">Biomed stacks</span></h2>
-      <button class="btn ghost" type="button"><span class="tgl">Open</span></button>
+      <button class="btn ghost" type="button" id="routeToggle" aria-expanded="false" aria-controls="routeBody"><span class="tgl">Open</span></button>
     </div>
     <div class="route-body" id="routeBody" hidden>
       <p class="route-hint">Upload photos of ILL slips or a pull list (JPEG/PNG) and the call numbers are read for you, or type them in.</p>
@@ -647,7 +1019,9 @@
   <div class="levels" id="levels"></div>
 
   <div class="stage">
-    <div class="planwrap"><svg id="plan" viewBox="0 0 720 400" role="img" aria-label="Floor plan"></svg></div>
+    <!-- `group`, not `img`: the shelves inside are controls, and role="img" made every one of
+         them presentational to a screen reader. -->
+    <div class="planwrap"><svg id="plan" viewBox="0 0 720 400" role="group" aria-label="Floor plan"></svg></div>
     <div class="legend">
       <span><i class="sw" style="background:var(--orange)"></i>orange · top-0 half (L3, L7)</span>
       <span><i class="sw" style="background:var(--green)"></i>green · top-1..16 full</span>
@@ -655,11 +1029,12 @@
       <span><i class="sw" style="background:var(--slate)"></i>slate · bot-0 half (L3)</span>
       <span><i class="sw" style="background:var(--orange)"></i>stairs</span>
       <span><i class="sw" style="background:var(--accent)"></i>elevator</span>
-      <span>│ = double-sided · filled = mapped · — = unmapped</span>
+      <span>│ = double-sided · filled = mapped · – = unmapped</span>
     </div>
   </div>
 
-  <div class="detail empty" id="detail">Tap any shelf to see its mapped ranges, or search a call number above.</div>
+  <div class="detail empty" id="detail" aria-live="polite">Tap any shelf to see its mapped ranges, or search a call number above.</div>
+  </main>
 
   <footer id="footer"></footer>
 </div>
@@ -667,6 +1042,21 @@
 <script>
 /* ===== embedded dataset ===== */
 const DATA = {"10|bot-10|left":{"start":"WA 900.1 M297","end":"WB 39 M294"},"10|bot-10|right":{"start":"WB 39 M294","end":"WB 105 D636b"},"10|bot-11|left":{"start":"WB 400 N9752","end":"WB 925 I43"},"10|bot-11|right":{"start":"WB 925 L315i","end":"WC 450 M441h"},"10|bot-12|left":{"start":"WD 308 A28876","end":"WE 39 E92K"},"10|bot-12|right":{"start":"WE 39 F789S","end":"WE 168 S961"},"10|bot-14|single":{"start":"WF 200 S689t","end":"WF 980 P964"},"10|bot-15|left":{"start":"WG 200 H437","end":"WG 330 E383"},"10|bot-15|right":{"start":"WG 330 E55","end":"WH 100 E96"},"10|bot-16|left":{"start":"WI 141 G2565","end":"WI 702 L7845"},"10|bot-16|right":{"start":"WI 702 L7845","end":"WJ 140 O61"},"10|bot-1|left":{"start":"QW 4 S875m","end":"QW 52 O13"},"10|bot-1|right":{"start":"QW 52 O31b","end":"QW 165.5 P3"},"10|bot-2|left":{"start":"QW 900 L668a","end":"QY 50 C641"},"10|bot-2|right":{"start":"QY 50 C768","end":"QZ 4 W171P"},"10|bot-3|left":{"start":"QZ 202 M7176","end":"QZ 269 P957"},"10|bot-3|right":{"start":"QZ 269 P964","end":"SB 933.37 I59"},"10|top-10|left":{"start":"WA 689 U57p","end":"WA 900.1 L334m"},"10|top-10|right":{"start":"WB 105 D794","end":"WB 290 B598c"},"10|top-11|left":{"start":"WB 290 C641","end":"WB 400 N9747"},"10|top-11|right":{"start":"WC 450 M468","end":"WC 840 C737"},"10|top-12|left":{"start":"WC 840 E18","end":"WD 308 A2887"},"10|top-12|right":{"start":"WE 168 S961","end":"WE 346 D758j"},"10|top-13|left":{"start":"WE 346 C154D","end":"WE 707 C215"},"10|top-13|right":{"start":"WE 707 C215","end":"WE 860 A2435"},"10|top-14|left":{"start":"WE 860 A244","end":"WF 200 R352ti"},"10|top-14|right":{"start":"WF 980 R698p","end":"WG 141 M9397"},"10|top-15|left":{"start":"WG 141 N487n","end":"WG 200 H437"},"10|top-15|right":{"start":"WH 100 F962","end":"WH 380 T231b"},"10|top-16|left":{"start":"WH 380 T255","end":"WI 141 G2565"},"10|top-16|right":{"start":"WJ 140 P393","end":"WJ 348 C616"},"10|top-1|left":{"start":"QW 4 S851b","end":"QW 16 S479"},"10|top-1|right":{"start":"QW 165.5 P6","end":"QW 541 I33"},"10|top-2|left":{"start":"QW 541 I332","end":"QW 900 I35"},"10|top-2|right":{"start":"QZ 4 W883c","end":"QZ 200 A179f"},"10|top-3|left":{"start":"QZ 200 A182c","end":"QZ 202 M693"},"10|top-3|right":{"start":"SB 933.5 B419","end":"SH 174 P963"},"10|top-4|left":{"start":"SH 174 S933","end":"W 13 D731"},"10|top-4|right":{"start":"W 13 D931da","end":"W 20.5 M689"},"10|top-5|left":{"start":"W 20.5 M849t","end":"W 49 H847"},"10|top-5|right":{"start":"W 49 H857d","end":"W 74 D795s"},"10|top-6|left":{"start":"W 74 D795s","end":"W 84 AA1"},"10|top-6|right":{"start":"W 84 AA1","end":"W 89 M473"},"10|top-7|left":{"start":"W 89 M847C","end":"W 867 I43"},"10|top-7|right":{"start":"W 867 I59L","end":"WA 100 M451P"},"10|top-8|left":{"start":"WA 100 M4511","end":"WA 305 S944M"},"10|top-8|right":{"start":"WA 305 T784","end":"WA 440 L676S"},"10|top-9|left":{"start":"WA 440 M161w","end":"WA 540 JV6"},"10|top-9|right":{"start":"WA 540 KA8","end":"WA 689 U57m"},"11|bot-10|left":{"start":"QL 121 S616c","end":"QL 495 C552i"},"11|bot-10|right":{"start":"QL 495 C976","end":"QL 639.2 R425"},"11|bot-11|left":{"start":"QL 737 C22","end":"QL 751 D597s"},"11|bot-11|right":{"start":"QL 751 D7465i","end":"QL 963 N289c"},"11|bot-12|left":{"start":"QS 675 S645r","end":"QT 140 L665a"},"11|bot-12|right":{"start":"QT 140 L722e","end":"QU 25 D628"},"11|bot-14|single":{"start":"QU 140 L151","end":"QU 325 F791c"},"11|bot-15|left":{"start":"QV 39 S224","end":"QV 82 A354"},"11|bot-15|right":{"start":"QV 82 B521","end":"QV 247 N117"},"11|bot-16|left":{"start":"QV 736 T969","end":"QV 766 S971p"},"11|bot-16|right":{"start":"QV 766 T387H","end":"QV 772 M537"},"11|bot-1|left":{"start":"BF 57 F72c","end":"BF 311 C6766"},"11|bot-1|right":{"start":"BF 311 C6767","end":"BF 371 B141h"},"11|bot-2|left":{"start":"BF 575 P9 R951p","end":"BF 697 P975"},"11|bot-2|right":{"start":"BF 697 R277a","end":"BF 713 T65"},"11|bot-3|left":{"start":"H 62 B113s","end":"HM 271 M598o"},"11|bot-3|right":{"start":"HM 271 M598o","end":"HQ 1090 D754m"},"11|top-10|left":{"start":"QK 898 B85","end":"QL 121 S438"},"11|top-10|right":{"start":"QL 639.2 T531r","end":"QL 687 P3"},"11|top-11|left":{"start":"QL 687 P3","end":"QL 737 C22"},"11|top-11|right":{"start":"QL 963 N289c","end":"QS 4 M334e"},"11|top-12|left":{"start":"QS 4 M334e","end":"QS 675 S645r"},"11|top-12|right":{"start":"QU 25 D6295","end":"QU 55 P97"},"11|top-13|left":{"start":"QU 55 P975","end":"QU 83 B615"},"11|top-13|right":{"start":"QU 83 C331","end":"QU 135 C943h"},"11|top-14|left":{"start":"QU 135 G982e","end":"QU 140 J35c"},"11|top-14|right":{"start":"QU 325 G328","end":"QV 34 H191"},"11|top-15|left":{"start":"QV 34 H192","end":"QV 39 S126n"},"11|top-15|right":{"start":"QV 247 N814","end":"QV 600 B915c"},"11|top-16|left":{"start":"QV 600 B915c","end":"QV 736 S797c"},"11|top-16|right":{"start":"QV 772 M721","end":"QV 835 U58pe"},"11|top-1|left":{"start":"AG 5 N421","end":"BF 57 D53"},"11|top-1|right":{"start":"BF 371 B141p","end":"BF 455 D646v"},"11|top-2|left":{"start":"BF 455 E36p","end":"BF 575 S37 G373t"},"11|top-2|right":{"start":"BF 713 T655b","end":"BF 789 D4 6456s"},"11|top-3|left":{"start":"BF 789 D4","end":"H 62 B113s"},"11|top-3|right":{"start":"HQ 1090 M452m","end":"PE 1628 W39c"},"11|top-4|left":{"start":"PE 1628 W39c","end":"QC 175 G939e"},"11|top-4|right":{"start":"QC 176.8 E4 S993","end":"QE 882 P8"},"11|top-5|left":{"start":"QE 882 R6","end":"QH 323.5 Z181b"},"11|top-5|right":{"start":"QH 323.5 Z181b","end":"QH 442.2 G3266"},"11|top-6|left":{"start":"QH 442.2 G328","end":"QH 506 B615"},"11|top-6|right":{"start":"QH 506 B6153","end":"QH 541.5 C7"},"11|top-7|left":{"start":"QH 541.5 C7","end":"QH 581.2 M697"},"11|top-7|right":{"start":"QH 581.2 M718","end":"QH 603 M5 B615"},"11|top-8|left":{"start":"QH 603 M5 E56","end":"QK 177 M682b"},"11|top-8|right":{"start":"QK 177 M682p","end":"QK 495 U48"},"11|top-9|left":{"start":"QK 495 U48","end":"QK 671 M565a"},"11|top-9|right":{"start":"QK 671 M565a","end":"QK 898 B85"},"1|bot-10|left":{"start":"W1 SU861","end":"W1 TE821"},"1|bot-10|right":{"start":"W1 TE821","end":"W1 TI935"},"1|bot-11|left":{"start":"W1 TR336A","end":"W1 TU671"},"1|bot-11|right":{"start":"W1 TU671","end":"W1 UR716"},"1|bot-12|left":{"start":"W1 VI801","end":"W1 VO917"},"1|bot-12|right":{"start":"W1 VO917","end":"W1 WI741"},"1|bot-14|single":{"start":"W2 AN231AN","end":"W2 AW4 P6P"},"1|bot-15|left":{"start":"W3 EU915","end":"W3 IN8715H"},"1|bot-15|right":{"start":"W3 IN8715M","end":"W3 NA794"},"1|bot-16|left":{"start":"W4C K79M","end":"W4C W382I"},"1|bot-16|right":{"start":"W4C W397A","end":"W4C Z89P 2009"},"1|bot-1|left":{"start":"W1 PR611P","end":"W1 PR7498"},"1|bot-1|right":{"start":"W1 PR7499","end":"W1 PR823U"},"1|bot-2|left":{"start":"W1 PS607","end":"W1 PS721M"},"1|bot-2|right":{"start":"W1 PS724","end":"W1 PS827"},"1|bot-3|left":{"start":"W1 RA369","end":"W1 RE160"},"1|bot-3|right":{"start":"W1 RE160","end":"W1 RE230TM"},"1|top-10|left":{"start":"W1 SU823","end":"W1 SU861"},"1|top-10|right":{"start":"W1 TO13","end":"W1 TO977"},"1|top-11|left":{"start":"W1 TO977","end":"W1 TR323"},"1|top-11|right":{"start":"W1 UR716","end":"W1 VE936"},"1|top-12|left":{"start":"W1 VE936","end":"W1 VI801"},"1|top-12|right":{"start":"W1 WI871","end":"W1 YE197"},"1|top-13|left":{"start":"W1 YE205","end":"W1 YE767"},"1|top-13|right":{"start":"W1 YE823","end":"W1 ZH765"},"1|top-14|left":{"start":"W1 ZH765","end":"W2 AN231AN"},"1|top-14|right":{"start":"W2 AW4 D6P","end":"W3 AD215"},"1|top-15|left":{"start":"W3 AD215","end":"W3 EU915"},"1|top-15|right":{"start":"W3 NE161","end":"W3 WO542"},"1|top-16|left":{"start":"W3 WO542","end":"W4C K764I"},"1|top-1|left":{"start":"W1 PR189","end":"W1 PR5606"},"1|top-1|right":{"start":"W1 PR823U","end":"W1 PS377"},"1|top-2|left":{"start":"W1 PS388","end":"W1 PS607"},"1|top-2|right":{"start":"W1 PS836","end":"W1 QU570"},"1|top-3|left":{"start":"W1 QU570","end":"W1 RA349"},"1|top-3|right":{"start":"W1 RE230TM","end":"W1 RE563"},"1|top-4|left":{"start":"W1 RE563","end":"W1 RI309"},"1|top-4|right":{"start":"W1 RI309","end":"W1 RO835"},"1|top-5|left":{"start":"W1 RO835","end":"W1 SC148"},"1|top-5|right":{"start":"W1 SC148","end":"W1 SC308"},"1|top-6|left":{"start":"W1 SC308A","end":"W1 SC831"},"1|top-6|right":{"start":"W1 SC831","end":"W1 SE607K"},"1|top-7|left":{"start":"W1 SE607K","end":"W1 SK371"},"1|top-7|right":{"start":"W1 SL217","end":"W1 SO134"},"1|top-8|left":{"start":"W1 SO134","end":"W1 SO8744"},"1|top-8|right":{"start":"W1 SO8744","end":"W1 SO9885"},"1|top-9|left":{"start":"W1 SO9911","end":"W1 ST469"},"1|top-9|right":{"start":"W1 ST897","end":"W1 SU823"},"2|bot-10|left":{"start":"W1 NE554","end":"W1 NE554"},"2|bot-10|right":{"start":"W1 NE554","end":"W1 NE788"},"2|bot-11|left":{"start":"W1 NO129","end":"W1 NO923"},"2|bot-11|right":{"start":"W1 NO923","end":"W1 NU511"},"2|bot-12|left":{"start":"W1 NU869","end":"W1 OC217"},"2|bot-12|right":{"start":"W1 OC217","end":"W1 OK716"},"2|bot-14|single":{"start":"W1 PA227","end":"W1 PA971"},"2|bot-15|left":{"start":"W1 PE734","end":"W1 PH294"},"2|bot-15|right":{"start":"W1 PH294","end":"W1 PH663"},"2|bot-16|left":{"start":"W1 PL111Y","end":"W1 PL217"},"2|bot-16|right":{"start":"W1 PL217","end":"W1 PO971"},"2|bot-1|left":{"start":"W1 MA757R","end":"W1 MC637"},"2|bot-1|right":{"start":"W1 MD239","end":"W1 ME2379"},"2|bot-2|left":{"start":"W1 ME635P","end":"W1 ME967"},"2|bot-2|right":{"start":"W1 ME967","end":"W1 MI186KH"},"2|bot-3|left":{"start":"W1 MI625","end":"W1 MO283"},"2|bot-3|right":{"start":"W1 MO283","end":"W1 MO287"},"2|top-10|left":{"start":"W1 NE419","end":"W1 NE554"},"2|top-10|right":{"start":"W1 NE793","end":"W1 NI885"},"2|top-11|left":{"start":"W1 NI885","end":"W1 NO122D"},"2|top-11|right":{"start":"W1 NU511","end":"W1 NU701"},"2|top-12|left":{"start":"W1 NU701","end":"W1 NU866"},"2|top-12|right":{"start":"W1 OK716","end":"W1 OP264"},"2|top-13|left":{"start":"W1 OP264","end":"W1 OR129"},"2|top-13|right":{"start":"W1 OR129","end":"W1 OR854"},"2|top-14|left":{"start":"W1 OR854","end":"W1 PA180"},"2|top-14|right":{"start":"W1 PA971","end":"W1 PE135H"},"2|top-15|left":{"start":"W1 PE135H","end":"W1 PE729"},"2|top-15|right":{"start":"W1 PH663","end":"W1 PH925"},"2|top-16|left":{"start":"W1 PH925","end":"W1 PL111"},"2|top-16|right":{"start":"W1 PO971","end":"W1 PO971"},"2|top-1|left":{"start":"W1 MA166","end":"W1 MA757R"},"2|top-1|right":{"start":"W1 ME2379","end":"W1 ME338"},"2|top-2|left":{"start":"W1 ME338","end":"W1 ME635P"},"2|top-2|right":{"start":"W1 MI186KH","end":"W1 MI425"},"2|top-3|left":{"start":"W1 MI425","end":"W1 MI625"},"2|top-3|right":{"start":"W1 MO287","end":"W1 MO295M"},"2|top-4|left":{"start":"W1 MO296A","end":"W1 MO583"},"2|top-4|right":{"start":"W1 MO594","end":"W1 MU869"},"2|top-5|left":{"start":"W1 MU869","end":"W1 NA1991"},"2|top-5|right":{"start":"W1 NA1991","end":"W1 NA835"},"2|top-6|left":{"start":"W1 NA835","end":"W1 NA835"},"2|top-6|right":{"start":"W1 NA839","end":"W1 NE185"},"2|top-7|left":{"start":"W1 NE185","end":"W1 NE252N"},"2|top-7|right":{"start":"W1 NE252N","end":"W1 NE282"},"2|top-8|left":{"start":"W1 NE282","end":"W1 NE286DB"},"2|top-8|right":{"start":"W1 NE286DH","end":"W1 NE286GK"},"2|top-9|left":{"start":"W1 NE286GK","end":"W1 NE411"},"2|top-9|right":{"start":"W1 NE411","end":"W1 NE411"},"3|bot-0|single":{"start":"W1 JA121","end":"W1 JO506"},"3|bot-10|left":{"start":"W1 JO718L","end":"W1 JO728"},"3|bot-10|right":{"start":"W1 JO728","end":"W1 JO7403"},"3|bot-11|left":{"start":"W1 JO757","end":"W1 JO788"},"3|bot-11|right":{"start":"W1 JO788","end":"W1 JO796"},"3|bot-12|left":{"start":"W1 JO829","end":"W1 JO836"},"3|bot-12|right":{"start":"W1 JO836","end":"W1 JO852"},"3|bot-14|single":{"start":"W1 JO922F","end":"W1 JO939"},"3|bot-15|left":{"start":"W1 KI311","end":"W1 LA208"},"3|bot-15|right":{"start":"W1 LA208","end":"W1 LA534"},"3|bot-16|left":{"start":"W1 LI431","end":"W1 LY621"},"3|bot-16|right":{"start":"W1 LY621","end":"W1 LY627"},"3|bot-1|left":{"start":"W1 JO523","end":"W1 JO535"},"3|bot-1|right":{"start":"W1 JO535","end":"W1 JO542"},"3|bot-2|left":{"start":"W1 JO547","end":"W1 JO551V"},"3|bot-2|right":{"start":"W1 JO551V","end":"W1 JO5576"},"3|bot-3|left":{"start":"W1 JO567","end":"W1 JO572"},"3|bot-3|right":{"start":"W1 JO572","end":"W1 JO599"},"3|top-0|single":{"start":"W1 JO506","end":"W1 JO5221"},"3|top-10|left":{"start":"W1 JO714","end":"W1 JO718D"},"3|top-10|right":{"start":"W1 JO7403","end":"W1 JO742H"},"3|top-11|left":{"start":"W1 JO742L","end":"W1 JO756"},"3|top-11|right":{"start":"W1 JO797","end":"W1 JO819"},"3|top-12|left":{"start":"W1 JO819","end":"W1 JO829"},"3|top-12|right":{"start":"W1 JO852","end":"W1 JO886"},"3|top-13|left":{"start":"W1 JO886","end":"W1 JO897VL"},"3|top-13|right":{"start":"W1 JO897VL","end":"W1 JO913"},"3|top-14|left":{"start":"W1 JO913","end":"W1 JO922F"},"3|top-14|right":{"start":"W1 JO939","end":"W1 JO955"},"3|top-15|left":{"start":"W1 JO955","end":"W1 KI311"},"3|top-15|right":{"start":"W1 LA534","end":"W1 LA719"},"3|top-16|left":{"start":"W1 LA719","end":"W1 LI388"},"3|top-1|left":{"start":"W1 JO5221","end":"W1 JO523"},"3|top-1|right":{"start":"W1 JO542","end":"W1 JO542"},"3|top-2|left":{"start":"W1 JO542","end":"W1 JO547"},"3|top-2|right":{"start":"W1 JO5576","end":"W1 JO565"},"3|top-3|left":{"start":"W1 JO565","end":"W1 JO567"},"3|top-3|right":{"start":"W1 JO599","end":"W1 JO6204"},"3|top-4|left":{"start":"W1 JO6204","end":"W1 JO623ML"},"3|top-4|right":{"start":"W1 JO623MP","end":"W1 JO626"},"3|top-5|left":{"start":"W1 JO626","end":"W1 JO629B"},"3|top-5|right":{"start":"W1 JO6292","end":"W1 JO632"},"3|top-6|left":{"start":"W1 JO632","end":"W1 JO6386"},"3|top-6|right":{"start":"W1 JO639N","end":"W1 JO650"},"3|top-7|left":{"start":"W1 JO650","end":"W1 JO656"},"3|top-7|right":{"start":"W1 JO656","end":"W1 JO669"},"3|top-8|left":{"start":"W1 JO669","end":"W1 JO682"},"3|top-8|right":{"start":"W1 JO682","end":"W1 JO6907"},"3|top-9|left":{"start":"W1 JO6907","end":"W1 JO701"},"3|top-9|right":{"start":"W1 JO701","end":"W1 JO714"},"5|bot-10|left":{"start":"W1 HE131","end":"W1 HE548"},"5|bot-10|right":{"start":"W1 HE549","end":"W1 HE925"},"5|bot-11|left":{"start":"W1 HO631","end":"W1 HU440"},"5|bot-11|right":{"start":"W1 HU440","end":"W1 HU471"},"5|bot-12|left":{"start":"W1 IM547A","end":"W1 IN236"},"5|bot-12|right":{"start":"W1 IN236","end":"W1 IN3892"},"5|bot-14|single":{"start":"W1 IN778","end":"W1 IN7886"},"5|bot-15|single":{"start":"W1 IN998","end":"W1 IZ764"},"5|bot-1|left":{"start":"W1 DE244","end":"W1 DE918"},"5|bot-1|right":{"start":"W1 DE926","end":"W1 DE957"},"5|bot-2|left":{"start":"W1 DO181","end":"W1 EC899"},"5|bot-2|right":{"start":"W1 EC899","end":"W1 EM647"},"5|bot-3|left":{"start":"W1 EN996D","end":"W1 ER511"},"5|bot-3|right":{"start":"W1 ER511","end":"W1 EU726"},"5|top-10|left":{"start":"W1 GR845","end":"W1 HE121"},"5|top-10|right":{"start":"W1 HE925","end":"W1 HI703"},"5|top-11|left":{"start":"W1 HI703","end":"W1 HO681"},"5|top-11|right":{"start":"W1 HU470","end":"W1 IB375"},"5|top-12|left":{"start":"W1 IB375","end":"W1 IM547"},"5|top-12|right":{"start":"W1 IN394","end":"W1 IN589P"},"5|top-13|left":{"start":"W1 IN593","end":"W1 IN747"},"5|top-13|right":{"start":"W1 IN747","end":"W1 IN7661"},"5|top-14|left":{"start":"W1 IN7661A","end":"W1 IN778"},"5|top-14|right":{"start":"W1 IN7886","end":"W1 IN795"},"5|top-15|left":{"start":"W1 IN798","end":"W1 IN828"},"5|top-1|left":{"start":"W1 D116","end":"W1 DE244"},"5|top-1|right":{"start":"W1 DE957","end":"W1 DI197"},"5|top-2|left":{"start":"W1 DI197","end":"W1 DO181"},"5|top-2|right":{"start":"W1 EM647","end":"W1 EN197"},"5|top-3|left":{"start":"W1 EN197","end":"W1 EN996D"},"5|top-3|right":{"start":"W1 EU726","end":"W1 EU733M"},"5|top-4|left":{"start":"W1 EU733M","end":"W1 EU736"},"5|top-4|right":{"start":"W1 EU736","end":"W1 EV275"},"5|top-5|left":{"start":"W1 EV275","end":"W1 EX597"},"5|top-5|right":{"start":"W1 EX597","end":"W1 EX623"},"5|top-6|left":{"start":"W1 EX623","end":"W1 FA471"},"5|top-6|right":{"start":"W1 FA471","end":"W1 FE119"},"5|top-7|left":{"start":"W1 FE134","end":"W1 FL302B"},"5|top-7|right":{"start":"W1 FL957","end":"W1 GA361"},"5|top-8|left":{"start":"W1 GA361","end":"W1 GE179"},"5|top-8|right":{"start":"W1 GE191","end":"W1 GE276"},"5|top-9|left":{"start":"W1 GE278","end":"W1 GE383"},"5|top-9|right":{"start":"W1 GE383","end":"W1 GR845"},"6|bot-10|left":{"start":"W1 CA566N","end":"W1 CA583"},"6|bot-10|right":{"start":"W1 CA601","end":"W1 CA672"},"6|bot-11|left":{"start":"W1 CA705","end":"W1 CA756TA"},"6|bot-11|right":{"start":"W1 CA757","end":"W1 CE139"},"6|bot-12|left":{"start":"W1 CE9022","end":"W1 CH295"},"6|bot-12|right":{"start":"W1 CH295","end":"W1 CH819"},"6|bot-14|single":{"start":"W1 CL663","end":"W1 CL671"},"6|bot-15|left":{"start":"W1 CO112","end":"W1 CO435A"},"6|bot-15|right":{"start":"W1 CO435A","end":"W1 CO745"},"6|bot-16|left":{"start":"W1 CU575","end":"W1 CU751R"},"6|bot-16|right":{"start":"W1 CU751R","end":"W1 CU821"},"6|bot-1|left":{"start":"W1 BE126K","end":"W1 BE958E"},"6|bot-1|right":{"start":"W1 BE958E","end":"W1 BI621"},"6|bot-2|left":{"start":"W1 BI636","end":"W1 BI6495"},"6|bot-2|right":{"start":"W1 BI6495","end":"W1 BI652"},"6|bot-3|left":{"start":"W1 BI704","end":"W1 BI838E"},"6|bot-3|right":{"start":"W1 BI838K","end":"W1 BI8764L"},"6|top-10|left":{"start":"W1 CA549R","end":"W1 CA566N"},"6|top-10|right":{"start":"W1 CA676P","end":"W1 CA692"},"6|top-11|left":{"start":"W1 CA692","end":"W1 CA705"},"6|top-11|right":{"start":"W1 CE139","end":"W1 CE144"},"6|top-12|left":{"start":"W1 CE144","end":"W1 CE9022"},"6|top-12|right":{"start":"W1 CH819","end":"W1 CI743"},"6|top-13|left":{"start":"W1 CI743","end":"W1 CL517"},"6|top-13|right":{"start":"W1 CL517","end":"W1 CL613"},"6|top-14|left":{"start":"W1 CL613","end":"W1 CL663"},"6|top-14|right":{"start":"W1 CL674","end":"W1 CL809"},"6|top-15|left":{"start":"W1 CL809","end":"W1 CL871"},"6|top-15|right":{"start":"W1 CO745","end":"W1 CR139"},"6|top-16|left":{"start":"W1 CR139","end":"W1 CU575"},"6|top-16|right":{"start":"W1 CU821","end":"W1 CY967B"},"6|top-1|left":{"start":"W1 B711","end":"W1 BE126K"},"6|top-1|right":{"start":"W1 BI621","end":"W1 BI631"},"6|top-2|left":{"start":"W1 BI635","end":"W1 BI636"},"6|top-2|right":{"start":"W1 BI652","end":"W1 BI652"},"6|top-3|left":{"start":"W1 BI652","end":"W1 BI704"},"6|top-3|right":{"start":"W1 BI8764L","end":"W1 BL467"},"6|top-4|left":{"start":"W1 BL467","end":"W1 BO853"},"6|top-4|right":{"start":"W1 BO853","end":"W1 BR115V"},"6|top-5|left":{"start":"W1 BR115V","end":"W1 BR123"},"6|top-5|right":{"start":"W1 BR123","end":"W1 BR509"},"6|top-6|left":{"start":"W1 BR509","end":"W1 BR531"},"6|top-6|right":{"start":"W1 BR531","end":"W1 BR557"},"6|top-7|left":{"start":"W1 BR557","end":"W1 BR649"},"6|top-7|right":{"start":"W1 BR649","end":"W1 BU167"},"6|top-8|left":{"start":"W1 BU167","end":"W1 BU851"},"6|top-8|right":{"start":"W1 BU851","end":"W1 CA4065"},"6|top-9|left":{"start":"W1 CA4065","end":"W1 CA527"},"6|top-9|right":{"start":"W1 CA527","end":"W1 CA549R"},"7|bot-10|left":{"start":"W1 AM519J","end":"W1 AM523"},"7|bot-10|right":{"start":"W1 AM523","end":"W1 AM538"},"7|bot-11|left":{"start":"W1 AM598","end":"W1 AM6744"},"7|bot-11|right":{"start":"W1 AM6744","end":"W1 AM972"},"7|bot-12|left":{"start":"W1 AN234G","end":"W1 AN261"},"7|bot-12|right":{"start":"W1 AN261","end":"W1 AN602"},"7|bot-14|single":{"start":"W1 AN819","end":"W1 AO671"},"7|bot-15|left":{"start":"W1 AR405","end":"W1 AR423H"},"7|bot-15|right":{"start":"W1 AR423H","end":"W1 AR4471"},"7|bot-16|left":{"start":"W1 AR947P","end":"W1 AT257"},"7|bot-16|right":{"start":"W1 AT257","end":"W1 AU759"},"7|bot-1|left":{"start":"W1 A1Q2","end":"W1 AC489"},"7|bot-1|right":{"start":"W1 AC489","end":"W1 AC745"},"7|bot-2|left":{"start":"W1 AC824","end":"W1 AC869"},"7|bot-2|right":{"start":"W1 AC869","end":"W1 AD153"},"7|bot-3|left":{"start":"W1 AD757","end":"W1 AD844"},"7|bot-3|right":{"start":"W1 AD847","end":"W1 AG342"},"7|top-0|single":{"start":"W1 A1C7","end":"W1 A1C8"},"7|top-10|left":{"start":"W1 AM511","end":"W1 AM519"},"7|top-10|right":{"start":"W1 AM542","end":"W1 AM554"},"7|top-11|left":{"start":"W1 AM554","end":"W1 AM598"},"7|top-11|right":{"start":"W1 AM972","end":"W1 AN173"},"7|top-12|left":{"start":"W1 AN173","end":"W1 AN234G"},"7|top-12|right":{"start":"W1 AN602","end":"W1 AN621"},"7|top-13|left":{"start":"W1 AN621","end":"W1 AN634F"},"7|top-13|right":{"start":"W1 AN634F","end":"W1 AN7852"},"7|top-14|left":{"start":"W1 AN786","end":"W1 AN819"},"7|top-14|right":{"start":"W1 AO671","end":"W1 AQ141"},"7|top-15|left":{"start":"W1 AQ141","end":"W1 AR405"},"7|top-15|right":{"start":"W1 AR4471","end":"W1 AR469"},"7|top-16|left":{"start":"W1 AR469","end":"W1 AR947P"},"7|top-16|right":{"start":"W1 AU771","end":"W1 AW469"},"7|top-1|left":{"start":"W1 A1C8","end":"W1 A1Q2"},"7|top-1|right":{"start":"W1 AC7485","end":"W1 AC809"},"7|top-2|left":{"start":"W1 AC809","end":"W1 AC824"},"7|top-2|right":{"start":"W1 AD153","end":"W1 AD751"},"7|top-3|left":{"start":"W1 AD751","end":"W1 AD757"},"7|top-3|right":{"start":"W1 AG342","end":"W1 AL157"},"7|top-4|left":{"start":"W1 AL157","end":"W1 AM169"},"7|top-4|right":{"start":"W1 AM169","end":"W1 AM302"},"7|top-5|left":{"start":"W1 AM302","end":"W1 AM343"},"7|top-5|right":{"start":"W1 AM343","end":"W1 AM4225"},"7|top-6|left":{"start":"W1 AM4225","end":"W1 AM4733"},"7|top-6|right":{"start":"W1 AM4733","end":"W1 AM477"},"7|top-7|left":{"start":"W1 AM477","end":"W1 AM482"},"7|top-7|right":{"start":"W1 AM482","end":"W1 AM489H"},"7|top-8|left":{"start":"W1 AM489H","end":"W1 AM4945"},"7|top-8|right":{"start":"W1 AM4945","end":"W1 AM4986"},"7|top-9|left":{"start":"W1 AM4986","end":"W1 AM511"},"7|top-9|right":{"start":"W1 AM511","end":"W1 AM511"},"8|bot-10|left":{"start":"WO 925 P3714","end":"WP 570 T255"},"8|bot-10|right":{"start":"WP 570 T783","end":"WQ 200 A629"},"8|bot-11|left":{"start":"WS 17 D993C","end":"WS 105.5 C7"},"8|bot-11|right":{"start":"WS 105.5 C7","end":"WS 200 P3706"},"8|bot-12|left":{"start":"WS 420 H236","end":"WT 100 F946A"},"8|bot-12|right":{"start":"WT 100 F981","end":"WU 18 C678E"},"8|bot-14|single":{"start":"WW 145 M718","end":"WW 400 W168C"},"8|bot-15|left":{"start":"WY 16 B469E","end":"WY 33 AA1"},"8|bot-15|right":{"start":"WY 33 AA1","end":"WY 100 F97984"},"8|bot-16|left":{"start":"WY 157.3 D651M","end":"Z 675 H7"},"8|bot-16|right":{"start":"Z 675 H7 D628","end":"ZQV 38 H335D"},"8|bot-1|left":{"start":"WJ 752 Q5","end":"WK 400 S961"},"8|bot-1|right":{"start":"WK 400 T5465","end":"WL 20 N277I"},"8|bot-2|left":{"start":"WL 102.8 N398","end":"WL 141 E195"},"8|bot-2|right":{"start":"WL 141 E38","end":"WL 310 R438"},"8|bot-3|left":{"start":"WL 400 A517S","end":"WM 13 D5536"},"8|bot-3|right":{"start":"WM 13 D5537","end":"WM 33 AA1"},"8|top-10|left":{"start":"WO 245 M295","end":"WO 925 P371"},"8|top-10|right":{"start":"WQ 200 B171P","end":"WQ 300 Y69C"},"8|top-11|left":{"start":"WQ 305 D576","end":"WS 17 C719"},"8|top-11|right":{"start":"WS 200 P3707","end":"WS 350 G741C"},"8|top-12|left":{"start":"WS 350 G815P","end":"WS 420 H233H"},"8|top-12|right":{"start":"WU 18 C739","end":"WU 240 G491C"},"8|top-13|left":{"start":"WU 240 G155P","end":"WV 100 S4313"},"8|top-13|right":{"start":"WV 100 S4313","end":"WV 540 S961"},"8|top-14|left":{"start":"WV 540 T892S","end":"WW 145 L137P"},"8|top-14|right":{"start":"WW 400 W168C","end":"WX 155 H434"},"8|top-15|left":{"start":"WX 155 K88R","end":"WY 16 A652"},"8|top-15|right":{"start":"WY 100 F97984","end":"WY 150 A497"},"8|top-16|left":{"start":"WY 150 A846","end":"WY 157.3 D547M"},"8|top-16|right":{"start":"ZQV 77.7 A139","end":"ZWZ 112 M889"},"8|top-1|left":{"start":"WJ 752 P968","end":"WK 835 V3315"},"8|top-1|right":{"start":"WL 20 N494","end":"WL 102 B8137"},"8|top-2|left":{"start":"WL 102 B814","end":"WL 102.8 N279N"},"8|top-2|right":{"start":"WL 310 S838B","end":"WL 355 C416"},"8|top-3|left":{"start":"WL 355 C4176","end":"WL 400 A468D"},"8|top-3|right":{"start":"WM 33 AA1","end":"WM 100 D299A"},"8|top-4|left":{"start":"WM 100 D299A","end":"WM 141 I24E"},"8|top-4|right":{"start":"WM 141 I31","end":"WM 172 C968"},"8|top-5|left":{"start":"WM 172 C9763","end":"WM 190 P232P"},"8|top-5|right":{"start":"WM 190 P232S","end":"WM 220 C737"},"8|top-6|left":{"start":"WM 220 C748","end":"WM 274 C466U"},"8|top-6|right":{"start":"WM 274 C536","end":"WM 415 L469C"},"8|top-7|left":{"start":"WM 415 L989","end":"WM 420 W836P"},"8|top-7|right":{"start":"WM 420 W848H","end":"WM 450.5 M8"},"8|top-8|left":{"start":"WM 450.5 M8","end":"WM 460.5 P3"},"8|top-8|right":{"start":"WM 460.5 P3","end":"WN 110 P8958"},"8|top-9|left":{"start":"WN 110 S468B","end":"WN 620 C881R"},"8|top-9|right":{"start":"WN 620 C964H","end":"WO 245 M294"},"9|bot-10|left":{"start":"WC 160 G7.78T","end":"WM 11.1 K189H"},"9|bot-10|right":{"start":"WM 11.1 K61J","end":"WX 27 GF7 G479H"},"9|bot-11|left":{"start":"WX 27 GF7 P3R5D","end":"WZ 55 M439Q"},"9|bot-11|right":{"start":"WZ 56 B422S","end":"WZ 80.5 A8 A165B"},"9|bot-12|left":{"start":"WZ 80.5 A8 A518M","end":"WZ 100 D259AO"},"9|bot-12|right":{"start":"WZ 100 D259AO","end":"WZ 100 H369K"},"9|bot-14|single":{"start":"WZ 100 H369M","end":"WZ 100 M549W"},"9|bot-15|left":{"start":"WZ 100 M551S","end":"WZ 100 S444A"},"9|bot-15|right":{"start":"WZ 100 S444K","end":"WZ 140 AP4 D583P"},"9|bot-16|left":{"start":"WZ 140 AU8 N663G","end":"WZ 292 C744"},"9|bot-16|right":{"start":"WZ 292 C817","end":"ZWZ 330"},"9|bot-1|left":{"start":"A","end":"CB 53 B262I"},"9|bot-1|right":{"start":"CB 53 B772H","end":"Q 41 R81R8"},"9|bot-2|left":{"start":"Q 41 R81S7","end":"QH 197 M745F"},"9|bot-2|right":{"start":"QH 204 B726E","end":"QV 711 S128"},"9|bot-3|left":{"start":"QV 711 S587M","end":"W 19 U645D"},"9|bot-3|right":{"start":"W 19 U645D","end":"WC 515 I44I"}};
+
+/* ===== what goes into the page =====
+   Every panel below grew its own copy of this, for a reason each one documents. The shelf map
+   had none, and put the search box straight into `innerHTML` inside a `<code>` tag, uppercased.
+   Uppercasing is not escaping — tag and attribute names are case-insensitive, and `&#60;` comes
+   through it unchanged — so a call number with a tag in it was a tag. These two are the shared
+   pair for the code above the panels. */
+const escHtml = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* A URL is only a link if it is the web. Escaping stops a quote from breaking out of the
+   attribute; it does nothing about `javascript:`, and several of these URLs are written by
+   upstreams we do not control. */
+function safeHref(u){
+  const s=String(u==null?'':u).trim();
+  return /^https?:\/\//i.test(s) ? s : '';
+}
 
 /* ===== NLM call-number comparator =====
    Tolerant of how people actually type call numbers:
@@ -741,7 +1131,11 @@ function scheme(cn){ return /^\s*W[1-4]([A-Z]|\b)/i.test(cn||'') ? 'w1' : 'nlm';
 const STACK_LEVELS=[1,2,3,4,5,6,7,8,9,10,11];
 const SPECIAL_FLOORS={4:'Reference'};
 const COLL_TO_LEVEL={ref:4, spec:9};
-const LEVEL_TO_COLL={4:'ref'};
+/* The inverse has to be complete. With only floor 4 in here, picking floor 9 off the levels bar
+   left the section on "Main stacks" while the map showed Special Collections, and the stacks
+   search skips every `9|` key by design — so every search from that state was a guaranteed miss
+   against shelves the reader was looking straight at. */
+const LEVEL_TO_COLL={4:'ref', 9:'spec'};
 let collection='stacks';
 const SHELVES=[];
 SHELVES.push({id:'top-0',  index:0, row:'top',    group:'orange', type:'half'});
@@ -916,7 +1310,18 @@ function renderPlan(){
   const {botY,botH}=PLAN;
   let svg=planShelves(level,null,true)+planFeatures();
   plan.innerHTML=svg; plan.setAttribute('viewBox',`0 0 720 ${botY+botH+16}`);
+  plan.setAttribute('aria-label',`Floor plan, level ${level}`);
 }
+
+/* Bound once, on the container, rather than written into four hundred generated elements: a
+   shelf that answers a click has to answer the keyboard equivalent too. */
+document.getElementById('plan').addEventListener('keydown',e=>{
+  if(e.key!=='Enter' && e.key!==' ' && e.key!=='Spacebar') return;
+  const g=e.target.closest && e.target.closest('g.shelf[role="button"]');
+  if(!g) return;
+  e.preventDefault();
+  g.dispatchEvent(new MouseEvent('click',{bubbles:true}));
+});
 
 /* The stacks themselves. Drawn by the big floor plan and by the small per-floor walk maps, so
    the two are the same picture rather than two drawings of the same building — same frames,
@@ -926,6 +1331,18 @@ function renderPlan(){
    (its shelf-group colour when a range is mapped, empty when not). The walk map uses it to
    colour the faces it is sending you to. `interactive` adds the click handlers, which only the
    big plan wants. */
+/* What a shelf is called out loud. The visual answer is a position on a drawing, which is no
+   answer at all if the drawing is not what you are using; the ranges are the point. */
+function shelfLabel(lvl, s){
+  const parts=[`Index ${s.index}, ${s.row} row, level ${lvl}`];
+  sidesOf(s).forEach(side=>{
+    const d=DATA[k(lvl,s.id,side)];
+    if(d) parts.push(`${sideName[side]}: ${d.start} to ${d.end}`);
+  });
+  if(parts.length===1) parts.push('no ranges mapped');
+  return parts.join('. ');
+}
+
 function planShelves(lvl, tint, interactive){
   const {startX,topY,topH,botY,botH}=PLAN;
   const cx=colX;
@@ -953,8 +1370,8 @@ function planShelves(lvl, tint, interactive){
       if(present){
         inner+=`<text class="face" x="${c-w/2}" y="${y+h-6}" text-anchor="middle">L</text>`;
         inner+=`<text class="face" x="${c+w/2}" y="${y+h-6}" text-anchor="middle">R</text>`;
-        if(!lFill) inner+=`<text x="${c-w/2}" y="${y+h/2+5}" text-anchor="middle" font-family="var(--mono)" font-size="15" fill="var(--ink-soft)">—</text>`;
-        if(!rFill) inner+=`<text x="${c+w/2}" y="${y+h/2+5}" text-anchor="middle" font-family="var(--mono)" font-size="15" fill="var(--ink-soft)">—</text>`;
+        if(!lFill) inner+=`<text x="${c-w/2}" y="${y+h/2+5}" text-anchor="middle" font-family="var(--mono)" font-size="15" fill="var(--ink-soft)">–</text>`;
+        if(!rFill) inner+=`<text x="${c+w/2}" y="${y+h/2+5}" text-anchor="middle" font-family="var(--mono)" font-size="15" fill="var(--ink-soft)">–</text>`;
       }
     } else {
       const w=9;
@@ -964,10 +1381,17 @@ function planShelves(lvl, tint, interactive){
       inner+=`<rect class="frame" x="${c}" y="${y}" width="${w*2}" height="${h}" rx="3"/>`;
       if(present){
         inner+=`<text class="face" x="${c+w}" y="${y+h-6}" text-anchor="middle">R</text>`;
-        if(!sFill) inner+=`<text x="${c+w}" y="${y+h/2+5}" text-anchor="middle" font-family="var(--mono)" font-size="15" fill="var(--ink-soft)">—</text>`;
+        if(!sFill) inner+=`<text x="${c+w}" y="${y+h/2+5}" text-anchor="middle" font-family="var(--mono)" font-size="15" fill="var(--ink-soft)">–</text>`;
       }
     }
-    svg+=`<g class="${cls}"${click}>${inner}</g>`;
+    /* An interactive shelf is a button, and has to say so and be reachable: these were bare
+       <g> elements with an onclick, inside a container marked role="img", which made them
+       invisible to a keyboard and presentational to a screen reader. Enter and Space are wired
+       once, by delegation, in renderPlan. */
+    const a11y=(interactive&&present)
+      ? ` role="button" tabindex="0" aria-label="${escHtml(shelfLabel(lvl,s))}"`
+      : ' aria-hidden="true"';
+    svg+=`<g class="${cls}"${click}${a11y}>${inner}</g>`;
   });
   for(let i=0;i<=16;i++) svg+=`<text class="idx" x="${cx(i)}" y="38" text-anchor="middle">${i}</text>`;
   // Both row labels are SVG text at the SAME font-size so they scale identically with the plan.
@@ -1010,9 +1434,17 @@ function planFeatures(){
 }
 
 /* ===== section pills + level sync ===== */
+/* `.pill` is the shared look, not a group: the catalog's scope and mode pills, the article
+   panel's year pills and the hours day strip all wear it too. Selecting every one of them meant
+   picking a floor quietly un-highlighted "Keyword" and "today" in panels the reader had not
+   touched. The section pills are the ones with a `data-coll`. */
 function setCollection(coll){
   collection = coll;
-  document.querySelectorAll('.pill').forEach(p=>p.classList.toggle('active', p.dataset.coll===coll));
+  document.querySelectorAll('#sect .pill').forEach(p=>{
+    const on = p.dataset.coll===coll;
+    p.classList.toggle('active', on);
+    p.setAttribute('aria-pressed', String(on));
+  });
 }
 function syncCollectionToLevel(){
   setCollection(LEVEL_TO_COLL[level] || 'stacks');
@@ -1025,12 +1457,17 @@ function renderLevels(){
     const has=levelsWithData[l];
     const special = SPECIAL_FLOORS[l];
     const n = has ? Object.keys(DATA).filter(k=>k.startsWith(l+'|')).length : 0;
-    const b=document.createElement('div');
+    // A real button, because it is one: these were plain divs with an onclick, so the whole
+    // floor selector was unreachable without a mouse.
+    const b=document.createElement('button');
+    b.type='button';
     let cls='lvl'+(l===level?' active':'');
     if(!has){ cls += special ? ' special' : ' empty'; }
     b.className=cls;
-    const sub = has ? (n+' faces') : (special ? (l===4?'Ref':'Spec') : '—');
+    const sub = has ? (n+' faces') : (special ? (l===4?'Ref':'Spec') : '–');
     b.innerHTML=`${l}<small>${sub}</small>`;
+    b.setAttribute('aria-pressed', String(l===level));
+    b.setAttribute('aria-label', `Level ${l}${special?' · '+special:''}${has?` · ${n} shelf faces mapped`:' · not mapped'}`);
     b.onclick=()=>{ level=l; selected=null; flashId=null; syncCollectionToLevel(); renderLevels(); renderPlan(); renderDetail(); };
     el.appendChild(b);
   });
@@ -1069,7 +1506,7 @@ function locate(){
   if(hd){ q=hd[1].trim(); inp.value=q; setCollection('spec'); }
   const out=document.getElementById('result');
   if(collection==='ref'){
-    const subject = q ? `<code>${q.toUpperCase()}</code>` : 'Your book';
+    const subject = q ? `<code>${escHtml(q.toUpperCase())}</code>` : 'Your book';
     out.innerHTML = `<div class="hit"><div class="loc">Floor 4 · Reference</div>`+
       `<div class="rng">${subject} is on floor 4, shelved by call number.</div></div>`;
     level=4; selected=null; flashId=null;
@@ -1098,7 +1535,7 @@ function locate(){
       renderLevels(); renderPlan(); renderDetail();
       setTimeout(()=>{flashId=null;renderPlan();},1600);
     } else {
-      out.innerHTML=`<div class="miss">No mapped Special Collections range contains <code>${q.toUpperCase()}</code>.</div>`;
+      out.innerHTML=`<div class="miss">No mapped Special Collections range contains <code>${escHtml(q.toUpperCase())}</code>.</div>`;
       level=9; renderLevels(); renderPlan(); renderDetail();
     }
     return;
@@ -1126,20 +1563,21 @@ function locate(){
     renderLevels(); renderPlan(); renderDetail();
     setTimeout(()=>{flashId=null;renderPlan();},1600);
   } else {
-    out.innerHTML=`<div class="miss">No mapped shelf contains <code>${q.toUpperCase()}</code>. It may be on a level not yet entered, or outside the mapped ranges.</div>`;
+    out.innerHTML=`<div class="miss">No mapped shelf contains <code>${escHtml(q.toUpperCase())}</code>. It may be on a level not yet entered, or outside the mapped ranges.</div>`;
   }
 }
 
+/* The instructions used to live here, and grew until the tool ended with more prose than tool.
+   They are two pages now, /about.html and /methodology.html, which is where someone who wants
+   them can read them properly and where someone who does not is not scrolling past them. What
+   stays is the pair of links and the byline. */
 document.getElementById('footer').innerHTML=
-  'Type a call number as printed. Spaces and the Cutter dot are optional, so <code>QL737.C22</code>, <code>QL 737 C22</code> and <code>W1 JO600</code> all work. A W1 number needs the space after W1. '+
-  'The locator finds the shelf whose range contains it, comparing class letters, then class number, then each Cutter as a decimal, so AM4733 sorts before AM477. '+
-  'Each green column is a double-sided shelf (L and R faces); black is the bottom row. Where a range start equals its end, many volumes share one call number, so every matching shelf is returned and you check the spine. '+
-  'Reference is on floor 4 and Special Collections on floor 9. Switch the Biomed map pill to search those.'+
+  '<a href="/about">How to use this</a> &middot; <a href="/methodology">How it works</a>'+
   /* The byline is also the disclaimer. Anything that searches a university catalog and draws
      its floors will be taken for an official service unless it says otherwise in its own
      voice, and saying so once here is cheaper than being asked. */
   '<span class="by">Built by <a href="https://phineasfritsch.com">Phineas Fritsch</a>. '+
-  'The shelf map is surveyed by hand and the catalog data comes from UCLA\'s public SRU endpoint. '+
+  'The shelf map is surveyed by hand and the data comes from UCLA&rsquo;s public endpoints. '+
   'Not affiliated with, or endorsed by, the UCLA Library.</span>';
 
 /* ===== init ===== */ renderLevels(); renderPlan(); renderDetail();
@@ -1217,7 +1655,7 @@ function unifiedSearch(){
 document.getElementById('go').onclick=unifiedSearch;
 document.getElementById('clear').onclick=()=>{document.getElementById('q').value='';document.getElementById('result').innerHTML='';showRouted('');selected=null;flashId=null;setCollection('stacks');renderPlan();renderDetail();if(window.catalogClear)window.catalogClear();};
 document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')unifiedSearch();});
-document.querySelectorAll('.examples b').forEach(b=>b.onclick=()=>{document.getElementById('q').value=b.dataset.q;if(looksLikeCallNumber(b.dataset.q))setCollection('stacks');unifiedSearch();});
+document.querySelectorAll('.examples .ex').forEach(b=>b.onclick=()=>{document.getElementById('q').value=b.dataset.q;if(looksLikeCallNumber(b.dataset.q))setCollection('stacks');unifiedSearch();});
 
 /* ===== Smart paste: accept full UCLA catalog Ctrl+A text =====
    Looks for the location line pattern: "Biomed Library ; W3 JA271 1977"
@@ -1284,7 +1722,13 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
         drop=$('drop'), fileInput=$('files'), cam=$('camera');
   let tessLoaded=false, heicLoaded=false, tessWorker=null;
 
-  head.addEventListener('click',()=>{ body.hidden=!body.hidden; head.querySelector('.tgl').textContent=body.hidden?'Open':'Close'; });
+  head.addEventListener('click',()=>{
+    body.hidden=!body.hidden;
+    head.querySelector('.tgl').textContent=body.hidden?'Open':'Close';
+    // This was the one disclosure of the four whose state nothing but a sighted reader could see.
+    const t=$('routeToggle');
+    if(t) t.setAttribute('aria-expanded',String(!body.hidden));
+  });
   $('pick').addEventListener('click',e=>{ e.stopPropagation(); fileInput.click(); });
   $('shoot').addEventListener('click',e=>{ e.stopPropagation(); cam.click(); });
   fileInput.addEventListener('change',e=>handleFiles(e.target.files));
@@ -1299,12 +1743,17 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
   function lines(){ return cnList.value.split(/[\n\r]+/).map(s=>s.trim()).filter(Boolean); }
   function setLines(arr){ cnList.value=arr.join('\n'); }
 
-  /* ---- OCR ---- */
+  /* ---- OCR ----
+     Both libraries are pinned to an exact version and checked against a hash of the bytes that
+     were reviewed. `@5` was a moving target: whatever jsDelivr decided that tag meant on the
+     morning someone opened the page ran here, with the run of the document. */
   function loadTess(){
     if(tessLoaded) return Promise.resolve();
     return new Promise((res,rej)=>{
       const s=document.createElement('script');
-      s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+      s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+      s.integrity='sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F';
+      s.crossOrigin='anonymous';
       s.onload=()=>{ tessLoaded=true; res(); };
       s.onerror=()=>rej(new Error('Could not load the text-recognition library (are you offline?). You can still type call numbers below.'));
       document.head.appendChild(s);
@@ -1328,6 +1777,8 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     return new Promise((res,rej)=>{
       const s=document.createElement('script');
       s.src='https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js';
+      s.integrity='sha384-OTofQ0MEeiSgh62havBcemCIK0gqj809wX6UA0uPISNMRnR6NZyCdGzX3SbLrgwL';
+      s.crossOrigin='anonymous';
       s.onload=()=>{ heicLoaded=true; res(); };
       s.onerror=()=>rej(new Error('Could not load the HEIC photo converter (are you offline?).'));
       document.head.appendChild(s);
@@ -1679,7 +2130,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       h+=`<li><span class="sn" style="background:${orderColor(st.n-1,n)}">${st.n}</span>`
        + `<span class="sd"><span class="k">${arrow[st.head]} ${move}</span> to ${aisleShort(st.x)}</span>`
        + `<span class="sat"><span class="k">${st.index}${face[st.side]||''}</span> ${st.row}</span>`
-       + `<span class="scn">${st.cns.join(' · ')}</span>`
+       + `<span class="scn">${st.cns.map(escHtml).join(' · ')}</span>`
        + `<span class="srng">${st.range.start} → ${st.range.end}</span></li>`;
     });
     if(outDoor){
@@ -1688,7 +2139,9 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     }
     return h+'</ol>';
   }
-  function miss(arr){ return `<div class="itin-miss">Not located (${arr.length}): ${arr.join(' · ')}<br>Mis-read by OCR, shelved in Reference on floor 4, or outside the mapped ranges. Fix the spelling above and rebuild.</div>`; }
+  /* These are lines out of the textarea. What OCR puts there is filtered down to [A-Z0-9. ],
+     but what a reader types or pastes is whatever they typed or pasted. */
+  function miss(arr){ return `<div class="itin-miss">Not located (${arr.length}): ${arr.map(escHtml).join(' · ')}<br>Mis-read by OCR, shelved in Reference on floor 4, or outside the mapped ranges. Fix the spelling above and rebuild.</div>`; }
 
   window.routeShow=function(lvl,id){ level=lvl; selected=id; flashId=id; if(typeof syncCollectionToLevel==='function') syncCollectionToLevel(); renderLevels(); renderPlan(); renderDetail(); setTimeout(()=>{ flashId=null; renderPlan(); },1600); const st=document.querySelector('.stage'); if(st) st.scrollIntoView({behavior:'smooth',block:'center'}); };
 })();
@@ -3127,11 +3580,16 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
         WEAK=60, WIDEN_MARGIN=40; // "nothing here resembles the title" / "out there is clearly better"
   let mode='kw', library='biomed', scopeMode='here', ctl=null, seq=0,
       loaded=[], total=0, lastQuery='', rankQuery='', relaxedTo='', usedScope='biomed',
-      widenReason='', relaxedBy='', parsed=null, ctx=null, modeAuto=false, widenedAway=false;
+      widenReason='', relaxedBy='', parsed=null, ctx=null, modeAuto=false, widenedAway=false,
+      // What Primo would have spelled it, kept so an empty answer can say spelling was not the problem.
+      spelledAs='';
 
   const MODE_FIELD={kw:'keyword', title:'title', author:'author', isbn:'isbn'};
 
   function setStatus(msg,err){ statusEl.innerHTML=msg||''; statusEl.classList.toggle('err',!!err); }
+
+  const busyEl=$('catBusy');
+  function setBusy(on){ if(busyEl) busyEl.hidden=!on; }
 
   /* Every control in the Filters panel is shorthand for a token you could have typed. It is
      compiled to exactly that, and the compiled string is shown back, so nothing narrows the
@@ -3253,6 +3711,39 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
   async function countOnly(query,signal){
     const r=await sru(query.replace(/ sortBy .*$/,''), 1, signal, 0);
     return r.total;
+  }
+
+  /* Primo's dictionary, one request, no catalog probes.
+
+     SRU has nothing like this. It matches the words it is given and returns zero for a
+     misspelling with no hint about which word was wrong, which is why the three-rung ladder
+     below exists at all — it reconstructs, out of the catalog's own vocabulary, an answer that
+     Primo simply knows. Primo runs over UCLA's holdings too, so a book title it corrects is a
+     book title SRU can then find.
+
+     Where the ladder is stronger: it only ever repairs a word that is in *no* UCLA record, and
+     it verifies every candidate against what was typed, so it does not guess. Where it cannot
+     help at all: two broken words, a broken word under six letters, a single-word query, and a
+     query longer than six words — each of those returns '' immediately. Primo answers all four,
+     so it is asked first and the ladder becomes the fallback rather than the only hope.
+
+     Memoised because a reader who retries the same typo, or switches search field and tries
+     again, should not spend a second request on the same answer. */
+  const SPELLINGS=new Map();
+  async function primoSpelling(text,signal){
+    const t=(text||'').trim();
+    if(!t) return '';
+    if(SPELLINGS.has(t)) return SPELLINGS.get(t);
+    let s='';
+    try{
+      const r=await fetch('/api/suggest?q='+encodeURIComponent(t),{signal});
+      if(r.ok) s=((await r.json()).suggest||'').trim();
+    }catch(e){
+      if(e.name==='AbortError') throw e;
+      s='';                              // Primo being unreachable is not the catalog failing
+    }
+    SPELLINGS.set(t,s);
+    return s;
   }
 
   /* Find the one word that is in no UCLA record and repair it. Three rungs, cheapest first,
@@ -3467,6 +3958,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     if(reset){ reqSpent=0; perf.reqs=0; perf.cached=0; perf.records=0; }
     let budgetHit=false;
 
+    setBusy(true);
     try{
       if(!reset){
         setStatus('Loading more\u2026');
@@ -3474,7 +3966,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
         if(mine!==seq) return;
         total=more.total; loaded=loaded.concat(more.records);
       } else {
-        loaded=[]; total=0; parsed=p; rankQuery=p.text||eq.typed; relaxedTo=''; relaxedBy=''; ctx=null; widenReason='';
+        loaded=[]; total=0; parsed=p; rankQuery=p.text||eq.typed; relaxedTo=''; relaxedBy=''; ctx=null; widenReason=''; spelledAs='';
         const chain=scopeChain(p);
         const wide=chain[chain.length-1];
         // Pass 1: the query exactly as typed.
@@ -3491,9 +3983,35 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
              into "could not reach the catalog" would blame the network for a spending limit. */
           try{
 
+          /* Pass 1: ask Primo how it is spelled. One request, and it is not a catalog request,
+             so it does not touch the probe budget the two passes below spend. Its answer is
+             still verified against SRU before it is used — Primo corrects against its own
+             dictionary, which is not the same thing as a UCLA record existing. */
+          const spelled=await primoSpelling(p.text,signal);
+          if(mine!==seq) return;
+          if(spelled && norm(spelled)!==norm(p.text)){
+            spelledAs=spelled;
+            /* A correction that keeps none of the words is not a correction. Primo corrects a
+               word against its dictionary with no idea what the reader meant, and on a
+               one-word query there is no context to save it: "srugged" comes back as "drugged",
+               which matches real books about real drugs and would be presented as the answer.
+               So a suggestion is applied only when something it kept anchors it, and otherwise
+               it is offered rather than taken — the reader can see "drugged" and judge it.
+               This follows the ladder below, which would rather say nothing than answer the
+               wrong question confidently. */
+            const kept=norm(spelled).split(' ').filter(Boolean)
+              .some(w => norm(p.text).split(' ').includes(w));
+            if(kept){
+              setStatus('Nothing matches “'+esc(p.text)+'”. Primo spells it “'+esc(spelled)+'”. Checking…');
+              const n=await countOnly(buildCQL(Object.assign({},p,{text:spelled}),field,wide,'best'),signal);
+              if(mine!==seq) return;
+              if(n){ recovered=spelled; recoveredBy='repair'; }
+            }
+          }
+
           /* Pass 2a: repair the broken word. See `wordRepairs` for why this exists — dropping
              a word is useless when the word that survives is "atlas". */
-          const fixed=await repairQuery(p,field,wide,signal,mine);
+          const fixed=recovered?'':await repairQuery(p,field,wide,signal,mine);
           if(fixed===null) return;
           if(fixed){ recovered=fixed; recoveredBy='repair'; }
 
@@ -3572,10 +4090,22 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       if(mine!==seq) return;
 
       if(!total){
+        /* Two different things Primo's spelling can mean here, and they need different offers.
+           Either it was tried and UCLA has no record of it either — worth saying, because it
+           tells the reader the typo they are staring at is not what went wrong — or it was too
+           unanchored to apply on its own, in which case it is put in front of them as a button
+           and they can decide whether "drugged" was what they meant. */
+        const offer=spelledAs && norm(spelledAs).split(' ').filter(Boolean)
+          .every(w => !norm(p.text).split(' ').includes(w));
         out.innerHTML='<div class="cat-empty">No UCLA record matches <span class="k">'+esc(eq.full)+'</span>'+
           (p.text?', even after retrying with fewer words':'')+'. '+
+          (offer?'Primo spells it <button class="cat-example cat-sug" type="button">'+esc(spelledAs)+'</button>. Search that instead? '
+                :(spelledAs?'Primo spells it <span class="k">'+esc(spelledAs)+'</span>, which UCLA has no record of either. ':''))+
           (p.notes.length?'Filters are active; clearing them widens the search. ':'')+
-          'Check the spelling, or switch the search field above. Keyword is the loosest.</div>';
+          (spelledAs?'Otherwise try a different field above. Keyword is the loosest.'
+                    :'Check the spelling, or switch the search field above. Keyword is the loosest.')+'</div>';
+        const sugBtn=out.querySelector('.cat-sug');
+        if(sugBtn) sugBtn.addEventListener('click',()=>{ input.value=spelledAs; run(true); });
         setStatus('');
         return;
       }
@@ -3608,6 +4138,12 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       if(mine!==seq) return;
       out.innerHTML='';
       setStatus('Could not reach the catalog: '+esc(e.message||'network error')+'. Check the connection and search again.',true);
+    }finally{
+      /* `finally`, because this function returns from a dozen places — every superseded-search
+         check is a `return` — and a progress bar left spinning over a finished answer is a lie
+         the reader has no way to clear. Guarded on ownership: a search that has been overtaken
+         must not switch off the bar belonging to the one that overtook it. */
+      if(mine===seq) setBusy(false);
     }
   }
 
@@ -3665,7 +4201,9 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     body.hidden=!open;
     toggle.setAttribute('aria-expanded',String(open));
     toggle.querySelector('.tgl').textContent=open?'Close':'Open';
-    if(open) input.focus();
+    // preventScroll: the catalog panel focuses the page-top box, and without this, opening a
+    // panel halfway down the page yanked the view to the top and raised the mobile keyboard.
+    if(open) input.focus({preventScroll:true});
   });
   root.querySelectorAll('.cat-modes .pill').forEach(p=>{
     p.addEventListener('click',e=>{ e.stopPropagation(); setMode(p.dataset.mode,true); });
@@ -3725,11 +4263,21 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
   const root=$('art'); if(!root) return;
   const head=$('artHead'), body=$('artBody'), toggle=$('artToggle'),
         input=$('artQ'), go=$('artGo'), statusEl=$('artStatus'), out=$('artOut');
+  const fTog=$('artFTog'), fBox=$('artFilters'),
+        afField=$('afField'), afType=$('afType'), afSort=$('afSort'), afLang=$('afLang'),
+        afFrom=$('afFrom'), afTo=$('afTo'), afPeer=$('afPeer'), afOa=$('afOa'),
+        afClear=$('afClear'), afJtWrap=$('afJtWrap'), afJtName=$('afJtName'), afJtClear=$('afJtClear');
+  /* The journal is the one filter with no control of its own — it is set by clicking a result —
+     so it is the one piece of filter state the DOM does not already hold. */
+  let jtitle='', lastBeyond=false;
   const RESOLVER='https://ucla.alma.exlibrisgroup.com/view/uresolver/01UCS_LAL/openurl';
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   let seq=0, ctl=null;
 
   function setStatus(msg,err){ statusEl.innerHTML=msg||''; statusEl.classList.toggle('err',!!err); }
+
+  const busyEl=$('artBusy');
+  function setBusy(on){ if(busyEl) busyEl.hidden=!on; }
 
   /* What the reader pasted decides which OpenURL key it becomes. A DOI and a PMID both
      identify one article; an ISSN or a title identifies the journal, and the resolver answers
@@ -3809,7 +4357,8 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       if(mat && mat!=='journal') h+='<span class="chip">'+esc(mat)+'</span>';
       h+='</div>';
       if(cov) h+='<div class="prov-c">'+esc(cov)+'</div>';
-      if(s.url) h+='<a class="go" href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer">Open at '+esc(iface||name)+'</a>';
+      const sHref=safeHref(s.url);
+      if(sHref) h+='<a class="go" href="'+esc(sHref)+'" target="_blank" rel="noopener noreferrer">Open at '+esc(iface||name)+'</a>';
       return h+'</div>';
     }).join('');
     // Said once under the list rather than repeated on every row.
@@ -3837,7 +4386,11 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
      matters on a shelf-finding tool — whether UCLA can actually get you the thing. */
   function fmtCite(d){
     const bits=[];
-    if(d.jtitle) bits.push(esc(d.jtitle));
+    /* The journal name doubles as the filter for it. The index only matches the string it stores,
+       and this row is holding that exact string, so a click is the one way to ask for "more from
+       this journal" that is certain to work. Already-filtered rows show it as plain text. */
+    if(d.jtitle) bits.push(jtitle ? esc(d.jtitle)
+      : '<button class="art-jt" type="button" data-jt="'+esc(d.jtitle)+'" title="Only papers in this journal">'+esc(d.jtitle)+'</button>');
     if(d.date)   bits.push(esc(String(d.date).slice(0,10)));
     let vp='';
     if(d.volume) vp+='Vol. '+esc(d.volume);
@@ -3847,98 +4400,309 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     return bits.join(' · ');
   }
 
-  /* One chip per result, and it answers the only question this panel exists to answer.
-     "Peer reviewed" and "Open access" were facts about the paper; neither told a reader whether
-     they could open it, which is what they came for. Primo's `delivery.availability` does. */
-  /* `fulltext` and `fulltext_linktorsrc` are a distinction about *how Primo hands the reader
-     over* — a licensed copy versus a jump straight to the publisher — and not about whether
-     they can read it. Both mean yes. Two different green chips for one answer only invited the
-     question of what the difference was, so they say the same thing. */
+  /* One chip per row, and one route out of it.
+
+     The row used to carry two chips and up to eight provider buttons, which asked the reader to
+     work out the difference between "UCLA has full text" (a green chip, from Primo: the library
+     is entitled to it) and a green "Open at" button (from the resolver: that provider opens for
+     anybody). Both were true, they answered different questions, and a paper could easily have
+     the first without the second — a licensed copy behind a sign-in. Read together they looked
+     like a contradiction.
+     So the two facts are collapsed into one ordering. Free-to-anybody outranks
+     licensed-through-UCLA, because it is the stronger promise and the one that still holds off
+     campus; the chip names the best route the row has, and the button takes it. */
+  /* Green is spent on one thing only: this opens for anybody, anywhere. Licensed full text used
+     to be green too (`chip ok`), which is what made the colour unreadable — two greens for two
+     different promises, one of which stops working when you leave campus. It is neutral now. */
   const ACCESS={
-    full: {cls:'ok', word:'UCLA has full text'},
-    link: {cls:'ok', word:'UCLA has full text'},
-    print:{cls:'',   word:'In the library in print'},
-    none: {cls:'no', word:'Not at UCLA'},
+    free: {cls:'free', word:'Free to read'},
+    ucla: {cls:'',     word:'Full text via UCLA'},
+    print:{cls:'',     word:'In print at UCLA'},
+    none: {cls:'no',   word:'Not at UCLA'},
   };
+  function accessOf(d){
+    if(d.oa) return 'free';
+    if(d.access==='full' || d.access==='link') return 'ucla';
+    return d.access==='print' ? 'print' : d.access==='none' ? 'none' : '';
+  }
+  const chip=k=>ACCESS[k] ? '<span class="chip '+ACCESS[k].cls+'">'+ACCESS[k].word+'</span>' : '';
+  const READ={free:'Read it free', ucla:'Read it'};
+
+  /* ---- more results ----
+
+     Ten rows is the right first answer and the wrong last one: the paper you want is often the
+     eleventh, and the only way to reach it was to guess a narrower query. `offset` pages cleanly
+     here, verified by asking for rows 1 to 10, 11 to 20 and 21 to 30 of the same search and finding
+     no record in common, so a later page really is more results rather than the same ones reshuffled.
+
+     Pages are appended rather than replacing what is on screen, because the reader is part way down
+     a list and moving it under them is worse than making them scroll. `seen` guards the join: the
+     worker de-duplicates within a page, and two pages of a moving index can still overlap. */
+  const PAGE_MORE=10;
+  const seen=new Set();
+  let shown=0, totalNow=0, statusBase='', moreBusy=false;
+  const keyOf=d=>d.doi ? 'doi:'+String(d.doi).toLowerCase()
+                       : 'tt:'+String(d.title||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+
+  function moreHTML(){
+    if(shown>=totalNow) return '';
+    const left=totalNow-shown;
+    return '<div class="art-more"><button class="btn ghost art-more-btn" type="button">Show '+
+      Math.min(PAGE_MORE,left)+' more</button>'+
+      '<span class="art-more-n">'+shown.toLocaleString()+' of '+totalNow.toLocaleString()+'</span></div>';
+  }
+  function bindMore(q){
+    const b=out.querySelector('.art-more-btn');
+    if(b) b.addEventListener('click',()=>loadMore(q));
+  }
+  function refreshMore(q){
+    const box=out.querySelector('.art-more');
+    if(!box) return;
+    box.outerHTML=moreHTML();
+    bindMore(q);
+  }
+
+  async function loadMore(q){
+    if(moreBusy) return;
+    const mine=seq, btn=out.querySelector('.art-more-btn');
+    moreBusy=true;
+    if(btn){ btn.disabled=true; btn.textContent='Looking…'; }
+    try{
+      const data=await searchArticles(q,lastBeyond,ctl?ctl.signal:undefined,shown);
+      if(mine!==seq) return;
+      /* A page of nothing new means the index has run out of distinct records to give, whatever its
+         total claims. Stopping is more honest than a button that fetches and adds nothing. */
+      const fresh=(data.docs||[]).filter(d=>!seen.has(keyOf(d)));
+      fresh.forEach(d=>seen.add(keyOf(d)));
+      const list=out.querySelector('.art-list');
+      if(!list) return;
+      const base=list.querySelectorAll('.art-card').length;
+      if(fresh.length){
+        list.insertAdjacentHTML('beforeend', fresh.map(rowHTML).join(''));
+        shown+=fresh.length;
+        if(statusBase) setStatus(statusBase+' · showing '+shown);
+        resolveAll(fresh,base);
+      }
+      if(!data.docs.length || !fresh.length) totalNow=shown;   // nothing further to offer
+      refreshMore(q);
+    }catch(e){
+      if(e.name==='AbortError') return;
+      if(mine!==seq) return;
+      const box=out.querySelector('.art-more');
+      if(box) box.innerHTML='<span class="art-more-n">Could not load more: '+esc(e.message||'network error')+'</span>';
+    }finally{
+      moreBusy=false;
+      const b=out.querySelector('.art-more-btn');
+      if(b) b.disabled=false;
+    }
+  }
 
   function renderArticles(data,q){
     if(!data.docs.length){
-      out.innerHTML='<div class="cat-empty">No articles match &ldquo;'+esc(q)+'&rdquo; in '+
-        (data.beyond?'UCLA&rsquo;s index or the wider one':'what UCLA can get you')+'. '+
-        'Check the spelling, or paste a DOI.</div>'+wider(data,q);
+      /* A count of zero is the one result that has to explain itself, because the reader cannot
+         see which of three possible causes it was. In order of likelihood: a misspelling, which
+         the index answers with silence rather than a correction; a filter narrowing past the
+         last paper; or a search nothing matches. Each cause gets the offer that fixes it. */
+      const n=activeCount(), sug=data.suggest;
+      out.innerHTML='<div class="cat-empty">No '+esc(describe(data.applied||{},0))+' match &ldquo;'+esc(q)+
+        '&rdquo; in '+(data.beyond?'the whole index':'what UCLA can get you')+'. '+
+        (sug?'Try <button class="cat-example af-sug" type="button">'+esc(sug)+'</button> instead. ':'')+
+        // "Or" only when there is something for it to be an alternative to.
+        (n?(sug?'Or loosen':'Loosen')+' the '+n+' filter'+(n===1?'':'s')+': '+
+           '<button class="cat-example af-drop" type="button">clear '+(n===1?'it':'them')+'</button>.'
+          :(sug?'':'Check the spelling, or paste a DOI.'))+'</div>'+wider(data,q);
+      const drop=out.querySelector('.af-drop');
+      if(drop) drop.addEventListener('click',()=>afClear.click());
+      const fix=out.querySelector('.af-sug');
+      if(fix) fix.addEventListener('click',()=>{ input.value=sug; look(lastBeyond); });
       bindWider(q);
       return 0;
     }
-    /* The title is the link. Asking a reader to click "Who has full text", wait for a second
-       search, and then pick a provider put two steps between a result and the paper, when a
-       DOI already resolves to the publisher on its own. So every card opens on click from the
-       moment it is drawn, and the resolver runs behind it to say who else carries it. */
-    out.innerHTML=data.docs.map((d,i)=>{
-      const href=d.doi ? 'https://doi.org/'+encodeURI(d.doi) : (d.link||'');
-      let h='<div class="prov art-card" data-i="'+i+'"><div class="prov-h">'+
-        (href ? '<a class="prov-n" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+esc(d.title)+'</a>'
-              : '<span class="prov-n">'+esc(d.title)+'</span>');
-      /* "Not at UCLA" beside "Free anywhere" is a contradiction on the page even though both
-         fields are true: an open access paper is readable whether or not UCLA holds it, so
-         holdings are not the answer to give. Open access wins that row outright. */
-      const a=ACCESS[d.access];
-      if(a && !(d.access==='none' && d.oa)) h+='<span class="chip '+a.cls+'">'+a.word+'</span>';
-      // Open access is an access fact too: the copy that still opens with no VPN and no proxy.
-      if(d.oa) h+='<span class="chip free">Free anywhere</span>';
-      h+='</div>';
-      const au=(d.authors||[]).slice(0,4).join(' · ')+((d.authors||[]).length>4?' and others':'');
-      if(au)  h+='<div class="prov-c">'+esc(au)+'</div>';
-      const cite=fmtCite(d);
-      if(cite) h+='<div class="prov-c">'+cite+'</div>';
-      h+='<div class="art-links">'+
-         (d.link?'<a class="rec" href="'+esc(d.link)+'" target="_blank" rel="noopener noreferrer">Record</a>':'')+
-         ((d.doi||d.issn)?'<span class="art-wait">finding who carries it…</span>':'')+'</div>';
-      return h+'</div>';
-    }).join('')+wider(data,q);
+    /* The title is a link and so is the button, both pointed at the same place, because the
+       whole row is one answer: this paper, here is how you read it. A DOI already resolves to
+       the publisher on its own, so that route works from the moment the row is drawn, and the
+       resolver runs behind it to name a better one where there is one.
+
+       Every other link the row can offer — the other licensed providers, the catalogue record —
+       is real but secondary, and a reader after one paper does not need eight buttons to choose
+       between. They live inside a disclosure that says how many there are. */
+    seen.clear();
+    data.docs.forEach(d=>seen.add(keyOf(d)));
+    shown=data.docs.length;
+    totalNow=data.total||0;
+    out.innerHTML='<div class="art-list">'+data.docs.map(rowHTML).join('')+'</div>'+moreHTML()+wider(data,q);
     bindWider(q);
-    resolveAll(data.docs);
+    bindMore(q);
+    resolveAll(data.docs,0);
     return data.docs.length;
+  }
+
+  /* One row, drawn the same way whether it arrived with the first ten or with a later ten. */
+  function rowHTML(d,i){
+    {
+      /* `encodeURI` leaves `#`, `?` and `&` alone, and a DOI suffix is allowed to contain all
+         three — everything after a `#` became a fragment and never reached doi.org. The slashes
+         are put back because a DOI reads as a path and there is no reason to make it not. */
+      const href=d.doi ? 'https://doi.org/'+encodeURIComponent(d.doi).replace(/%2F/gi,'/') : safeHref(d.link);
+      const acc=accessOf(d);
+      let h='<article class="hit-row art-card"><div class="hr-top">'+
+        (href ? '<a class="hr-t" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+esc(d.title)+'</a>'
+              : '<span class="hr-t">'+esc(d.title)+'</span>')+
+        chip(acc)+'</div>';
+      /* Three names and a count, not sixteen names. The row's job is to be recognised, and a
+         reader recognises a paper by its first author and its journal; the full list is one
+         click away on the record and was pushing the citation onto a third line. */
+      const au=d.authors||[];
+      if(au.length) h+='<div class="hr-m">'+esc(au.slice(0,3).join(' · '))+
+        (au.length>3?' <span class="hr-etal">and '+(au.length-3)+' more</span>':'')+'</div>';
+      const cite=fmtCite(d);
+      if(cite) h+='<div class="hr-m">'+cite+'</div>';
+      h+='<div class="hr-a">'+
+         (href?'<a class="hr-go'+(acc==='free'?' free':'')+'" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+
+               (READ[acc]||'See the record')+'</a>':'')+
+         '<span class="hr-via">'+((d.doi)?'checking who carries it&hellip;':'')+'</span></div>'+
+         /* Outside the action row, not inside it: a disclosure that sits in a flex line has to
+            either shove the button aside or wrap the summary onto its own line the moment it
+            opens, and both read as the layout breaking rather than as content arriving. */
+         '<details class="hr-more" hidden><summary></summary><div class="hr-list"></div></details>';
+      return h+'</article>';
+    }
   }
 
   /* Who carries this paper, per card, asked in parallel once the list is already on screen.
      The resolver is keyless and CORS-open, so this costs no server; ten of them answer in about
      the time one search takes, and nothing on the page is waiting on them. */
-  async function resolveAll(docs){
+  /* `base` is how many rows were already on screen when these arrived. Without it a second page
+     resolved against the first page's cards and wrote every answer into the wrong row. */
+  async function resolveAll(docs,base){
     const mine=seq, cards=out.querySelectorAll('.art-card');
     await Promise.all(docs.map(async (d,i)=>{
-      const box=cards[i] && cards[i].querySelector('.art-links');
-      if(!box) return;
-      const wait=box.querySelector('.art-wait');
+      const card=cards[(base||0)+i];
+      if(!card) return;
+      const via=card.querySelector('.hr-via'), go=card.querySelector('.hr-go'),
+            more=card.querySelector('.hr-more'), list=more&&more.querySelector('.hr-list');
+      /* Everything the resolver could not be asked about still gets its record link, because a
+         row with no way out of it is not a result. */
+      const record=d.link
+        ? '<a class="at rec" href="'+esc(safeHref(d.link))+'" target="_blank" rel="noopener noreferrer">The catalogue record</a>' : '';
+      // One place decides what the row says once the resolver is done, placeholder included.
+      const settle=(extra,n,viaText)=>{
+        if(via) via.textContent=viaText||'';
+        if(!list || !more) return;
+        list.innerHTML=extra+record;
+        const count=n+(record?1:0);
+        if(!count) return;
+        more.hidden=false;
+        more.querySelector('summary').textContent=n
+          ? n+' other way'+(n===1?'':'s')+' in'
+          : 'The catalogue record';
+      };
       /* Only a DOI is asked about. Given an ISSN the resolver answers about the journal, and
          the links it hands back land on a table of contents or a publisher's front page —
          verified: eLife's ISSN returns doaj.org/toc/…, elifesciences.org, and a PMC journal
          page, none of which is the paper. A button that says "Open at" had better open it. */
-      if(!d.doi){ if(wait) wait.remove(); return; }
-      let list=[];
-      try{ list=await targetsFor(d,ctl?ctl.signal:undefined); }
+      if(!d.doi){ settle('',0); return; }
+      let targets=[];
+      try{ targets=await targetsFor(d,ctl?ctl.signal:undefined); }
       catch(e){ if(e.name==='AbortError') return; }
       if(mine!==seq) return;                       // a newer search owns the panel now
-      if(wait) wait.remove();
-      if(!list.length) return;
-      /* An entitled link beats a bare DOI off campus, so the title is repointed at the first
-         provider once one is known. On campus both work; off campus only this one does. */
-      const title=cards[i].querySelector('a.prov-n');
-      if(title) title.href=list[0].url;
-      box.insertAdjacentHTML('afterbegin', list.map(t=>
-        '<a class="at'+(t.free?' free':'')+'" href="'+esc(t.url)+'" target="_blank" rel="noopener noreferrer"'+
-        (t.cov?' title="'+esc(t.name+(t.cov?' — '+t.cov:''))+'"':'')+'>Open at '+esc(t.via||t.name)+'</a>').join(''));
+      if(!targets.length){ settle('',0); return; }
+
+      /* An entitled link beats a bare DOI off campus, so the row is repointed at the best one
+         once it is known — free first, since `targetsFor` has already sorted them that way. On
+         campus both work; off campus only this one does.
+
+         With one exception, and it is the reason the old design read as self-contradictory. When
+         Primo says a paper is open access and the resolver's best route is a licensed one, the
+         free copy is the one the DOI already points at — the resolver lists what UCLA subscribes
+         to, not every place a paper is legally free. Repointing there would swap a link that
+         opens anywhere for one that needs a sign-in, and then label it "Read it free". So a
+         licensed target does not displace the DOI of an open access paper; it joins the list
+         underneath it. */
+      /* Two reasons to leave the DOI alone, both about the resolver answering a slightly
+         different question than the one the row is asking. Its targets are journal-level: it
+         says UCLA can reach this journal through that provider, not that the article is there.
+           - A broad shelf like the Biodiversity Heritage Library or Alma's catch-all
+             "Free E-Journals" is a coverage claim about a run of a journal. The DOI is the
+             article. Verified 2026-08-10: Biodiversity Heritage Library was winning the primary
+             link for 2024 gene-editing papers.
+           - For an open access paper, a licensed route is a straight downgrade — it swaps a link
+             that opens anywhere for one that needs a sign-in, under a button saying "free".
+         Otherwise the resolver's link wins, because it is the one that survives going home. */
+      const best=targets[0];
+      const keepDoi=!!d.doi && (isGeneric(best) || (d.oa && !best.free));
+      if(!keepDoi){
+        const title=card.querySelector('a.hr-t');
+        if(title) title.href=best.url;
+        if(go) go.href=best.url;
+      }
+      /* The button describes the link behind it rather than the paper in front of it: a free
+         route earns the green and the word "free", anything else says "Read it" and names the
+         door in the line beside it. Primo knows a paper is open access; only the resolver knows
+         UCLA also has a free provider for one that Primo did not flag, so this is where a row
+         gets upgraded — the case that used to show a green chip above plain grey buttons. */
+      const freeRoute=keepDoi ? !!d.oa : best.free;
+      if(freeRoute){
+        const c=card.querySelector('.chip');
+        if(c && !c.classList.contains('free')){ c.className='chip free'; c.textContent=ACCESS.free.word; }
+        if(go){ go.classList.add('free'); go.textContent=READ.free; }
+      }
+      const rest=keepDoi ? targets : targets.slice(1);
+      const reachable=rest.filter(t=>safeHref(t.url));
+      settle(reachable.map(t=>
+        '<a class="at'+(t.free?' free':'')+'" href="'+esc(safeHref(t.url))+'" target="_blank" rel="noopener noreferrer"'+
+        (t.cov?' title="'+esc(t.name+(t.cov?': '+t.cov:''))+'"':'')+'>'+esc(t.via||t.name)+'</a>').join(''),
+        reachable.length,
+        keepDoi ? (d.oa?'free at the publisher':'at the publisher')
+                : (best.free?'free at ':'through UCLA at ')+(best.via||best.name));
     }));
   }
 
-  /* One button per interface, not per package. NEJM alone comes back as five services — Ovid,
-     ProQuest, Highwire, and two NEJM packages split at 1989 — and five buttons for what is one
+  /* One entry per interface, not per package. NEJM alone comes back as five services — Ovid,
+     ProQuest, Highwire, and two NEJM packages split at 1989 — and five entries for what is one
      publisher is the list being loud about the library's licensing rather than about the paper.
-     Free-to-read providers sort first because they are the ones that work from anywhere. */
+     Ordering is `rank` below: familiar platform first, free breaking ties within a tier. */
   /* Not everything the resolver lists is a place to read a paper. CLOCKSS and Portico are dark
      preservation archives, and DOAJ and the ISSN Centre's ROAD are registries — all four are
      marked free, so they sorted to the front and became the link the title pointed at. They are
      dropped rather than demoted: a reader has no use for a button that opens a catalogue. */
   const NOT_A_READER=/clockss|portico|lockss|doaj|issn international|^road:|directory of open access/i;
+
+  /* Which door the row's one button opens.
+     Sorting on free-versus-licensed alone put whatever happened to be marked free in front,
+     and what that produced was the Biodiversity Heritage Library for a 2024 gene-editing paper
+     (observed 2026-08-10 on "crispr base editor liver"). Free is worth something — it survives
+     going home — but not enough to hand the only button to a scanned-book archive.
+
+     So platforms are tiered first and free breaks ties inside a tier.
+
+     Tier 0 is the publisher's own platform and the large hosts a reader has almost certainly
+     used before: the article is the page, the PDF is where you expect it, and UCLA licenses
+     essentially all of them. Tier 2 is the broad shelves and the news databases — they carry
+     the run of a journal, or they index coverage *about* research rather than the research, and
+     their interfaces are the confusing ones. Everything unrecognised sits in tier 1, which is
+     also where the general aggregators belong: ProQuest and EBSCOhost do hold the full text,
+     they just wrap it in a database interface, so they win only when nothing better is offered.
+
+     This is a judgement about interfaces, not about quality of scholarship, and it only decides
+     which link is promoted. Every other provider stays one disclosure away, free ones marked. */
+  const PLATFORM=new RegExp([
+    'nature','springer','sciencedirect','elsevier','cell press','wiley','oxford university press',
+    'cambridge core','cambridge university press','taylor & francis','taylor and francis','sage',
+    'plos','public library of science','pubmed central','pmc','pnas',
+    'proceedings of the national academy','jama','american medical association','nejm',
+    'new england journal','bmj','lancet','jstor','ieee','acm digital','acs publications',
+    'american chemical society','royal society of chemistry','aaas','science magazine',
+    'frontiers','mdpi','biomed central','bmc','karger','thieme','annual reviews','elife',
+    'american physical society','aip publishing','iop publishing','de gruyter','emerald',
+  ].join('|'),'i');
+  const GENERIC=/biodiversity heritage|free e-?\s*journals|lexis ?nexis|factiva|dow jones|archive\.org|gale/i;
+  const tierOf=t=>{
+    const s=((t.via||'')+' '+(t.name||'')).toLowerCase();
+    return GENERIC.test(s) ? 2 : PLATFORM.test(s) ? 0 : 1;
+  };
+  const isGeneric=t=>tierOf(t)===2;
+  const rank=t=>tierOf(t)*2+(t.free?0:1);
 
   async function targetsFor(d,signal){
     const res=await fetch(buildURL({kind:'doi', key:'rft_id', prefix:'info:doi/', value:d.doi}),{signal});
@@ -3953,7 +4717,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       seen.add(k);
       list.push({name:name||via, via:via, url:s.url, free:s.keys['Is_free']==='1', cov:clean(s.keys['Availability'])});
     });
-    list.sort((a,b)=>(b.free?1:0)-(a.free?1:0));
+    list.sort((a,b)=>rank(a)-rank(b));
     return list;
   }
 
@@ -3962,7 +4726,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
      because a result nobody can read is worse than no result when the question is access. */
   function wider(data,q){
     return '<div class="prov-note">'+(data.beyond
-      ? 'Showing everything the index knows about, including papers UCLA does not hold — those are marked <span class="chip no">Not at UCLA</span> and would have to come through interlibrary loan. '
+      ? 'Showing everything the index knows about, including papers UCLA does not hold. Those are marked <span class="chip no">Not at UCLA</span> and would have to come through interlibrary loan. '
       : 'Only papers UCLA can get you. ')+
       '<button class="cat-example wider" type="button" data-beyond="'+(data.beyond?'no':'yes')+'">'+
       (data.beyond?'Limit to UCLA&rsquo;s holdings':'Search beyond UCLA&rsquo;s holdings')+'</button></div>';
@@ -3972,21 +4736,173 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     if(b) b.addEventListener('click',()=>look(b.dataset.beyond==='yes'));
   }
 
-  async function searchArticles(q,beyond,signal){
-    const res=await fetch('/api/articles?q='+encodeURIComponent(q)+'&limit=10'+(beyond?'&beyond=yes':''),{signal});
+  /* The filters, read off the controls. `articles` and `rank` are the defaults the panel has
+     always searched with, so they are sent as absences: a bare query keeps producing exactly
+     the request it produced before there were filters, which is also what keeps the edge cache
+     warm for the search everyone runs. */
+  const DEFAULTS={field:'any', type:'articles', sort:'rank', lang:''};
+  function filters(){
+    const f={field:afField.value, type:afType.value, sort:afSort.value, lang:afLang.value,
+             from:(afFrom.value||'').trim(), to:(afTo.value||'').trim(),
+             peer:afPeer.checked, oa:afOa.checked, jtitle:jtitle};
+    return f;
+  }
+  // Counted for the toggle, so a reader who has scrolled past a shut filter box still knows.
+  function activeCount(){
+    const f=filters();
+    let n=0;
+    for(const k in DEFAULTS) if(f[k]!==DEFAULTS[k]) n++;
+    if(f.from) n++;
+    if(f.to) n++;
+    if(f.peer) n++;
+    if(f.oa) n++;
+    if(f.jtitle) n++;
+    return n;
+  }
+  function syncFilterUI(){
+    const n=activeCount();
+    fTog.textContent=n?('Filters · '+n):'Filters';
+    afClear.hidden=!n;
+    afJtWrap.hidden=!jtitle;
+    afJtName.textContent=jtitle;
+  }
+
+  /* ---- the back button ----
+
+     A search replaced the results in place and left no trace, so the browser had nothing to go back
+     to: refining a search four times and wanting the second one meant retyping it. Each search now
+     writes itself into the address bar, which buys three things at once. Back and Forward walk the
+     searches. A search can be linked to or bookmarked. And a reload lands on the same results
+     instead of an empty box.
+
+     The state lives in the URL rather than only in `history.state`, so a pasted link works for
+     somebody who was never here. `a` is the query; the filters keep the names the API uses. Any
+     other parameter already on the URL is left alone, because `?diag=1` is a thing a reader can be
+     using and dropping it on the first search would be a mystery. */
+  const HIST_KEYS=['a','field','type','sort','lang','from','to','jtitle','peer','oa','beyond'];
+  let restoring=false;
+
+  function urlForSearch(beyond){
+    const f=filters(), p=new URLSearchParams(location.search);
+    HIST_KEYS.forEach(k=>p.delete(k));
+    const q=(input.value||'').trim();
+    if(q) p.set('a',q);
+    for(const k in DEFAULTS) if(f[k]!==DEFAULTS[k]) p.set(k,f[k]);
+    if(f.from) p.set('from',f.from);
+    if(f.to) p.set('to',f.to);
+    if(f.jtitle) p.set('jtitle',f.jtitle);
+    if(f.peer) p.set('peer','yes');
+    if(f.oa) p.set('oa','yes');
+    if(beyond) p.set('beyond','yes');
+    const qs=p.toString();
+    return location.pathname+(qs?'?'+qs:'')+location.hash;
+  }
+
+  /* Called at the top of a search, before anything is awaited, so `restoring` is still true when a
+     restored search runs and no entry is written for it. An identical search repeated on purpose
+     replaces its entry rather than stacking a second copy: pressing the button twice is not two
+     places to go back to. */
+  function remember(beyond){
+    if(restoring || !history.pushState) return;
+    const url=urlForSearch(beyond);
+    const here=location.pathname+location.search+location.hash;
+    try{
+      if(url===here) history.replaceState({sm:'art'},'',url);
+      else history.pushState({sm:'art'},'',url);
+    }catch(e){ /* a history that will not be written to is not worth failing a search over */ }
+  }
+
+  // Put the controls back the way a URL describes them. Returns the query it found, if any.
+  function applyUrl(){
+    const p=new URLSearchParams(location.search);
+    afField.value=p.get('field')||DEFAULTS.field;
+    afType.value=p.get('type')||DEFAULTS.type;
+    afSort.value=p.get('sort')||DEFAULTS.sort;
+    afLang.value=p.get('lang')||DEFAULTS.lang;
+    afFrom.value=p.get('from')||'';
+    afTo.value=p.get('to')||'';
+    afPeer.checked=p.get('peer')==='yes';
+    afOa.checked=p.get('oa')==='yes';
+    jtitle=p.get('jtitle')||'';
+    root.querySelectorAll('.af-quick .pill').forEach(o=>o.classList.remove('active'));
+    syncFilterUI();
+    const q=p.get('a')||'';
+    input.value=q;
+    return {q:q, beyond:p.get('beyond')==='yes', filtered:activeCount()>0};
+  }
+
+  window.addEventListener('popstate',()=>{
+    restoring=true;
+    try{
+      const st=applyUrl();
+      if(st.q){
+        if(body.hidden) head.click();
+        if(st.filtered && fBox.hidden) fTog.click();   // show the filters that shaped this result
+        look(st.beyond);
+      }else{
+        // Back past the first search: the panel should look the way it did before one ran.
+        if(ctl) ctl.abort();
+        seq++; out.innerHTML=''; setStatus(''); setBusy(false);
+      }
+    }finally{ restoring=false; }
+  });
+
+  async function searchArticles(q,beyond,signal,offset){
+    const f=filters();
+    const p=new URLSearchParams({q:q, limit:String(PAGE_MORE)});
+    if(offset) p.set('offset',String(offset));
+    for(const k in DEFAULTS) if(f[k]!==DEFAULTS[k]) p.set(k,f[k]);
+    if(f.from) p.set('from',f.from);
+    if(f.to) p.set('to',f.to);
+    if(f.peer) p.set('peer','yes');
+    if(f.oa) p.set('oa','yes');
+    if(f.jtitle) p.set('jtitle',f.jtitle);
+    if(beyond) p.set('beyond','yes');
+    const res=await fetch('/api/articles?'+p.toString(),{signal});
     const data=await res.json();
     if(!res.ok) throw new Error(data.error||('HTTP '+res.status));
     return data;
   }
 
+  /* What the count is a count of. The worker hands back the filters it actually applied rather
+     than the ones that were asked for, because they differ: sorting by date supplies a bound of
+     its own — newest-first without one is a wall of records dated two and three years out. */
+  const KIND={articles:'article', reviews:'review', book_chapters:'book chapter',
+              conference_proceedings:'conference paper', dissertations:'dissertation',
+              newspaper_articles:'newspaper article', books:'book', any:'result'};
+  const IN={any:'', title:'with this in the title', creator:'by this author', sub:'on this subject'};
+  function describe(a,n){
+    const noun=KIND[a.type]||'result';
+    const bits=[];
+    if(a.peer) bits.push('peer-reviewed');
+    const lead=bits.concat(noun+(n===1?'':'s')).join(' ');
+    const tail=[];
+    if(IN[a.field]) tail.push(IN[a.field]);
+    if(a.jtitle) tail.push('in '+a.jtitle);
+    if(a.from && a.to) tail.push(a.from===a.to?('from '+a.from):('from '+a.from+'–'+a.to));
+    else if(a.from) tail.push('from '+a.from+' on');
+    else if(a.to) tail.push('up to '+a.to);
+    if(a.oa) tail.push('free to read anywhere');
+    // Read off the option list rather than built into a selector: a value with a quote in it
+    // used to throw a SyntaxError out of the middle of drawing the results.
+    if(a.lang){
+      const opt=Array.prototype.find.call(afLang.options, o=>o.value===a.lang);
+      tail.push('in '+(opt?opt.textContent:a.lang));
+    }
+    return lead+(tail.length?' '+tail.join(', '):'');
+  }
+
   async function look(beyond){
+    lastBeyond=!!beyond;
     const raw=(input.value||'').trim();
     if(!raw){ out.innerHTML=''; setStatus('Paste a DOI, a PubMed ID, an ISSN, or search by title.'); return; }
+    remember(beyond);            // before the first await, so a restored search writes no entry
     const id=identify(raw);
     const mine=++seq;
     if(ctl) ctl.abort();
     ctl=new AbortController();
     go.disabled=true;
+    setBusy(true);
     out.innerHTML='<div class="prov"><div class="skel" style="width:60%"></div>'+
                   '<div class="skel" style="width:35%; margin-top:8px"></div></div>';
     try{
@@ -3994,7 +4910,9 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
          providers and their coverage. Anything else is a question about *what exists*, and
          only the article index can answer that. */
       if(id && id.kind!=='title'){
-        setStatus('Asking the resolver about this '+esc(id.label)+'…');
+        // Said out loud, because the filter box may be open and visibly doing nothing.
+        setStatus('Asking the resolver about this '+esc(id.label)+'…'+
+                  (activeCount()?' Filters do not apply to an identifier: it names one thing.':''));
         const res=await fetch(buildURL(id),{signal:ctl.signal});
         if(!res.ok) throw new Error('the resolver returned HTTP '+res.status);
         const svcs=parseServices(await res.text());
@@ -4008,17 +4926,27 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       const data=await searchArticles(raw,beyond,ctl.signal);
       if(mine!==seq) return;
       const n=renderArticles(data,raw);
-      if(n) setStatus(data.total.toLocaleString()+' article'+(data.total===1?'':'s')+
-                      (data.beyond?'':' UCLA can get you')+' match “'+esc(raw)+
-                      '” · showing '+n+(data.cached?' · from cache':''));
-      else setStatus('');
+      /* "UCLA can get you" used to sit between the noun and the verb, which worked while the
+         noun was always "articles" and stopped working the moment a filter put words of its own
+         there: "articles from 2024 on UCLA can get you match …". The note under the list already
+         says which of the two searches this is, so the count only has to describe itself. */
+      /* Kept, so that loading another page can rewrite the count without rebuilding the sentence
+         and without asking the worker what the search was again. */
+      statusBase=data.total.toLocaleString()+' '+esc(describe(data.applied||{},data.total))+
+                 ' match “'+esc(raw)+'”'+(data.cached?' · from cache':'');
+      if(n) setStatus(statusBase+' · showing '+n);
+      else { statusBase=''; setStatus(''); }
     }catch(e){
       if(e.name==='AbortError') return;
       if(mine!==seq) return;
       out.innerHTML='';
       setStatus('Could not reach the article index: '+esc(e.message||'network error')+'. Try again.',true);
     }finally{
-      if(mine===seq) go.disabled=false;
+      /* The bar covers the search itself, not the per-row resolver calls that follow it. Those
+         run behind a list that is already on screen and each row says "checking who carries it"
+         for itself, so a bar over the whole panel would claim the page was still loading when
+         the answer is sitting there readable. */
+      if(mine===seq){ go.disabled=false; setBusy(false); }
     }
   }
 
@@ -4027,7 +4955,9 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     body.hidden=!open;
     toggle.setAttribute('aria-expanded',String(open));
     toggle.querySelector('.tgl').textContent=open?'Close':'Open';
-    if(open) input.focus();
+    // preventScroll: the catalog panel focuses the page-top box, and without this, opening a
+    // panel halfway down the page yanked the view to the top and raised the mobile keyboard.
+    if(open) input.focus({preventScroll:true});
   });
   /* Driven from the page's single search field, the same way `catalogSearch` is: open the
      panel if it is shut, because a result nobody can see is not a result, and scroll to it
@@ -4041,9 +4971,73 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
   };
   go.addEventListener('click',e=>{ e.stopPropagation(); look(); });
   input.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); look(); } });
-  root.querySelectorAll('.art-ex .cat-example').forEach(b=>{
+  // `[data-q]`, not every `.cat-example`: the filter toggle sits in this row and is not an example.
+  root.querySelectorAll('.art-ex .cat-example[data-q]').forEach(b=>{
     b.addEventListener('click',e=>{ e.stopPropagation(); input.value=b.dataset.q||''; look(); });
   });
+
+  /* ---- filters ---- */
+  fTog.addEventListener('click',e=>{
+    e.stopPropagation();
+    const open=fBox.hidden;
+    fBox.hidden=!open;
+    fTog.setAttribute('aria-expanded',String(open));
+  });
+  /* A changed filter re-runs the search rather than waiting for the button. The reader has
+     already said what they are looking for; a filter is a correction to that, and a correction
+     that needs a second click reads as not having worked. `lastBeyond` is carried through so
+     narrowing by year does not silently undo a widened search. */
+  function refilter(){
+    syncFilterUI();
+    if((input.value||'').trim()) look(lastBeyond);
+  }
+  [afField,afType,afSort,afLang,afPeer,afOa].forEach(el=>el.addEventListener('change',refilter));
+  // Years re-search on blur or Enter, not per keystroke: "19" is a year on the way to 1998.
+  [afFrom,afTo].forEach(el=>{
+    el.addEventListener('change',refilter);
+    el.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); el.blur(); } });
+  });
+  root.querySelectorAll('.af-quick .pill').forEach(b=>{
+    b.addEventListener('click',()=>{
+      const back=parseInt(b.dataset.years,10);
+      const now=new Date().getFullYear();
+      afFrom.value=back?String(now-back+1):'';
+      afTo.value='';
+      root.querySelectorAll('.af-quick .pill').forEach(o=>o.classList.toggle('active',o===b && !!back));
+      refilter();
+    });
+  });
+  afJtClear.addEventListener('click',()=>{ jtitle=''; refilter(); });
+  afClear.addEventListener('click',()=>{
+    afField.value=DEFAULTS.field; afType.value=DEFAULTS.type; afSort.value=DEFAULTS.sort;
+    afLang.value=DEFAULTS.lang; afFrom.value=''; afTo.value='';
+    afPeer.checked=false; afOa.checked=false; jtitle='';
+    root.querySelectorAll('.af-quick .pill').forEach(o=>o.classList.remove('active'));
+    refilter();
+  });
+  // Bound once on the container, because the rows it applies to are redrawn on every search.
+  out.addEventListener('click',e=>{
+    const b=e.target.closest('.art-jt');
+    if(!b) return;
+    jtitle=b.dataset.jt||'';
+    if(fBox.hidden) fTog.click();          // the filter it just set should be visible
+    refilter();
+  });
+  syncFilterUI();
+
+  /* A page opened on a search URL runs it. That is what makes a link to a search a link to a
+     search, and it is also what makes Back work across a reload: the entry the browser returns to
+     is a URL, and this is the code that turns it back into results. */
+  (function(){
+    if(!new URLSearchParams(location.search).get('a')) return;
+    restoring=true;
+    try{
+      const st=applyUrl();
+      if(body.hidden) head.click();
+      if(st.filtered && fBox.hidden) fTog.click();
+      look(st.beyond);
+    }finally{ restoring=false; }
+  })();
 })();
 
 /* ===== hours, from LibCal =====
@@ -4276,6 +5270,115 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     dateIn.max=addDays(today,730);
   }
   show(today);
+})();
+
+/* ===== Databases A-Z =====
+   The worker parses LibGuides' widget once a day and hands back the list as JSON; this panel is
+   the reader's end of that. Three things worth saying about the shape:
+
+   - It is fetched on first open, not on load. Roughly 1,350 entries is ~190 KB of JSON, which is
+     not much next to the 1.17 MB of markup the worker reads to get it, but it is a lot to spend
+     on someone who came here to find a book on a shelf. Once fetched it is kept for the session.
+   - Filtering is local. The whole list is already in hand, so a keystroke is a filter and not a
+     request, and the worker's day-long cache does not need to know.
+   - What the feed carries is a name, a link, whether UCLA has to log you in, and whether the
+     library flagged it as a best bet. There are no descriptions in it — all 1,365 description
+     divs come back empty — so this does not print an empty line pretending otherwise.
+*/
+(function(){
+  const $=id=>document.getElementById(id);
+  const root=$('db'); if(!root) return;
+  const head=$('dbHead'), toggle=$('dbToggle'), body=$('dbBody'),
+        input=$('dbQ'), clear=$('dbClear'), best=$('dbBest'), open=$('dbOpen'),
+        statusEl=$('dbStatus'), out=$('dbOut'), summary=$('dbSummary');
+  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  let items=null, loading=false, failed=false;
+  /* Long enough that the whole list is never on screen at once, short enough that the first
+     screen arrives instantly. Filtering narrows to well under this almost immediately. */
+  const PAGE=60;
+  let shown=PAGE;
+
+  function setStatus(t,err){ statusEl.textContent=t||''; statusEl.classList.toggle('err',!!err); }
+
+  function matches(){
+    const q=input.value.trim().toLowerCase();
+    return items.filter(i=>
+      (!q || i.name.toLowerCase().includes(q)) &&
+      (!best.checked || i.best) &&
+      (!open.checked || !i.auth));
+  }
+
+  function draw(){
+    if(!items) return;
+    const list=matches();
+    if(!list.length){
+      out.innerHTML='<div class="cat-empty">No database here matches that. The list is UCLA-wide, so try a shorter word &mdash; <span class="k">pub</span> finds PubMed, <span class="k">psyc</span> finds PsycINFO.</div>';
+      setStatus('0 of '+items.length.toLocaleString()+' databases');
+      return;
+    }
+    const page=list.slice(0,shown);
+    out.innerHTML='<div class="db-list">'+page.map(i=>
+      '<div class="db-row"><a href="'+esc(safeHref(i.url))+'" target="_blank" rel="noopener noreferrer">'+esc(i.name)+'</a>'+
+      (i.best?'<span class="db-tag best">best bet</span>':'')+
+      (i.auth?'':'<span class="db-tag open">no login</span>')+
+      '</div>').join('')+'</div>'+
+      (list.length>shown
+        ? '<div class="db-more"><button class="cat-example" type="button" id="dbMore">Show '+
+          Math.min(PAGE,list.length-shown)+' more</button> of '+list.length.toLocaleString()+'</div>'
+        : '');
+    const more=$('dbMore');
+    if(more) more.addEventListener('click',()=>{ shown+=PAGE; draw(); });
+    setStatus(list.length===items.length
+      ? items.length.toLocaleString()+' databases, '+items.filter(i=>i.auth).length.toLocaleString()+' of them needing a UCLA login'
+      : list.length.toLocaleString()+' of '+items.length.toLocaleString()+' databases');
+  }
+
+  function refilter(){ shown=PAGE; draw(); }
+
+  async function load(){
+    if(items || loading) return;
+    loading=true; failed=false;
+    out.innerHTML='<div class="db-list">'+Array.from({length:8},()=>
+      '<div class="db-row"><span class="skel" style="width:'+(120+Math.round(Math.random()*160))+'px"></span></div>').join('')+'</div>';
+    setStatus('Asking LibGuides…');
+    try{
+      const res=await fetch('/api/databases');
+      const data=await res.json();
+      if(!res.ok) throw new Error(data.error||('HTTP '+res.status));
+      /* The worker already drops anything that is not the web, so this is the second of two
+         checks rather than the only one — but the list is somebody else's markup, and the page
+         that draws the link is the last place that can refuse to. */
+      items=(data.items||[]).filter(i=>i && i.name && safeHref(i.url));
+      if(!items.length) throw new Error('the list came back empty');
+      summary.textContent=items.length.toLocaleString()+' databases, refreshed daily';
+      refilter();
+    }catch(e){
+      failed=true;
+      out.innerHTML='';
+      setStatus('Could not load the database list: '+e.message+'. The A to Z page itself is at library.ucla.edu.',true);
+    }finally{ loading=false; }
+  }
+
+  head.addEventListener('click',()=>{
+    const opening=body.hidden;
+    body.hidden=!opening;
+    toggle.setAttribute('aria-expanded',String(opening));
+    toggle.querySelector('.tgl').textContent=opening?'Close':'Open';
+    if(opening){
+      // Focus the filter inside the panel that just opened, without dragging the page to it.
+      input.focus({preventScroll:true});
+      if(!items && !loading) load();
+      else if(failed) load();
+    }
+  });
+
+  let t=null;
+  input.addEventListener('input',()=>{ clearTimeout(t); t=setTimeout(refilter,120); });
+  input.addEventListener('keydown',e=>{ if(e.key==='Enter'){ clearTimeout(t); refilter(); } });
+  clear.addEventListener('click',()=>{ input.value=''; best.checked=false; open.checked=false; refilter(); input.focus(); });
+  best.addEventListener('change',refilter);
+  open.addEventListener('change',refilter);
 })();
 </script>
 </body>

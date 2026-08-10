@@ -1,0 +1,12 @@
+# Shelfmark, a shelf finder for UCLA's libraries.
+#
+# Unknown paths now return a real 404 page, so this file is no longer standing in for a fallback
+# that answered 200 to everything — it is here to say the one thing below.
+
+User-agent: *
+Allow: /
+
+# Not pages. /api/ is a narrow proxy in front of Primo and LibGuides: it answers with JSON, it
+# answers differently for every query string, and a crawler walking it would spend another
+# service's rate limit to index nothing anyone can read.
+Disallow: /api/

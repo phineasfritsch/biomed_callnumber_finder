@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How to use Shelfmark</title>
+<meta name="description" content="How to use Shelfmark: type a call number to find the shelf it is on, a title to search UCLA's catalog, or a DOI to find who carries the full text.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="canonical" href="https://shelfmark.phineasfritsch.com/about">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#f3efe4">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Shelfmark">
+<meta property="og:title" content="How to use Shelfmark">
+<meta property="og:description" content="How to use Shelfmark: type a call number to find the shelf it is on, a title to search UCLA's catalog, or a DOI to find who carries the full text.">
+<meta property="og:url" content="https://shelfmark.phineasfritsch.com/about">
+<meta property="og:image" content="https://shelfmark.phineasfritsch.com/og-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="/prose.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap"></noscript>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="/">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+        <g class="stack">
+          <rect x="6.5" y="9" width="5" height="16.5" rx="1"/>
+          <rect x="20.5" y="9" width="5" height="16.5" rx="1"/>
+          <rect x="4" y="25.5" width="24" height="3" rx="1.2"/>
+        </g>
+        <path class="marked" d="M13.5 5.6h5v19.9L16 22.6l-2.5 2.9Z"/>
+      </svg>
+      <span><b>Shelfmark</b><span class="tag">the book, then the aisle</span></span>
+    </a>
+    <nav class="site-nav">
+      <a href="/">The tool</a>
+      <a href="/about" aria-current="page">How to use</a>
+      <a href="/methodology">Methodology</a>
+    </nav>
+  </header>
+
+  <main class="prose">
+  <h1>How to use Shelfmark</h1>
+  <p class="lede">Shelfmark answers two questions that UCLA&rsquo;s own search leaves to you: which
+  library holds the thing, and which shelf it is on once you are standing in the building.</p>
+
+  <h2>Everything starts in the one box</h2>
+  <p>There used to be a box per question, and you had to know which question you were asking before
+  you could ask it. There is one field now and it decides:</p>
+  <div class="rows">
+    <div><code>QL737.C22</code></div><div>Anything shaped like a call number goes to the shelf map.</div>
+    <div><code>10.1056/NEJMoa1816897</code></div><div>A DOI, a PubMed ID or an ISSN goes to the article panel and the link resolver.</div>
+    <div>Everything else</div><div>Goes to UCLA&rsquo;s catalog as a title, author or subject search.</div>
+  </div>
+  <p>The choice it made is always shown, and always reversible in one click. Guessing wrong quietly
+  would be worse than asking.</p>
+
+  <h2>Call numbers and the shelf map</h2>
+  <p>Type a call number as printed. Spaces and the Cutter dot are optional, so <code>QL737.C22</code>,
+  <code>QL 737 C22</code> and <code>W1 JO600</code> all work. A W1 number needs the space after W1.</p>
+  <p>The locator finds the shelf whose range contains it, comparing class letters, then class number,
+  then each Cutter as a decimal, so AM4733 sorts before AM477. That last part is the one people trip
+  over: Cutters are decimals, not integers.</p>
+  <h3>Reading the map</h3>
+  <ul>
+    <li>Each green column is a double-sided shelf, with an L and an R face.</li>
+    <li>Black is the bottom row.</li>
+    <li>A dash means a face nobody has surveyed yet.</li>
+    <li>Where a range start equals its end, many volumes share one call number, so every matching
+    shelf is returned and you check the spine.</li>
+  </ul>
+  <p>Reference is on floor 4 and Special Collections on floor 9. Switch the Biomed map pill to search
+  those. Only Biomed stacks copies resolve to a shelf you can walk to; a copy at Powell or YRL is
+  reported as being there, without a shelf face.</p>
+
+  <h2>Books</h2>
+  <p>Results are scoped to the library you say you are working at, and widen to the rest of UCLA only
+  if yours has nothing. All 21 libraries work.</p>
+  <p>The catalog ranks nothing and corrects no spelling, so both happen here. A title that matches no
+  record is checked against Primo&rsquo;s dictionary first and against the catalog&rsquo;s own
+  vocabulary second, and any correction is named rather than applied quietly. A typo or two still
+  finds the book.</p>
+  <h3>Filters and syntax</h3>
+  <p>The Filters panel is shorthand for tokens you can type instead, and the Search syntax panel in
+  the tool lists all of them. The ones worth knowing by heart:</p>
+  <div class="rows">
+    <div><code>title:</code> <code>au:</code> <code>su:</code></div><div>Title phrase, author, subject.</div>
+    <div><code>mesh:neoplasms</code></div><div>Medical subject heading.</div>
+    <div><code>year:2015+</code></div><div>Also <code>year:2010..2020</code>, <code>after:2015</code>, <code>year:1990s</code>.</div>
+    <div><code>at:yrl</code></div><div>Search a named library, overriding the pills. <code>at:ucla</code> for everywhere.</div>
+    <div><code>cardio*</code></div><div>Trailing truncation. End of a word only.</div>
+    <div><code>shelf:yes</code></div><div>Keep only copies that resolve to a real shelf face.</div>
+  </div>
+  <p>Two words both have to appear. Quote a phrase to require them together.</p>
+
+  <h2>Articles</h2>
+  <p>Articles come from the same index UCLA&rsquo;s own search uses, and by default only papers UCLA
+  can actually get you. Narrow by year, kind, language, peer review, whether it is free to read, or
+  to one journal picked off a result.</p>
+  <p>Every row answers one question: whether you can read the thing.</p>
+  <div class="rows">
+    <div><b>Free to read</b></div><div>Opens for anybody, with no sign-in and no VPN. The button is green.</div>
+    <div><b>Full text via UCLA</b></div><div>The library licenses it. It opens on campus, and off campus after signing in.</div>
+    <div><b>In print at UCLA</b></div><div>There is a physical copy. Search its call number to find the shelf.</div>
+    <div><b>Not at UCLA</b></div><div>Interlibrary loan can usually get it.</div>
+  </div>
+  <p>The button takes the best route in and says which door it is. Everything else the library offers
+  for that paper sits behind &ldquo;other ways in&rdquo;, because a reader after one paper does not
+  need eight buttons to choose between.</p>
+  <p>Paste an identifier instead of a title and the link resolver answers who carries the full text,
+  and for which years. Coverage is worth checking before walking someone over: a provider can carry
+  the journal and not the issue.</p>
+
+  <h2>Hours, databases and pickup walks</h2>
+  <p>Opening hours come from LibCal and are read live, so they are as current as the
+  library&rsquo;s own page.</p>
+  <p>The <b>Databases A&ndash;Z</b> panel is UCLA&rsquo;s whole list, about 1,350 of them, taken
+  from the same LibGuides feed the library&rsquo;s own A to Z page is built from and refreshed
+  once a day. Type to narrow it by name, and the two checkboxes narrow it further: <i>best
+  bets</i> is the library&rsquo;s own flag on the ones it recommends first, and <i>open to
+  anyone</i> hides everything that asks for a UCLA login &mdash; useful if you are not on the
+  campus network. The feed carries names and links and nothing else, so there are no
+  descriptions to show; the list is fetched the first time you open the panel rather than on
+  every page load.</p>
+  <p>The pickup walk takes a list of call numbers, or photographs of them, and puts them in the order
+  you would walk the stacks rather than the order you typed them. Photographs are read in the browser
+  with optical character recognition; the images are never uploaded anywhere.</p>
+
+  <div class="note"><b>Nothing here needs an account.</b> No sign-in, no analytics, no cookies. What
+  you type is sent to UCLA&rsquo;s public endpoints to answer the search, and nowhere else.</div>
+
+  </main>
+
+  <footer>
+    <a href="/methodology">How it works in detail</a> &middot; <a href="/">Back to the tool</a>
+    <span class="by">Built by <a href="https://phineasfritsch.com">Phineas Fritsch</a>.
+    Not affiliated with, or endorsed by, the UCLA Library.</span>
+  </footer>
+</div>
+</body>
+</html>

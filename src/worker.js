@@ -6,9 +6,13 @@
  * `Access-Control-Allow-Origin`, so a page cannot call it. It is also the only endpoint that
  * searches the article index at all — SRU indexes UCLA's own holdings and nothing else.
  *
- * So: one route, narrow on purpose.
+ * So: three routes, narrow on purpose, all GET. Everything else goes to the static assets.
  *
- *   - Only `/api/articles`, only GET. Everything else goes to the static assets.
+ *   - `/api/articles` searches the article index.
+ *   - `/api/suggest` returns Primo's spelling correction for a phrase and nothing else. The
+ *     catalog side of the app is SRU, which has no dictionary, so this is where a misspelt book
+ *     title gets an answer.
+ *   - `/api/databases` parses the A-Z list out of the LibGuides widget.
  *   - Only the parameters below reach Primo, with fixed values for the ones that identify the
  *     institution. This is not an open proxy and cannot be pointed anywhere else.
  *   - Responses are cached at the edge, so repeated searches cost Primo nothing.
@@ -21,9 +25,51 @@ const VID = '01UCS_LAL:UCLA';
 const INST = '01UCS_LAL';
 const TTL = 600;                       // seconds; article metadata does not move
 const MAX_LIMIT = 20;
+/* Deep paging is a way to spend an upstream's time for nothing: the page shows ten rows at a
+   time, so a hundred pages is already further than anyone goes, and past that the request is a
+   crawler or a mistake. */
+const MAX_OFFSET = 1000;
+/* Neither upstream promises to answer, and a request with nobody left waiting on it still holds
+   a subrequest slot. Eight seconds is longer than either has ever taken and shorter than a
+   reader will sit in front of a spinner. */
+const DEADLINE = 8000;
 
 const first = v => (Array.isArray(v) ? v[0] : v) || '';
 const list = v => (Array.isArray(v) ? v : v ? [v] : []);
+/* An allowlist is a plain object, and a plain object answers for everything it inherits:
+   `FIELDS['constructor']` is a function, which is truthy, which is a validation that passes.
+   `?sort=constructor` reached Primo as `sort=function Object() { [native code] }`. */
+const allowed = (table, k) => Object.prototype.hasOwnProperty.call(table, k);
+
+/* Primo's `q` is `field,operator,value`, and a fourth comma-separated token is a boolean that
+   joins the next clause. So a comma a reader typed is a clause a reader did not ask for:
+   verified 2026-08-10, `aspirin,AND,title,contains,zzzzqqq` returns 0 where `aspirin` alone
+   returns millions. A comma carries no search meaning here — `smith, john` and `smith john`
+   both return 395,471 — so it becomes a space and the grammar stays ours. */
+const phrase = s => s.replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
+
+/* Primo writes its booleans as strings, and every non-empty string is truthy, so `oa: "false"`
+   read as open access. */
+function flag(v) {
+  const s = String(v == null ? '' : v).trim().toLowerCase();
+  return !!s && s !== 'false' && s !== '0' && s !== 'no';
+}
+
+// One name per entry, whichever way the record arrived, with the repeats a merged record carries.
+function names(vals) {
+  const seen = new Set(), out = [];
+  for (const v of vals) {
+    if (v === null || v === undefined) continue;   // an absent author is not an author called "null"
+    for (const part of String(v).split(/\s*;\s*/)) {
+      const n = part.trim().replace(/[,;]+$/, '');
+      const k = n.toLowerCase();
+      if (!n || seen.has(k)) continue;
+      seen.add(k);
+      out.push(n);
+    }
+  }
+  return out;
+}
 
 /* One PNX doc reduced to what a result row needs. Nothing here is personal: it is
    bibliographic metadata about published articles. */
@@ -44,11 +90,15 @@ function slim(doc) {
   const dl = doc.delivery || {};
   const avail = list(dl.availability).map(x => String(x).toLowerCase());
   const cats = list(dl.deliveryCategory).map(x => String(x).toLowerCase());
-  const has = re => avail.some(x => re.test(x));
-  const access = has(/no_fulltext/) ? 'none'
-    : has(/linktorsrc/) ? 'link'
-    : has(/fulltext/) ? 'full'
-    : cats.some(x => /alma-p/.test(x)) || has(/available_in_library|physical/) ? 'print'
+  /* `no_fulltext` contains `fulltext`, so a positive has to be read as "says full text, and is
+     not the negative". Reading the negative first was wrong for merged records: one that carries
+     both — a copy UCLA licenses and one it does not — was reported unreachable when the reader
+     could in fact read it. Positives first, then a physical copy, and only then nothing. */
+  const yes = re => avail.some(x => re.test(x) && !/no_fulltext/.test(x));
+  const access = yes(/linktorsrc/) ? 'link'
+    : yes(/fulltext/) ? 'full'
+    : cats.some(x => /alma-p/.test(x)) || avail.some(x => /available_in_library|physical/.test(x)) ? 'print'
+    : avail.some(x => /no_fulltext/.test(x)) ? 'none'
     : '';
   const recordid = first(c.recordid);
   const context = /^cdi_/.test(recordid) ? 'PC' : 'L';
@@ -72,7 +122,11 @@ function slim(doc) {
   }).join('/').trim();
   return {
     title: title,
-    authors: list(d.creator).length ? list(d.creator) : list(d.contributor),
+    /* Primo is inconsistent about this: sometimes one author per entry, sometimes forty authors
+       in a single string joined with " ; ". A page that trusts the array length shows either
+       three names or a five-line wall of them depending on the record, so the joined form is
+       split back apart here and the array always means what it says. */
+    authors: names(list(d.creator).length ? list(d.creator) : list(d.contributor)),
     jtitle: first(a.jtitle) || first(d.ispartof),
     volume: first(a.volume),
     issue: first(a.issue),
@@ -85,7 +139,7 @@ function slim(doc) {
     access: access,
     // Open access is kept because it *is* an access fact: it is the copy that still opens
     // from a coffee shop, with no VPN and no proxy.
-    oa: list(f.toplevel).some(x => /open_?access/i.test(x)) || !!first(a.oa),
+    oa: list(f.toplevel).some(x => /open_?access/i.test(x)) || flag(first(a.oa)),
     link: permalink,
   };
 }
@@ -107,27 +161,238 @@ function dedupe(docs) {
   return out;
 }
 
-async function articles(request, url, ctx) {
-  const q = (url.searchParams.get('q') || '').trim();
-  if (!q) return json({ error: 'q is required' }, 400);
-  if (q.length > 300) return json({ error: 'q is too long' }, 400);
+/* What this index will and will not narrow on. Probed 2026-08-10 against the live endpoint,
+   and written down because every failure here is a silent one — a filter Primo does not
+   understand returns a full, plausible, unfiltered result set.
 
-  const limit = Math.min(parseInt(url.searchParams.get('limit'), 10) || 10, MAX_LIMIT);
-  const offset = Math.max(parseInt(url.searchParams.get('offset'), 10) || 0, 0);
+     - `facet_rtype`, `facet_tlevel`, `facet_lang` and `facet_jtitle` all narrow both halves of
+       the search, local holdings and the central index alike.
+     - Dates only work in Lucene bracket form. `facet_searchcreationdate,include,2020|,|2026` —
+       the syntax Primo's own facet links use — drops the central index entirely
+       (`totalResultsPC` comes back as -1), which on an article search means dropping
+       everything: 0 results once `facet_rtype,exact,articles` is also on. The bracket form
+       `include,[2020 TO 2026]` filters both halves, and takes `*` for an open end.
+     - `facet_creator` is local-only: an author with 1,162 central hits faceted down to 5 local
+       books and nothing else. So filtering by author has to be a query field, not a facet,
+       which is also why author cannot be combined with a topic — see FIELDS below.
+     - `mfacet`, `facet`, `dr_s`/`dr_e` are accepted and ignored. `sort` understands date_d,
+       date_a, title and author; the plausible spellings it does not know (date, scdate,
+       dateOld, sortby=) silently mean rank.
+     - Responses carry no facet value lists, so there is nothing to build a menu of journals or
+       authors from. The journal filter is offered from a result row instead, where the exact
+       string the index uses is already in hand — "The Lancet" matches 26 records and "lancet"
+       matches none, so a typed guess would mostly be a wrong answer with no error.
+*/
+const FIELDS = { any: 1, title: 1, creator: 1, sub: 1 };
+const TYPES = {
+  articles: 1, reviews: 1, books: 1, book_chapters: 1,
+  dissertations: 1, conference_proceedings: 1, newspaper_articles: 1,
+};
+// The page's words on the left, Primo's on the right. Only these five sorts do anything.
+const SORTS = { rank: 'rank', newest: 'date_d', oldest: 'date_a', title: 'title', author: 'author' };
+const LANGS = {
+  eng: 1, spa: 1, chi: 1, fre: 1, ger: 1, jpn: 1, kor: 1,
+  por: 1, rus: 1, ita: 1, ara: 1, heb: 1, dut: 1, pol: 1,
+};
 
+const YEAR_FLOOR = 1500;
+
+/* A misspelling gets nothing here and says nothing about why: the index ANDs every word and does
+ * not correct anything, so one wrong letter in one word returns a confident zero. `parkisons tFUS`
+ * was the report — 0 results, while `parkinsons tFUS` finds 14.
+ *
+ * Primo does know. A query it thinks has misfired comes back with a top-level `did_u_mean`, absent
+ * otherwise. What it hands back cannot be offered as-is, though, because its corrector treats an
+ * acronym as a misspelt word: `parkisons tFUS` suggests `parkinsons thus`, which is not what anyone
+ * meant and finds the wrong papers. So the correction is applied word by word, and any word
+ * carrying a capital letter after the first — tFUS, mRNA, pH, CRISPR — keeps the spelling it was
+ * given. That turns "parkinsons thus" into "parkinsons tFUS", which is the search that was wanted.
+ *
+ * Returns '' when there is nothing worth offering, including when the only thing Primo wanted to
+ * change was an acronym it should have left alone.
+ */
+function repair(q, raw) {
+  const sug = String(raw || '').trim();
+  if (!sug) return '';
+  const words = q.split(/\s+/), sugWords = sug.split(/\s+/);
+  const merged = sugWords.length === words.length
+    ? sugWords.map((s, i) => (/[A-Z]/.test(words[i].slice(1)) ? words[i] : s)).join(' ')
+    : sug;
+  return merged.toLowerCase() === q.toLowerCase() ? '' : merged;
+}
+
+/* A year, or nothing. Nonsense is refused rather than dropped: `[abcd TO 2026]` is a range the
+   index accepts and then ignores, so a typo would otherwise come back as an unfiltered search
+   wearing a filter's label. */
+function year(raw, nowYear) {
+  const v = (raw || '').trim();
+  if (!v) return null;
+  if (!/^\d{4}$/.test(v)) return NaN;
+  const n = parseInt(v, 10);
+  return n >= YEAR_FLOOR && n <= nowYear + 1 ? n : NaN;
+}
+
+/* Ask Primo how a phrase is spelled, and nothing else.
+ *
+ * `did_u_mean` rides on an ordinary search response, so this is a search asking for one row and
+ * throwing the row away. Cheap, and the only way to get the answer: it appears on the bare query
+ * and disappears under any `qInclude`.
+ *
+ * Its own cache, and a generous one. A spelling correction is a property of Primo's dictionary
+ * rather than of the collection, so it does not go stale the way a result count does, and the
+ * callers are the searches that just failed — the same typo arriving twice should cost nothing.
+ */
+const SUGGEST_TTL = 86400;
+
+/* Returns the correction, `''` when there is nothing to correct, and `null` when the question
+   could not be asked. The caller needs the difference: `''` is an answer worth keeping for a
+   day, and `null` is an outage that must not be. */
+async function didUMean(q) {
   const up = new URL(PNX);
   up.searchParams.set('q', 'any,contains,' + q);
   up.searchParams.set('vid', VID);
   up.searchParams.set('inst', INST);
   up.searchParams.set('scope', 'MyInst_and_CI');
   up.searchParams.set('tab', 'LibraryCatalog');
-  up.searchParams.set('sort', 'rank');
+  up.searchParams.set('lang', 'en');
+  up.searchParams.set('limit', '1');
+  up.searchParams.set('offset', '0');
+  try {
+    const res = await fetch(up.toString(), {
+      signal: AbortSignal.timeout(DEADLINE),
+      headers: {
+        'Accept': 'application/json, text/plain, */*',
+        'Referer': 'https://search.library.ucla.edu/discovery/search?vid=' + VID,
+        'User-Agent': 'Shelfmark/1.0 (UCLA library tool; +https://shelfmark.phineasfritsch.com)',
+      },
+    });
+    if (!res.ok) return null;
+    return repair(q, (await res.json()).did_u_mean);
+  } catch (e) {
+    return null;      // a suggestion is a courtesy; failing to get one is not an error
+  }
+}
+
+/* The spelling route, for the catalog side of the app.
+ *
+ * The catalog is Alma SRU, which has no dictionary and no suggestions: a misspelt title returns
+ * zero records and says nothing about why. It recovers by probing itself — the repair ladder in
+ * the page — which works but costs several requests and only ever fixes one broken word. Primo's
+ * dictionary is one request and knows about the words SRU can only guess at, so the page asks
+ * here first and spends catalog requests only if this comes back empty.
+ */
+async function suggest(request, url, ctx) {
+  const asked = (url.searchParams.get('q') || '').trim();
+  if (!asked) return json({ error: 'q is required' }, 400);
+  if (asked.length > 300) return json({ error: 'q is too long' }, 400);
+  const q = phrase(asked);
+
+  const key = new Request('https://shelfmark.internal/suggest-v1?q=' + encodeURIComponent(q.toLowerCase()), { method: 'GET' });
+  const cache = caches.default;
+  const hit = await cache.match(key);
+  if (hit) {
+    const body = await hit.json();
+    // The key is folded, the answer is not: echo the phrase this reader asked about, not the
+    // casing of whoever asked first.
+    return json(Object.assign({ cached: true }, body, { q: asked }), 200, SUGGEST_TTL);
+  }
+
+  const found = await didUMean(q);
+  const out = { q: asked, suggest: found || '' };
+  /* Only a real answer is worth a day. Storing the empty string that a failed lookup returns
+     pinned "no suggestion" for twenty-four hours on exactly the searches that had just failed
+     and most needed one. */
+  if (found !== null) {
+    ctx.waitUntil(cache.put(key, new Response(JSON.stringify(out), {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=' + SUGGEST_TTL },
+    })));
+  }
+  return json(out, 200, SUGGEST_TTL);
+}
+
+async function articles(request, url, ctx) {
+  const p = url.searchParams;
+  const asked = (p.get('q') || '').trim();
+  if (!asked) return json({ error: 'q is required' }, 400);
+  if (asked.length > 300) return json({ error: 'q is too long' }, 400);
+  const q = phrase(asked);
+  if (!q) return json({ error: 'q is required' }, 400);
+
+  /* Both ends, not just the top. `Math.min(-5, 20)` is -5, which asked the index for zero rows
+     and then ran `docs.slice(0, -5)`, which takes rows off the *end* — an empty list, HTTP 200,
+     and nothing anywhere saying why. */
+  const limitNum = parseInt(p.get('limit'), 10);
+  const limit = Number.isFinite(limitNum) ? Math.min(Math.max(limitNum, 1), MAX_LIMIT) : 10;
+
+  const offsetRaw = (p.get('offset') || '').trim();
+  if (offsetRaw && !/^-?\d+$/.test(offsetRaw)) return json({ error: 'offset must be a whole number' }, 400);
+  const offset = Math.max(parseInt(offsetRaw || '0', 10), 0);
+  if (offset > MAX_OFFSET) return json({ error: 'offset cannot be past ' + MAX_OFFSET }, 400);
+
+  const field = p.get('field') || 'any';
+  if (!allowed(FIELDS, field)) return json({ error: 'unknown field: ' + field }, 400);
+
+  // `articlesOnly=no` was the old spelling of "search everything"; it still means that.
+  const type = p.get('type') || (p.get('articlesOnly') === 'no' ? 'any' : 'articles');
+  if (type !== 'any' && !allowed(TYPES, type)) return json({ error: 'unknown type: ' + type }, 400);
+
+  const sortName = p.get('sort') || 'rank';
+  if (!allowed(SORTS, sortName)) return json({ error: 'unknown sort: ' + sortName }, 400);
+
+  const lang = p.get('lang') || '';
+  if (lang && !allowed(LANGS, lang)) return json({ error: 'unknown language: ' + lang }, 400);
+
+  const nowYear = new Date().getUTCFullYear();
+  const from = year(p.get('from'), nowYear), to = year(p.get('to'), nowYear);
+  if (Number.isNaN(from) || Number.isNaN(to)) {
+    return json({ error: 'from and to must be four-digit years between ' + YEAR_FLOOR + ' and ' + (nowYear + 1) }, 400);
+  }
+  if (from && to && from > to) return json({ error: 'from is later than to' }, 400);
+
+  const peer = p.get('peer') === 'yes';
+  const oa = p.get('oa') === 'yes';
+  /* Facets are joined with `|,|`, so a journal title carrying that separator would splice in
+     filters nobody asked for — the one place this worker takes free text into the upstream
+     query grammar. A comma is fine, because a facet's value is the rest of its token and real
+     journals have commas in their names; a vertical bar is not, and no journal has one. */
+  const jtitle = (p.get('jtitle') || '').trim().slice(0, 200);
+  if (jtitle.includes('|')) return json({ error: 'jtitle cannot contain a vertical bar' }, 400);
+
+  const filters = [];
+  if (type !== 'any') filters.push('facet_rtype,exact,' + type);
+  if (peer) filters.push('facet_tlevel,include,peer_reviewed');
+  if (oa) filters.push('facet_tlevel,include,open_access');
+  if (lang) filters.push('facet_lang,exact,' + lang);
+  if (jtitle) filters.push('facet_jtitle,exact,' + jtitle);
+
+  /* Sorting by date needs a bound even when the reader asked for none. Newest-first on any
+     query returns a wall of records dated 2027 through 2029 — forthcoming issues and bad
+     metadata, six of six on the first page — which is not what "newest" means to anyone. So
+     newest-first is capped at this year unless the reader named a later one, and oldest-first
+     starts at 1900 rather than at the year-zero records that sit below it.
+
+     A bound a sort supplies must never argue with one a reader asked for, though: `oldest` with
+     `to=1800` used to build `[1900 TO 1800]`, which is empty, and said "from 1900 to 1800" as
+     though that were the search. An implicit bound only appears where it leaves a real range. */
+  let lo = from, hi = to;
+  if (!lo && sortName === 'oldest' && (!hi || hi >= 1900)) lo = 1900;
+  if (!hi && sortName === 'newest' && (!lo || lo <= nowYear)) hi = nowYear;
+  if (lo || hi) {
+    filters.push('facet_searchcreationdate,include,[' + (lo || '*') + ' TO ' + (hi || '*') + ']');
+  }
+
+  const up = new URL(PNX);
+  up.searchParams.set('q', field + ',contains,' + q);
+  up.searchParams.set('vid', VID);
+  up.searchParams.set('inst', INST);
+  up.searchParams.set('scope', 'MyInst_and_CI');
+  up.searchParams.set('tab', 'LibraryCatalog');
+  up.searchParams.set('sort', SORTS[sortName]);
   up.searchParams.set('lang', 'en');
   // A few spare rows so that dropping duplicates does not hand back a short page.
   up.searchParams.set('limit', String(Math.min(limit + 5, 30)));
   up.searchParams.set('offset', String(offset));
-  if (url.searchParams.get('articlesOnly') !== 'no')
-    up.searchParams.set('qInclude', 'facet_rtype,exact,articles');
+  if (filters.length) up.searchParams.set('qInclude', filters.join('|,|'));
 
   /* Primo's default is holdings-only: without `pcAvailability` the central index answers with
      what UCLA can actually deliver, and nothing else. That is the right default for a tool
@@ -135,7 +400,7 @@ async function articles(request, url, ctx) {
      48,636 expanded, and the 8,893 difference is papers a reader would click into a dead end.
      The wider search stays one request away, because sometimes knowing a paper exists is the
      point. Verified 2026-08-10. */
-  const beyond = url.searchParams.get('beyond') === 'yes';
+  const beyond = p.get('beyond') === 'yes';
   if (beyond) up.searchParams.set('pcAvailability', 'true');
 
   // Edge cache keyed on the upstream request, so two readers asking the same thing cost one.
@@ -151,6 +416,7 @@ async function articles(request, url, ctx) {
      pause: enough to absorb a blip, not enough to make a bad minute worse. Two requests is the
      ceiling for one search. */
   const ask = () => fetch(up.toString(), {
+    signal: AbortSignal.timeout(DEADLINE),
     headers: {
       'Accept': 'application/json, text/plain, */*',
       'Accept-Language': 'en-US,en;q=0.9',
@@ -180,8 +446,31 @@ async function articles(request, url, ctx) {
     local: info.totalResultsLocal,
     central: info.totalResultsPC,
     beyond: beyond,          // so the page can say which of the two searches it is showing
+    // Only ever set when the search misfired, so the page can offer it instead of a shrug.
+    suggest: repair(q, data.did_u_mean),
+    /* Handed back rather than assumed. The page can be one search behind — a filter changed
+       while a request was in flight — and the two date bounds are not always the ones asked
+       for, because sorting by date supplies its own. A result list should be able to say what
+       it is a list of. */
+    applied: {
+      field: field, type: type, sort: sortName, lang: lang, jtitle: jtitle,
+      peer: peer, oa: oa, from: lo || null, to: hi || null,
+    },
     docs: dedupe((data.docs || []).map(slim).filter(d => d.title)).slice(0, limit),
   };
+
+  /* Primo drops `did_u_mean` the moment any `qInclude` is present, and this panel filters to
+     articles by default — so the one search that needs a spelling suggestion is the one that
+     never carries it. Verified 2026-08-10: `parkisons tFUS` suggests "parkinsons thus" bare and
+     suggests nothing at all with `facet_rtype,exact,articles` applied.
+     So an empty result asks once more, unfiltered, purely to read the correction. It costs a
+     request only when the answer was nothing, which is the moment a reader is most owed
+     something better than a shrug, and the reply is cached with the rest.
+
+     A full index is not a spelling problem, though: a page of records that all lost their titles
+     is still thousands of matches, so the second request is spent only when the index itself
+     found nothing. */
+  if (!out.docs.length && !out.suggest && !out.total) out.suggest = (await didUMean(q)) || '';
 
   const stored = json(out);
   ctx.waitUntil(cache.put(key, new Response(JSON.stringify(out), {
@@ -206,29 +495,62 @@ const AZ = 'https://lgapi-us.libapps.com/widgets.php?site_id=705&widget_type=2&o
 const AZ_TTL = 86400;
 const Q = String.fromCharCode(34);
 
+const ENTITY = { amp: '&', lt: '<', gt: '>', quot: Q, apos: "'", nbsp: ' ', '#39': "'", '#039': "'" };
+function plain(s) {
+  return s.replace(/<[^>]*>/g, ' ')
+    .replace(/&(#0?39|amp|lt|gt|quot|apos|nbsp);/g, (m, k) => (ENTITY[k] === undefined ? m : ENTITY[k]))
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/* Every record in the widget is a tracked anchor: LibGuides wraps each database link in an
+   `onclick` that reports the click back to Springshare, and nothing else in the payload carries
+   one. That is what separates a database from the "Requires UCLA authentication" icon beside it,
+   which is also an `<li><a href=...>` and which a looser pattern reads as a database called
+   nothing, linking to a UCLA help page.
+   Verified against the live widget 2026-08-10: 1,354 databases, 1,248 licensed, 337 best bets.
+   The class this used to split on, `s-lg-az-result`, is no longer in the markup at all — only
+   `s-lg-az-result-badge-*` survives it, so the split was landing on badges and returning 374
+   fragments of the list instead of the list.
+   There are no descriptions to read: all 1,365 `s-lg-guide-list-info` divs come back empty, and
+   `show_descriptions=1` returns the same bytes. This is a list of names and links, and saying so
+   is better than shipping a field that is always "". */
+const AZ_REC = new RegExp(
+  '<a href=' + Q + '([^' + Q + ']+)' + Q + '[^>]*onclick=' + Q + 'return springSpace[^>]*>([\\s\\S]{0,400}?)<\\/a>',
+  'g');
+
 function parseAZ(raw) {
   const html = raw.replace(/\\\//g, '/').replace(/\\"/g, Q).replace(/\\n/g, '\n').replace(/\\t/g, ' ');
-  const blocks = html.split('s-lg-az-result').slice(1);
-  const re = new RegExp('<a[^>]+href=' + Q + '([^' + Q + ']+)' + Q + '[^>]*>([\\s\\S]{0,300}?)<\\/a>');
+  const hits = [];
+  let m;
+  AZ_REC.lastIndex = 0;
+  while ((m = AZ_REC.exec(html))) hits.push({ url: m[1], name: m[2], end: AZ_REC.lastIndex, at: m.index });
+
   const out = [], seen = new Set();
-  for (const b of blocks) {
-    const a = re.exec(b);
-    if (!a) continue;
-    const name = a[2].replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+  for (let i = 0; i < hits.length; i++) {
+    const h = hits[i];
+    // A record owns the markup between its own link and the next one.
+    const block = html.slice(h.end, i + 1 < hits.length ? hits[i + 1].at : Math.min(html.length, h.end + 4000));
+    const name = plain(h.name);
     if (!name || name.length > 160) continue;
+    /* Whatever the widget puts in an href ends up in a link on our page. Only the web belongs
+       there — a `javascript:` URL in someone else's markup should not become a link we drew. */
+    const link = h.url.trim();
+    if (!/^https?:\/\//i.test(link)) continue;
     const key = name.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
     /* The access mode is not a field, it is an icon: entries UCLA licenses carry a key image
        with alt="Requires UCLA authentication". Everything without one is reachable by anybody,
        which is the free-versus-campus-only distinction the A-Z page itself draws. */
-    const auth = /Requires UCLA authentication/i.test(b.slice(0, 2000));
-    const best = /Best Bet/i.test(b.slice(0, 2000));
-    const dm = /class=.s-lg-az-result-description[^>]*>([\s\S]{0,700}?)<\/div>/.exec(b);
-    const desc = dm ? dm[1].replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim() : '';
-    out.push({ name: name, url: a[1], desc: desc.slice(0, 320), auth: auth, best: best });
+    out.push({
+      name: name,
+      url: link,
+      auth: /alt="Requires UCLA authentication"/i.test(block),
+      best: /s-lg-az-result-badge-featured/.test(block),
+    });
   }
-  return out.sort((x, y) => x.name.localeCompare(y.name));
+  return out.sort((x, y) => x.name.localeCompare(y.name, 'en'));
 }
 
 async function databases(request, url, ctx) {
@@ -237,15 +559,21 @@ async function databases(request, url, ctx) {
   const hit = await cache.match(key);
   if (hit) {
     const body = await hit.json();
-    return json(Object.assign({ cached: true }, body));
+    return json(Object.assign({ cached: true }, body), 200, AZ_TTL);
   }
   let res;
   try {
-    res = await fetch(AZ, { headers: { 'User-Agent': 'Shelfmark/1.0 (UCLA library tool)' } });
+    res = await fetch(AZ, {
+      signal: AbortSignal.timeout(DEADLINE),
+      headers: { 'User-Agent': 'Shelfmark/1.0 (UCLA library tool)' },
+    });
   } catch (e) { return json({ error: 'could not reach the database list' }, 502); }
   if (!res.ok) return json({ error: 'the database list returned HTTP ' + res.status }, 502);
 
-  const items = parseAZ(await res.text());
+  let raw;
+  try { raw = await res.text(); }
+  catch (e) { return json({ error: 'the database list could not be read' }, 502); }
+  const items = parseAZ(raw);
   if (!items.length) return json({ error: 'the database list could not be read' }, 502);
   const out = { count: items.length, licensed: items.filter(i => i.auth).length, items: items };
   ctx.waitUntil(cache.put(key, new Response(JSON.stringify(out), {
@@ -254,32 +582,80 @@ async function databases(request, url, ctx) {
   return json(out, 200, AZ_TTL);
 }
 
-function json(body, status, ttl) {
+const ALLOW = 'GET, HEAD, OPTIONS';
+
+function json(body, status, ttl, extra) {
   const code = status || 200;
-  return new Response(JSON.stringify(body), {
-    status: code,
+  const headers = {
+    'Content-Type': 'application/json; charset=utf-8',
+    /* Only a good answer is worth keeping. Caching the failures too meant one transient 522
+       from Primo was stored by the browser for ten minutes, so the panel kept reporting an
+       outage that had already ended and no retry could get past it. */
+    'Cache-Control': code === 200 ? 'public, max-age=' + (ttl || TTL) : 'no-store',
+    'Access-Control-Allow-Origin': '*',
+  };
+  if (extra) Object.assign(headers, extra);
+  return new Response(JSON.stringify(body), { status: code, headers: headers });
+}
+
+/* These answers are open to anyone, so the preflight has to say so in the words a browser reads.
+   Answering it with the same 405 as a POST meant `Access-Control-Allow-Origin: *` was an
+   invitation nothing could take up: any request with a header on it never got past the check. */
+function preflight() {
+  return new Response(null, {
+    status: 204,
     headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      /* Only a good answer is worth keeping. Caching the failures too meant one transient 522
-         from Primo was stored by the browser for ten minutes, so the panel kept reporting an
-         outage that had already ended and no retry could get past it. */
-      'Cache-Control': code === 200 ? 'public, max-age=' + (ttl || TTL) : 'no-store',
       'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': ALLOW,
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Max-Age': '86400',
     },
   });
 }
 
+/* The page is static and same-origin, so it needs none of these to work — they are here because
+   a public URL gets pointed at scanners and embedded in frames by people who did not ask us. */
+function guarded(res) {
+  const headers = new Headers(res.headers);
+  headers.set('X-Content-Type-Options', 'nosniff');
+  headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  headers.set('X-Frame-Options', 'SAMEORIGIN');
+  const empty = res.status === 204 || res.status === 304;
+  return new Response(empty ? null : res.body, {
+    status: res.status, statusText: res.statusText, headers: headers,
+  });
+}
+
+// A Map, not an object: `ROUTES['/constructor']` on an object literal is a function, and a
+// truthy route is a route the worker would try to call.
+const ROUTES = new Map([
+  ['/api/articles', articles],
+  ['/api/suggest', suggest],
+  ['/api/databases', databases],
+]);
+
 export default {
   async fetch(request, env, ctx) {
-    const url = new URL(request.url);
-    if (url.pathname === '/api/articles') {
-      if (request.method !== 'GET') return json({ error: 'GET only' }, 405);
-      return articles(request, url, ctx);
+    /* Nothing may leave here without the envelope. A throw from the cache, from a body that
+       stops mid-read, or from the assets binding used to reach the runtime's own error page —
+       HTML, no `Access-Control-Allow-Origin`, which the page cannot tell from being offline. */
+    try {
+      const url = new URL(request.url);
+      const route = ROUTES.get(url.pathname);
+      if (route) {
+        if (request.method === 'OPTIONS') return preflight();
+        if (request.method !== 'GET' && request.method !== 'HEAD') {
+          return json({ error: 'GET only' }, 405, null, { 'Allow': ALLOW });
+        }
+        const res = await route(request, url, ctx);
+        // A HEAD is a GET with the body dropped; it must not be able to answer differently.
+        return request.method === 'HEAD'
+          ? new Response(null, { status: res.status, headers: res.headers })
+          : res;
+      }
+      return guarded(await env.ASSETS.fetch(request));
+    } catch (e) {
+      return json({ error: 'shelfmark could not answer that' }, 500);
     }
-    if (url.pathname === '/api/databases') {
-      if (request.method !== 'GET') return json({ error: 'GET only' }, 405);
-      return databases(request, url, ctx);
-    }
-    return env.ASSETS.fetch(request);
   },
 };

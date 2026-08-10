@@ -1,12 +1,17 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
   "name": "shelfmark",
   "main": "src/worker.js",
   "compatibility_date": "2026-06-05",
   "assets": {
+    // The whole repo is the document root, so .assetsignore is the only thing standing between
+    // a new file at the top level and the public web. Anything added here ships by default.
     "directory": ".",
     "binding": "ASSETS",
-    "not_found_handling": "single-page-application"
+    /* This was "single-page-application", which is not what this is: three static pages, not one
+       app that routes on the client. Every unknown path came back as index.html with HTTP 200,
+       so /aboutt was a soft 404 serving 330 KB of tool, link checkers found nothing broken, and
+       robots.txt had to exist mostly to say "that 200 is not a robots file". */
+    "not_found_handling": "404-page"
   },
   "observability": {
     "enabled": true

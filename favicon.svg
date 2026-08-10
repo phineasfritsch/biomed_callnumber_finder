@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Shelfmark">
+  <!-- Paper ground is painted rather than left transparent: browser tabs sit on either a light
+       or a dark chrome, and an unpainted mark disappears into one of them. -->
+  <rect width="32" height="32" rx="6.5" fill="#f3efe4"/>
+  <g fill="#26221a">
+    <rect x="6.5" y="9" width="5" height="16.5" rx="1"/>
+    <rect x="20.5" y="9" width="5" height="16.5" rx="1"/>
+    <rect x="4" y="25.5" width="24" height="3" rx="1.2"/>
+  </g>
+  <!-- The marked spine: taller than its neighbours, notched at the foot like a bookmark tail. -->
+  <path d="M13.5 5.6h5v19.9L16 22.6l-2.5 2.9Z" fill="#7a2e1e"/>
+</svg>

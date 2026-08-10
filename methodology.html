@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shelfmark methodology</title>
+<meta name="description" content="How Shelfmark works, endpoint by endpoint: the exact requests it makes to Alma SRU, Primo, the OpenURL resolver, LibCal and LibGuides, what comes back, and how each answer is read.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="canonical" href="https://shelfmark.phineasfritsch.com/methodology">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#f3efe4">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Shelfmark">
+<meta property="og:title" content="Shelfmark methodology">
+<meta property="og:description" content="How Shelfmark works, endpoint by endpoint: the exact requests it makes to Alma SRU, Primo, the OpenURL resolver, LibCal and LibGuides, what comes back, and how each answer is read.">
+<meta property="og:url" content="https://shelfmark.phineasfritsch.com/methodology">
+<meta property="og:image" content="https://shelfmark.phineasfritsch.com/og-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="/prose.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap"></noscript>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="/">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+        <g class="stack">
+          <rect x="6.5" y="9" width="5" height="16.5" rx="1"/>
+          <rect x="20.5" y="9" width="5" height="16.5" rx="1"/>
+          <rect x="4" y="25.5" width="24" height="3" rx="1.2"/>
+        </g>
+        <path class="marked" d="M13.5 5.6h5v19.9L16 22.6l-2.5 2.9Z"/>
+      </svg>
+      <span><b>Shelfmark</b><span class="tag">the book, then the aisle</span></span>
+    </a>
+    <nav class="site-nav">
+      <a href="/">The tool</a>
+      <a href="/about">How to use</a>
+      <a href="/methodology" aria-current="page">Methodology</a>
+    </nav>
+  </header>
+
+  <main class="prose">
+  <h1>Methodology</h1>
+  <p class="lede">Every endpoint this site talks to, the exact request it sends, what comes back, and
+  how the answer is read. Written down because a tool that tells you which shelf to walk to should be
+  checkable, and because most of what is below was learned by probing rather than from
+  documentation.</p>
+
+  <h2>The shelf map</h2>
+  <p>Surveyed by hand, one shelf face at a time: the first and last call number actually on the face,
+  which side of the unit it is (L or R), which row, which level. Nothing derives it from the catalog,
+  because the catalog does not know how the furniture is arranged. The survey ships inside the page,
+  keyed by level, row index and side, so locating a call number needs no network request at all.</p>
+  <p>That has consequences worth stating. The map is accurate as of when a face was walked, and
+  shelves get shifted. A face nobody has surveyed shows as a dash rather than as an empty shelf,
+  because those are different claims. Where a range start equals its end, many volumes share one call
+  number and every matching face is returned for you to check the spine.</p>
+
+  <h2>Matching a call number to a shelf</h2>
+  <p>A call number is parsed into parts and compared part by part, not as a string. Class letters
+  first, then the class number as a number, then each Cutter as a decimal. String comparison is what
+  produces the classic wrong answer, where AM477 sorts before AM4733 because 7 precedes 3 as a
+  character. As decimals, .4733 is less than .477, which is how the shelf is actually ordered.</p>
+  <p>W1 numbers get their own handling: the space after W1 is part of the number, not decoration.</p>
+
+  <hr>
+
+  <h2>Endpoints</h2>
+  <p>Seven services, five called straight from the browser and two through a Worker. Which is which is
+  not architectural taste: a service gets a proxy only when it cannot be called from a page.</p>
+  <div class="rows">
+    <div>Alma SRU</div><div>Direct. Keyless, and sends CORS headers.</div>
+    <div>OpenURL resolver</div><div>Direct. Keyless, and sends CORS headers.</div>
+    <div>LibCal</div><div>Direct. Keyless, and sends CORS headers.</div>
+    <div>Open Library</div><div>Direct, and only when you ask for covers.</div>
+    <div>jsDelivr</div><div>Direct, and only when you use the photo reader.</div>
+    <div>Primo PNX</div><div>Proxied. Answers without a key but sends no <code>Access-Control-Allow-Origin</code>, so a page cannot read it.</div>
+    <div>LibGuides A to Z</div><div>Proxied. CORS-open, but 1.17 MB of escaped markup to extract about 60 KB of facts.</div>
+  </div>
+
+  <h2>1. Alma SRU, the catalog</h2>
+  <p><code>https://ucla.alma.exlibrisgroup.com/view/sru/01UCS_LAL</code></p>
+  <p>Every book search is this endpoint, called from your browser. The request is ordinary SRU.</p>
+  <div class="rows">
+    <div><code>version=1.2</code></div><div>Fixed.</div>
+    <div><code>operation=searchRetrieve</code></div><div>Fixed.</div>
+    <div><code>recordSchema=marcxml</code></div><div>Full MARC, because the shelf logic needs the call number subfields and the holdings, not a summary.</div>
+    <div><code>query=</code></div><div>CQL, built from what you typed and from the filters.</div>
+    <div><code>maximumRecords=</code></div><div>50 at most. Alma silently caps it there, so asking for more is a request that quietly returns fewer.</div>
+    <div><code>startRecord=</code></div><div>One-based paging.</div>
+  </div>
+  <p>The CQL is assembled from named indexes rather than thrown at a single catch-all:
+  <code>alma.all_for_ui</code> for free text, then <code>alma.title</code>,
+  <code>alma.creator</code>, <code>alma.subjects</code>, <code>alma.series</code>,
+  <code>alma.uniform_title</code>, <code>alma.notes</code>, <code>alma.publisher</code>,
+  <code>alma.publisher_location</code>, <code>alma.isbn</code>, <code>alma.nlm_call_number</code>,
+  <code>alma.main_pub_date</code>, <code>alma.type_of_record</code>, <code>alma.bib_level</code>,
+  <code>alma.mms_resource_type</code> and <code>alma.material_type</code>. Every token in the search
+  syntax maps onto one of those.</p>
+  <p>Two facts about this tenant are in no documentation and were established by probing. A
+  <code>sortBy</code> clause inside the CQL is honoured, while the equivalent request parameter is
+  accepted and ignored, which is worse than being rejected: a search that looks sorted and is not
+  gives you a confident wrong first result. And <code>maximumRecords=0</code> returns a count alone,
+  in well under a tenth of a second once the connection is warm, which is the only reason probing a
+  dozen spelling candidates is affordable.</p>
+  <h3>How its answers are handled</h3>
+  <ul>
+    <li><strong>One request in flight.</strong> Rate limits are undocumented, so requests go through a
+    queue, never a burst.</li>
+    <li><strong>Three attempts, backing off</strong> half a second, then a second and a half. If the
+    failure might be the <code>sortBy</code> clause, the clause is dropped and the query retried once
+    before any error reaches you.</li>
+    <li><strong>Diagnostics are read as errors.</strong> SRU reports failure inside a 200, so the
+    parse looks for a <code>message</code> element and treats its text as the error, and reads
+    <code>numberOfRecords</code> for the count.</li>
+    <li><strong>MARCXML is parsed in the browser</strong> with the platform XML parser, namespace
+    aware. A parser error is treated as an unreadable response rather than as no results.</li>
+    <li><strong>Twenty-five requests per question.</strong> Spelling recovery can be expensive, and
+    when the allowance runs out the page says so instead of reporting no match.</li>
+    <li><strong>Repeats are free.</strong> Every response is kept for the session, keyed on page size,
+    start record and query, so paging back and forth costs nothing.</li>
+  </ul>
+  <h3>Ranking, because SRU does none</h3>
+  <p>Records come back in no useful order. Up to 150 are pulled, over at most three pages, before
+  anything is shown, and each is scored against what was typed: a title that <em>is</em> the query
+  beats a title that merely contains it, and rare words count for more than common ones, so
+  &ldquo;Atlas shrugged&rdquo; is not outranked by every anatomy atlas. Editions of one work are
+  grouped, newest on top.</p>
+  <h3>Scoping</h3>
+  <p>The search runs at the library you say you are at, and widens to the rest of UCLA only if that
+  library has nothing, or nothing that matches the title. When it widens it says so, and if the answer
+  turns out to be at another library the &ldquo;only my library&rdquo; filter is suspended rather than
+  left to hide it.</p>
+  <h3>Spelling</h3>
+  <p>SRU corrects nothing and suggests nothing: a misspelt word returns zero records and no
+  explanation. Two passes follow, cheapest first.</p>
+  <ul>
+    <li><strong>Primo&rsquo;s dictionary</strong>, one request, through the suggest route below.</li>
+    <li><strong>The catalog&rsquo;s own vocabulary.</strong> The broken word is identified by asking
+    which single word of the query is in no UCLA record at all, then repaired in three rungs: likely
+    typos enumerated and tested, a truncated form searched so the real word can be read out of the
+    titles that come back, and finally every one-edit variant asked about in batches, since 26
+    variants as one <code>or</code> query cost one request rather than 26. Each candidate is scored
+    against what you typed before it is accepted, because a candidate that matches the wrong books is
+    worse than no candidate.</li>
+  </ul>
+
+  <h2>2. Primo PNX, the article index, through <code>/api/articles</code></h2>
+  <p>Upstream: <code>https://search.library.ucla.edu/primaws/rest/pub/pnxs</code></p>
+  <p>The only endpoint that searches the article index at all, and the only one that needs a server.
+  The route accepts a fixed set of parameters and refuses anything else.</p>
+  <div class="rows">
+    <div><code>q</code></div><div>Required, 300 characters at most.</div>
+    <div><code>field</code></div><div><code>any</code>, <code>title</code>, <code>creator</code> or <code>sub</code>, becoming <code>q=&lt;field&gt;,contains,&lt;query&gt;</code>.</div>
+    <div><code>type</code></div><div>articles, reviews, books, book_chapters, dissertations, conference_proceedings, newspaper_articles, or any.</div>
+    <div><code>from</code> <code>to</code></div><div>Four-digit years, 1500 to next year.</div>
+    <div><code>peer</code> <code>oa</code></div><div><code>yes</code> to require peer review or open access.</div>
+    <div><code>lang</code></div><div>A three-letter MARC code from a fixed list.</div>
+    <div><code>jtitle</code></div><div>One journal, exactly as the index spells it.</div>
+    <div><code>sort</code></div><div>rank, newest, oldest, title, author.</div>
+    <div><code>beyond</code></div><div><code>yes</code> to search past UCLA&rsquo;s holdings.</div>
+    <div><code>limit</code> <code>offset</code></div><div>Up to 20 rows, 10 by default.</div>
+  </div>
+  <p>The parameters that identify the institution are hardcoded rather than accepted:
+  <code>vid=01UCS_LAL:UCLA</code>, <code>inst=01UCS_LAL</code>,
+  <code>scope=MyInst_and_CI</code>, <code>tab=LibraryCatalog</code>, <code>lang=en</code>. Filters
+  become one <code>qInclude</code> string joined with <code>|,|</code>. Sort names are translated:
+  newest is <code>date_d</code>, oldest is <code>date_a</code>.</p>
+  <p>An unknown value is a 400 with a message rather than a silent default. That matters more here
+  than usual, because a filter Primo does not understand returns a full, plausible, unfiltered result
+  set, so a typo would otherwise look like an answer.</p>
+  <h3>What the index will and will not filter on</h3>
+  <p>All probed against the live endpoint on 10 August 2026.</p>
+  <ul>
+    <li><code>facet_rtype</code>, <code>facet_tlevel</code>, <code>facet_lang</code> and
+    <code>facet_jtitle</code> narrow both halves of the search, local holdings and the central index
+    alike.</li>
+    <li><strong>Dates work in exactly one syntax.</strong>
+    <code>facet_searchcreationdate,include,[2020 TO 2026]</code> filters both halves, and an open end
+    takes <code>*</code>. The pipe-separated form Primo&rsquo;s own facet links use drops the central
+    index entirely, reporting <code>totalResultsPC</code> as -1, which on an article search means
+    dropping everything: zero results once the articles filter is also on.</li>
+    <li><strong>Sorting by date needs a bound.</strong> Newest first with no upper bound returns a
+    wall of records dated 2027 through 2029, so it is capped at the current year unless you name a
+    later one. Oldest first starts at 1900 rather than at the year-zero records below it.</li>
+    <li><strong>Author cannot be a filter.</strong> <code>facet_creator</code> is local-only: an
+    author with 1,162 central hits faceted down to 5 local books. So author is a query field instead,
+    which is also why it cannot be combined with a topic.</li>
+    <li><strong>Several plausible parameters do nothing.</strong> <code>mfacet</code>,
+    <code>facet</code>, <code>dr_s</code> and <code>dr_e</code> are accepted and ignored, as are the
+    sort spellings <code>date</code>, <code>scdate</code>, <code>dateOld</code> and
+    <code>sortby=</code>, each of which silently means rank.</li>
+    <li><strong>No facet lists come back</strong> in a search response, so there is nothing to build a
+    menu of journals or authors from. That is why the journal filter is only offered from a result row,
+    where the exact string the index uses is already in hand. Typing it would mostly fail:
+    &ldquo;The Lancet&rdquo; matches 26 records and &ldquo;lancet&rdquo; matches none.</li>
+    <li><strong>Holdings-only is the default.</strong> Without <code>pcAvailability</code> the central
+    index answers with what UCLA can deliver and nothing else. For &ldquo;crispr gene editing&rdquo;
+    that is 39,743 papers against 48,636 expanded, and the 8,893 difference is results a reader would
+    click into a dead end. The wider search is one button away.</li>
+  </ul>
+  <h3>What the Worker sends and returns</h3>
+  <p>It identifies itself, as
+  <code>Shelfmark/1.0 (UCLA library tool; +https://shelfmark.phineasfritsch.com)</code>, with an
+  <code>Accept</code> and a <code>Referer</code>. An unidentified client is the one nobody can ask
+  about. A 5xx gets one retry after 400 ms; a 4xx does not, because it will not fix itself. Two
+  requests is the ceiling for one search.</p>
+  <p>The 17 KB internal record is reduced to the roughly 2 KB a row renders: title, authors, journal,
+  volume, issue, pages, date, DOI, ISSN, type, source, an access verdict, an open access flag, and a
+  permalink built from the record id, with the context set to PC for a central record and L for a
+  local one. Three details worth naming:</p>
+  <ul>
+    <li><strong>Title variants are collapsed.</strong> Primo joins them with a slash, and one JAMA
+    reply arrived as the same sentence three times. Exact repeats are dropped, and so is any variant
+    that is only the start of a longer one.</li>
+    <li><strong>Authors are split apart.</strong> Sometimes one name per entry, sometimes forty names
+    in a single string joined with semicolons. A page that trusts the array length shows either three
+    names or a five-line wall depending on the record, so the field is normalised into a real list.</li>
+    <li><strong>Duplicates are merged</strong> on DOI, or on title and year where there is no DOI. The
+    request over-fetches by five rows, capped at 30, so dropping duplicates does not hand back a short
+    page.</li>
+  </ul>
+  <p>Answers are cached at the Cloudflare edge for ten minutes, keyed on the upstream request, so two
+  readers asking the same thing cost Primo one answer, and a cached reply says so. Only successes are
+  cached: caching failures meant one transient 522 was stored for ten minutes and no retry could get
+  past it.</p>
+
+  <h2>3. <code>/api/suggest</code>, spelling</h2>
+  <p>The same Primo host, asking for one row and throwing the row away. The only thing wanted is
+  <code>did_u_mean</code>, which rides along on an ordinary search response.</p>
+  <p>It is a route of its own because the catalog side has no dictionary, and because of a trap:
+  <code>did_u_mean</code> is present on a bare query and <strong>absent the moment any
+  <code>qInclude</code> is applied</strong>. The article panel filters to articles by default, so the
+  one search that needs a suggestion is the one that never carries it. An empty article result
+  therefore asks a second time, unfiltered, purely to read the correction.</p>
+  <p>What comes back cannot be used as it stands. Primo&rsquo;s corrector treats an acronym as a
+  misspelling: <code>parkisons tFUS</code> comes back as <code>parkinsons thus</code>, which finds the
+  wrong papers. So the correction is applied word by word, and any word carrying a capital letter
+  after the first is left alone. That turns it into <code>parkinsons tFUS</code>, which is the search
+  that was meant and finds 14 papers. If the suggestion differs from the original only in the acronym,
+  nothing is offered. Cached for a day, since a spelling is a property of the dictionary rather than of
+  the collection.</p>
+
+  <h2>4. <code>/api/databases</code>, the A to Z list</h2>
+  <p>Upstream: <code>https://lgapi-us.libapps.com/widgets.php?site_id=705&amp;widget_type=2&amp;output_format=1</code></p>
+  <p>LibGuides has no JSON API without a key, but the public widget carries the whole list as escaped
+  HTML inside a JavaScript file. It is CORS-open, so a browser could fetch it, except that it is
+  1.17 MB of markup to extract about 190 KB of facts. Parsing it in the Worker and caching for a day
+  means the page downloads the answer instead of the haystack, and LibGuides sees one request a day
+  rather than one per reader. The page fetches it the first time the panel is opened, not on load.</p>
+  <p>The parse unescapes the payload and then finds each record by its tracked anchor: LibGuides wraps
+  every database link in an <code>onclick</code> that reports the click back to Springshare, and nothing
+  else in the payload carries one. That is what separates a database from the little key icon beside it,
+  which is also a link and which a looser pattern reads as a database called nothing, pointing at a UCLA
+  help page. A record owns the markup between its own link and the next one.</p>
+  <p>Whether a database needs a login is not a field: it is an icon, an image whose alt text says it
+  requires UCLA authentication, so that is what gets tested. Best bets are flagged the same way, by the
+  badge class the library&rsquo;s own page uses. Links that are not <code>http</code> or <code>https</code>
+  are dropped rather than passed through to the page. An empty parse is reported as an error rather than
+  as an empty list, because those are different facts. Verified against the live widget on 10 August 2026:
+  1,354 databases, 1,248 of them needing a login, 337 best bets.</p>
+  <p>Two things the list does not carry. There are no descriptions &mdash; every one of the 1,365
+  description elements in the payload is empty, and asking the widget for them changes nothing &mdash;
+  so the panel shows names and links and does not pretend otherwise. And there is no entitlement in
+  general: UCLA tags one database as a trial and none as free, so this is an inventory, and the
+  free-versus-licensed question is answered per provider by the resolver instead.</p>
+
+  <h2>5. The OpenURL resolver, who carries the full text</h2>
+  <p><code>https://ucla.alma.exlibrisgroup.com/view/uresolver/01UCS_LAL/openurl</code></p>
+  <p>Called from the browser, once per pasted identifier and once per result row that has a DOI.</p>
+  <div class="rows">
+    <div><code>url_ver=Z39.88-2004</code></div><div>Fixed.</div>
+    <div><code>svc_dat=CTO</code></div><div>Ask for the service list rather than a redirect.</div>
+    <div><code>svc.fulltext=yes</code></div><div>Include full-text services.</div>
+    <div><code>rft_id=info:doi/…</code></div><div>For a DOI. A PubMed ID uses <code>info:pmid/…</code>.</div>
+    <div><code>rft.issn=…</code></div><div>For an ISSN, which asks about the journal rather than the paper.</div>
+    <div><code>rft.genre=</code></div><div><code>article</code> for an identifier naming one paper, <code>journal</code> for an ISSN.</div>
+  </div>
+  <p>The reply is XML in the resolver&rsquo;s own namespace. Each <code>context_service</code> carries
+  a <code>service_type</code> and a set of <code>key</code> elements read as name and value pairs, and
+  only <code>getFullTxt</code> services are kept. The link is either the <code>Authentication</code>
+  key or the <code>resolution_url</code> that sits alongside in document order. From each service:
+  <code>package_public_name</code> or <code>package_display_name</code> for the package,
+  <code>interface_name</code> for the platform, <code>Is_free</code> for whether it opens without
+  UCLA, <code>Availability</code> for coverage years, and <code>electronic_material_type</code>.</p>
+  <p>Four things had to be handled.</p>
+  <ul>
+    <li><strong>Coverage text contains markup.</strong> <code>Availability</code> arrives as
+    &ldquo;Available from 01/01/1990 volume: 322 issue: 1.&lt;br&gt;&rdquo; in a field that is
+    otherwise plain text, so tags are stripped rather than rendered.</li>
+    <li><strong>One entry per platform, not per package.</strong> NEJM alone returns five services,
+    two of them NEJM packages split at 1989. Five buttons for one publisher is the list being loud
+    about licensing rather than about the paper.</li>
+    <li><strong>Some free services are not places to read.</strong> CLOCKSS and Portico are dark
+    preservation archives, DOAJ and the ISSN Centre&rsquo;s ROAD are registries. All four are marked
+    free, so they sorted to the front and became the link the title pointed at. They are dropped, not
+    demoted: a reader has no use for a button that opens a catalogue.</li>
+    <li><strong>An ISSN is not asked about per row.</strong> Given an ISSN the resolver answers about
+    the journal, and the links land on a table of contents or a publisher&rsquo;s front page.
+    Verified: eLife&rsquo;s ISSN returns a DOAJ table of contents, the eLife home page and a PMC
+    journal page, none of which is the paper.</li>
+  </ul>
+  <h3>Which of them the button uses</h3>
+  <p>Platforms are tiered, and free breaks ties inside a tier: publisher platforms and the large hosts
+  first, unrecognised platforms and general aggregators next, broad free shelves and news databases
+  last. Sorting on free alone handed the primary link to the Biodiversity Heritage Library for 2024
+  gene-editing papers, which is a coverage claim about a journal run rather than about the article.
+  Two cases keep the DOI instead: an open access paper, where a licensed route would swap a link that
+  opens anywhere for one that needs a sign-in, and a broad shelf, for the same reason it is ranked
+  last.</p>
+  <p>Access and route are kept separate. Primo says whether UCLA can deliver the paper, the resolver
+  says whether a particular door opens for anybody. Green means the second thing only, and the button
+  describes the link behind it rather than the paper in front of it.</p>
+
+  <h2>6. LibCal, opening hours</h2>
+  <p><code>https://api2.libcal.com/api_hours_grid.php?iid=3244&amp;weeks=1&amp;format=json</code></p>
+  <p>Keyless, CORS-open, carries no personal data, and one request returns all seven days for all 32
+  locations, so moving between days in a week is a re-render rather than a fetch. Any date can be
+  asked for with <code>date=YYYY-MM-DD</code>, which returns the Sunday-anchored week containing it.
+  Worth knowing that <code>from=</code> and <code>start=</code> are ignored: they fail silently by
+  returning this week and looking like they worked. Weeks are kept once fetched, so walking a term back
+  and forth costs one request per new week and none for a revisit.</p>
+  <p>Dates are handled two deliberately different ways. Today is computed from local time rather than
+  from an ISO string, because an ISO string is UTC and puts Los Angeles on tomorrow&rsquo;s row after
+  4pm. Arithmetic on dates is done in UTC, because these are calendar dates rather than moments, and
+  adding a day in local time across a daylight saving boundary can give 23 or 25 hours and slip the
+  answer by a day.</p>
+
+  <h2>7. Open Library, cover images</h2>
+  <p><code>https://covers.openlibrary.org/b/isbn/&lt;isbn&gt;-L.jpg?default=false</code></p>
+  <p>Only while the show covers box is ticked, and the box says what it does: it sends the ISBN to
+  openlibrary.org. <code>default=false</code> makes a missing cover a 404 rather than a placeholder,
+  so the image removes itself instead of leaving a grey box in the row.</p>
+
+  <h3>Also, on demand only</h3>
+  <div class="rows">
+    <div>jsDelivr</div><div><code>tesseract.js@5.1.1</code> and <code>heic2any@0.0.4</code>, fetched the
+    first time you read call numbers off a photograph. Both are pinned to an exact version and checked
+    against a hash of the reviewed bytes, so the CDN cannot hand this page different code than the code
+    that was read. Recognition runs in your browser and the images are never uploaded.</div>
+    <div>doi.org</div><div>A link target, not a request this page makes.</div>
+    <div>Google Fonts</div><div>Two font files. The stylesheet is loaded without blocking the paint,
+    and both families name a local fallback picked to break lines in the same places, so the page does
+    not move when the fonts arrive.</div>
+  </div>
+
+  <h2>The Worker</h2>
+  <p>The whole server is one file with three routes, and it exists because Primo cannot be called from
+  a page. Everything else is a static asset from the same deployment.</p>
+  <ul>
+    <li><code>GET /api/articles</code>, <code>GET /api/suggest</code> and
+    <code>GET /api/databases</code>, plus <code>HEAD</code> and a CORS preflight on each. Any other
+    method is a 405 naming what it does allow, and any other path falls through to the static assets
+    &mdash; which answer with a real 404 page, not the tool with a 200 on it.</li>
+    <li>Only the parameters documented above reach Primo, and the ones identifying the institution are
+    fixed in the source. It is not an open proxy and cannot be pointed anywhere else. Every value is
+    checked against a list of the ones that mean something, and a value that is not on it is refused
+    rather than passed along: an unknown facet does not fail upstream, it comes back as a full,
+    plausible, unfiltered result set wearing a filter&rsquo;s label.</li>
+    <li>Two characters carry grammar in Primo&rsquo;s query language and are therefore not passed
+    through as text. A comma opens a new clause, so commas in a search phrase become spaces &mdash;
+    which changes no result, since <code>smith, john</code> and <code>smith john</code> return the same
+    395,471 records. The <code>|,|</code> that separates facets means a journal-title filter containing
+    a vertical bar is refused outright.</li>
+    <li>Replies carry <code>Access-Control-Allow-Origin: *</code>, since they hold nothing but
+    bibliographic facts, and a <code>Cache-Control</code> matching the edge cache. Errors are sent
+    <code>no-store</code>. Every reply is JSON, including the ones nobody planned for: an unexpected
+    failure is caught and answered in the same shape, because an error page without that header reads
+    to the browser as being offline rather than as a server saying no.</li>
+    <li>Both upstreams are given eight seconds. Neither promises to answer, and a request nobody is
+    waiting on still occupies a slot.</li>
+    <li>There is no database and no state between requests beyond the edge cache.</li>
+  </ul>
+
+  <h2>Privacy, in one paragraph</h2>
+  <p>No accounts, no cookies, no analytics, and no third-party code on load. What you type goes to
+  UCLA&rsquo;s public endpoints, and to Primo by way of the Worker, in order to answer the search. The
+  Worker sees the query because it has to forward it, and retains it only inside the cache key of a
+  cached answer. Cover images are the one request that leaves the UCLA and Cloudflare pair, and they
+  happen only if you ask for covers.</p>
+
+  <h2>What this is not</h2>
+  <p>It is not an official UCLA service, it has no access to your library account, and it cannot place
+  holds or requests. It reads the same public endpoints anyone can read. When it is wrong about a
+  shelf, the shelf is right.</p>
+  </main>
+
+  <footer>
+    <a href="/about">How to use it</a> &middot; <a href="/">Back to the tool</a>
+    <span class="by">Built by <a href="https://phineasfritsch.com">Phineas Fritsch</a>.
+    Not affiliated with, or endorsed by, the UCLA Library.</span>
+  </footer>
+</div>
+</body>
+</html>
