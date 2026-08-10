@@ -52,15 +52,24 @@ const published = walk(ROOT, []).sort();
 
 /* ---- what is supposed to be there ---- */
 const EXPECTED = [
+  // the five pages of the tool
+  'index.html',
+  'map.html',
+  'hours.html',
+  'databases.html',
   '404.html',
+  // the two text pages
   'about.html',
+  'methodology.html',
+  // what every page shares
+  'site.css',
+  'shelf-data.js',
+  'shelf-core.js',
+  // icons, the share card, and the one directive file
   'apple-touch-icon.png',
   'favicon.ico',
   'favicon.svg',
-  'index.html',
-  'methodology.html',
   'og-card.png',
-  'prose.css',
   'robots.txt',
 ].sort();
 
@@ -74,8 +83,27 @@ ok('nothing is published that was not meant to be', extra.length === 0,
   '\n      → add it to .assetsignore, or to EXPECTED in this file if it belongs on the site');
 ok('everything the pages need is published', gone.length === 0,
   'missing: ' + gone.join(', '));
-ok('the published set is exactly ten files', published.length === 10,
+ok('the published set is exactly fifteen files', published.length === 15,
   published.length + ': ' + published.join(', '));
+
+/* Every page has to reach the one stylesheet and, if it draws shelves, the two shared scripts.
+   A page that links a file which is not published renders unstyled, which is the kind of break
+   that only shows up in a browser. */
+for (const page of ['index.html', 'map.html', 'hours.html', 'databases.html', 'about.html', 'methodology.html', '404.html']) {
+  const src = fs.readFileSync(path.join(ROOT, page), 'utf8');
+  ok(page + ' links the shared stylesheet', src.includes('href="/site.css"'));
+  for (const m of src.matchAll(/(?:href|src)="(\/[^"#?]+)"/g)) {
+    const rel = m[1].slice(1);
+    if (!rel) continue;
+    ok(page + ' links /' + rel + ', which is published', published.includes(rel) || fs.existsSync(path.join(ROOT, rel + '.html')),
+      'not in the published set');
+  }
+}
+for (const page of ['index.html', 'map.html']) {
+  const src = fs.readFileSync(path.join(ROOT, page), 'utf8');
+  ok(page + ' loads the shelf dataset before the core that reads it',
+    src.indexOf('/shelf-data.js') > 0 && src.indexOf('/shelf-data.js') < src.indexOf('/shelf-core.js'));
+}
 
 section('the things that must never ship');
 

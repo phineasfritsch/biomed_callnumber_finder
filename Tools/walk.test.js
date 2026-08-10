@@ -3,8 +3,9 @@
 //
 //   node Tools/walk.test.js
 //
-// Like Tools/catalog.test.js this pulls the shipped code out of index.html rather than
-// re-typing it, so a pass says something about the file that actually deploys. The same
+// Like Tools/catalog.test.js this pulls the shipped code out of the file that deploys rather
+// than re-typing it, so a pass says something about that file. The walk geometry moved into
+// shelf-core.js when the tool became five pages; the markers came with it. The same
 // functions are transcribed into ios/BiomedShelfScanner/Models/WalkPath.swift; the assertions
 // here are the contract both ports have to meet, and several of them exist because the obvious
 // implementation gets them backwards.
@@ -13,13 +14,13 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const HTML = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+const CORE = fs.readFileSync(path.join(ROOT, 'shelf-core.js'), 'utf8');
 
 function between(start, end, what) {
-  const a = HTML.indexOf(start);
-  const b = HTML.indexOf(end, a);
-  if (a < 0 || b < 0) throw new Error(`could not find ${what} in index.html — did the markers move?`);
-  return HTML.slice(a + start.length, b);
+  const a = CORE.indexOf(start);
+  const b = CORE.indexOf(end, a);
+  if (a < 0 || b < 0) throw new Error(`could not find ${what} in shelf-core.js — did the markers move?`);
+  return CORE.slice(a + start.length, b);
 }
 const core = between('/* == walk-core:start ==', '/* == walk-core:end == */', 'walk core')
   .replace(/^[\s\S]*?\*\//, '');   // drop the marker's own block comment tail
@@ -186,18 +187,31 @@ ok('every door is inside the building', Object.values(D).every(d =>
 // Cheap insurance. The route planner builds its SVG out of nested template literals, which fail
 // at parse time and take the entire page with them — including the shelf lookup, which has
 // nothing to do with routing.
-section('index.html parses');
+section('every shipped script parses');
 
+/* Five pages and two shared files now. A page whose inline script does not parse is a page that
+   renders its masthead and then does nothing at all, which looks like a slow network rather than
+   like a broken deploy — so each one is checked here rather than found in a browser. */
 let scripts = 0, parsed = 0, firstError = null;
-const re = /<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g;
-let m;
-while ((m = re.exec(HTML))) {
+for (const f of ['shelf-data.js', 'shelf-core.js']) {
   scripts++;
-  try { new Function(m[1]); parsed++; }
-  catch (e) { if (!firstError) firstError = e.message; }
+  try { new Function(fs.readFileSync(path.join(ROOT, f), 'utf8')); parsed++; }
+  catch (e) { if (!firstError) firstError = f + ': ' + e.message; }
 }
-ok('there is inline script to check', scripts > 0, `${scripts} blocks`);
-eq('every inline script block parses', parsed, scripts);
+const re = /<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g;
+for (const f of ['index.html', 'map.html', 'hours.html', 'databases.html', 'about.html', 'methodology.html', '404.html']) {
+  const html = fs.readFileSync(path.join(ROOT, f), 'utf8');
+  let m;
+  re.lastIndex = 0;
+  while ((m = re.exec(html))) {
+    if (!m[1].trim()) continue;
+    scripts++;
+    try { new Function(m[1]); parsed++; }
+    catch (e) { if (!firstError) firstError = f + ': ' + e.message; }
+  }
+}
+ok('there is script to check', scripts >= 6, `${scripts} blocks`);
+eq('every shipped script parses', parsed, scripts);
 ok('no syntax error', firstError === null, firstError || '');
 
 /* ---- report ---- */

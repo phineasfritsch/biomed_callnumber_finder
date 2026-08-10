@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Library hours — Shelfmark</title>
+<meta name="description" content="Opening hours for all 27 UCLA library locations, read live from LibCal. Pick any day and see what is open, when it closes, and how to get in.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="canonical" href="https://shelfmark.phineasfritsch.com/hours">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#f3efe4">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shelfmark">
+<meta property="og:title" content="Library hours — Shelfmark">
+<meta property="og:description" content="Opening hours for all 27 UCLA library locations, read live from LibCal. Pick any day and see what is open, when it closes, and how to get in.">
+<meta property="og:url" content="https://shelfmark.phineasfritsch.com/hours">
+<meta property="og:image" content="https://shelfmark.phineasfritsch.com/og-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="/site.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- The web font sheet used to be an ordinary stylesheet link, which meant nothing painted until
+     Google answered: 803 ms of a 3.5 s first paint, on a page whose own HTML arrives in 50 ms.
+     Nothing here needs Fraunces to be readable, so the sheet is fetched at high priority and
+     applied when it lands, instead of holding the page hostage while it travels. `media="print"`
+     is what makes it non-blocking; the onload swaps it back to every medium. The families both
+     name a system fallback, so the wait is a change of typeface rather than invisible text. -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap">
+<!-- The two font files themselves, fetched alongside the sheet that would otherwise have to
+     arrive first and name them. Without this the browser learns these URLs only after a round
+     trip to Google, and the typeface lands after the page has already painted in Georgia and
+     the system monospace: every line then re-measures at once, which moved the shelf map down
+     the page and was the whole of a 0.375 layout shift on desktop. -->
+<link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/splinesansmono/v13/R70BjzAei_CDNLfgZxrW6wrZOF2WX5KZmE-Z-lw.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/fraunces/v38/6NU78FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0KxC9TeP2Xz5c.woff2">
+<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap"></noscript>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the hours</a>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="/">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+              <g class="stack">
+                <rect x="6.5" y="9" width="5" height="16.5" rx="1"/>
+                <rect x="20.5" y="9" width="5" height="16.5" rx="1"/>
+                <rect x="4" y="25.5" width="24" height="3" rx="1.2"/>
+              </g>
+              <path class="marked" d="M13.5 5.6h5v19.9L16 22.6l-2.5 2.9Z"/>
+            </svg>
+      <span><b>Shelfmark</b><span class="tag">the book, then the aisle</span></span>
+    </a>
+    <nav class="site-nav" aria-label="Sections">
+      <a href="/">Search</a>
+      <a href="/map">Map</a>
+      <a href="/hours" aria-current="page">Hours</a>
+      <a href="/databases">Databases</a>
+    </nav>
+  </header>
+
+  <main id="main">
+  <!-- No disclosure here. On the page that is only this, a panel that starts closed behind an
+       "Open" button is a click charged for nothing, and a heading that repeats the one above it
+       is a second thing to read that says the same thing. The summary the collapsed header used
+       to carry is the lede instead. -->
+  <h1>Library hours</h1>
+  <p class="lede" id="hrsSummary">Every UCLA location, read live from the library&rsquo;s own
+  calendar.</p>
+
+  <div class="cat open" id="hrs">
+    <div class="cat-body" id="hrsBody">
+      <div class="hr-when">
+        <label for="hrsDate">Date:</label>
+        <input type="date" id="hrsDate">
+        <button class="cat-example" type="button" id="hrsToday">Today</button>
+        <span class="hr-wk"><button class="cat-example" type="button" id="hrsPrev" aria-label="Previous week">&lsaquo; week</button><button class="cat-example" type="button" id="hrsNext" aria-label="Next week">week &rsaquo;</button></span>
+      </div>
+      <div class="hr-days" id="hrsDays" role="group" aria-label="Day of the week"></div>
+      <div class="cat-status" id="hrsStatus" role="status" aria-live="polite"></div>
+      <div id="hrsOut"></div>
+    </div>
+  </div>
+  </main>
+
+  <footer>
+    <a href="/about">How to use this</a> &middot; <a href="/methodology">How it works</a>
+    <span class="by">Built by <a href="https://phineasfritsch.com">Phineas Fritsch</a>.
+    The shelf map is surveyed by hand and the data comes from UCLA&rsquo;s public endpoints.
+    Not affiliated with, or endorsed by, the UCLA Library.</span>
+  </footer>
+</div>
+<script>
+/* ===== hours, from LibCal =====
+   `api_hours_grid.php` is keyless, CORS-open and carries no personal data. One request returns
+   all seven days for all 32 locations, so moving between days in a week costs nothing: the week
+   is already in hand and switching days is a re-render, not a fetch.
+
+   Any date can be asked for. `date=YYYY-MM-DD` returns the Sunday-anchored week containing it —
+   `from=` and `start=` are ignored, which is worth knowing because they fail silently by
+   returning this week and looking like they worked. Weeks are kept once fetched, so walking
+   back and forth over a term costs one request per new week and none for a revisit. Past and
+   future both answer; far enough out everything comes back `not-set`, which means nobody has
+   posted those hours yet and is said as much rather than rendered as a blank list.
+   Probed 2026-08-10: 2026-01, 2026-11, 2027-06 all answered; 2028-03 was almost entirely unset.
+
+   Departments nest under their library by `parent_lid`, which is the only structure in the
+   payload and the only thing that makes it readable. Probed 2026-08-06. */
+(function(){
+  const $=id=>document.getElementById(id);
+  const root=$('hrs'); if(!root) return;
+  const body=$('hrsBody'),
+        summary=$('hrsSummary'), statusEl=$('hrsStatus'), out=$('hrsOut'), days=$('hrsDays'),
+        dateIn=$('hrsDate'), todayBtn=$('hrsToday'), prevBtn=$('hrsPrev'), nextBtn=$('hrsNext');
+  const GRID='https://api2.libcal.com/api_hours_grid.php?iid=3244&weeks=1&format=json';
+  const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  /* One entry per week, keyed on its Sunday. `sel` is the date being looked at; `cur` is the
+     week holding it. Today's week is remembered separately because the header count is always
+     about today, whatever week the reader has wandered into. */
+  const weeks=new Map();
+  let today='', sel='', cur='', todayWeek='', pick='', loaded=false, loading=false;
+
+  // Local date as YYYY-MM-DD. Not toISOString(), which is UTC and puts Los Angeles on
+  // tomorrow's row after 4pm.
+  function localDate(){
+    const d=new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  /* Date arithmetic in UTC on purpose: a local Date built from a date string lands at midnight,
+     and adding days across a DST boundary in local time can give 23 or 25 hours and slip a day.
+     These are calendar dates, not moments, so UTC is the arithmetic that matches the meaning. */
+  const parse=ds=>{ const p=String(ds).split('-'); return Date.UTC(+p[0],+p[1]-1,+p[2]); };
+  const fmt=ms=>new Date(ms).toISOString().slice(0,10);
+  const addDays=(ds,n)=>fmt(parse(ds)+n*86400000);
+  const sundayOf=ds=>addDays(ds,-new Date(parse(ds)).getUTCDay());
+  const dayIndex=ds=>new Date(parse(ds)).getUTCDay();
+  const longDate=ds=>new Date(parse(ds)).toLocaleDateString(undefined,
+    {weekday:'long', day:'numeric', month:'long', year:'numeric', timeZone:'UTC'});
+
+  const at=key=>weeks.get(key)||[];
+  const dayOf=(loc,name)=>((loc.weeks&&loc.weeks[0])||{})[name]||null;
+
+  /* LibCal returns `not-set` for a day nobody has filled in. Rendering those as "unknown" pads
+     the list with rows that answer nothing, so they are dropped for that day. A location with
+     no hours all week therefore never appears at all. */
+  const known=d=>!!d && ((d.times||{}).status||'').toLowerCase()!=='not-set';
+
+  /* Status is a dot *and* a word: colour alone must never carry the meaning. "Open now" is
+     only claimed for today — on any other day the honest word is just "Open". */
+  function statusOf(d,isToday){
+    const t=(d&&d.times)||{}, s=(t.status||'').toLowerCase();
+    if(s==='byapp')  return {cls:'', word:'By appointment'};
+    if(s==='closed') return {cls:'shut', word:'Closed'};
+    if(s==='text')   return {cls:'', word:'See note'};
+    if(s==='24hours') return isToday ? {cls:'open', word:'Open now'} : {cls:'open', word:'24 hours'};
+    if(s==='open'){
+      /* `status: open` means "has hours on this day", not "is open at this moment". At 6.45pm
+         the Collaboration Hub is still `open` for a 9am-6pm day, and rendering that green beside
+         the word Open told a reader to walk to a closed room. On today, `currently_open` is the
+         only field that answers the question being asked; the posted hours stay on the row so
+         the reader can see when it reopens. */
+      if(!isToday) return {cls:'', word:'Open'};
+      return t.currently_open===true ? {cls:'open', word:'Open now'}
+                                     : {cls:'shut', word:'Closed now'};
+    }
+    return {cls:'', word:esc(t.status||'unknown')};
+  }
+
+  function row(loc,name,isToday){
+    const d=dayOf(loc,name), s=statusOf(d,isToday);
+    /* `rendered` is a display string LibCal writes by hand, and some of it carries markup:
+       the Law Reference Desk reads "9am - 5pm </br>(1pm-4pm in-person)". Escaping is what keeps
+       that safe, but escaping alone printed the tag, so line breaks become a separator first. */
+    const when=esc(String((d&&d.rendered)||'').replace(/<\/?br\s*\/?>/gi,' · ').replace(/\s+/g,' ').trim());
+    return '<div class="hr-row">'+
+      '<span class="hr-n">'+esc(loc.name||'Unnamed location')+'</span>'+
+      (when && when.toLowerCase()!==s.word.toLowerCase() ? '<span class="hr-t">'+when+'</span>' : '')+
+      '<span class="hr-s '+s.cls+'"><i></i>'+s.word+'</span></div>';
+  }
+
+  function renderDays(){
+    if(!days) return;
+    const first=at(cur)[0];
+    days.innerHTML=DAYS.map(n=>{
+      const d=dayOf(first,n), date=(d&&d.date)||'';
+      const num=date?date.slice(8).replace(/^0/,''):'';
+      const isToday=date===today;
+      return '<button class="pill'+(n===pick?' active':'')+'" type="button" data-day="'+n+'"'+
+             ' data-date="'+esc(date)+'" aria-pressed="'+(n===pick)+'">'+n.slice(0,3)+
+             (num?' <span class="hr-d">'+num+'</span>':'')+
+             (isToday?' <span class="hr-today">today</span>':'')+'</button>';
+    }).join('');
+    days.querySelectorAll('.pill').forEach(b=>b.addEventListener('click',e=>{
+      e.stopPropagation();
+      // Within a loaded week this is still a re-render, not a fetch.
+      pick=b.dataset.day;
+      if(b.dataset.date){ sel=b.dataset.date; if(dateIn) dateIn.value=sel; }
+      renderDays(); renderDay();
+    }));
+  }
+
+  function renderDay(){
+    const locs=at(cur);
+    const d0=dayOf(locs[0],pick)||{};
+    const isToday=d0.date===today;
+    const shown=locs.filter(l=>known(dayOf(l,pick)));
+    const parents=shown.filter(l=>!l.parent_lid);
+    const kids={};
+    shown.forEach(l=>{ if(l.parent_lid) (kids[l.parent_lid]=kids[l.parent_lid]||[]).push(l); });
+    if(!parents.length){
+      /* Far enough ahead LibCal has nothing entered for anybody. That is not an error and not
+         "closed": it is hours nobody has posted yet, and saying so is the only honest reading. */
+      out.innerHTML='<div class="cat-empty">No hours are posted for '+
+        esc(d0.date?longDate(d0.date):pick)+' yet.</div>';
+      return;
+    }
+    out.innerHTML=parents.map(p=>{
+      let h='<div class="hr-lib">'+row(p,pick,isToday);
+      const sub=kids[p.lid]||[];
+      if(sub.length) h+='<div class="hr-sub">'+sub.map(k=>row(k,pick,isToday)).join('')+'</div>';
+      return h+'</div>';
+    }).join('');
+    // Which day is on screen, so a reader four weeks out is never guessing.
+    if(d0.date && !isToday) statusEl.textContent='Showing '+longDate(d0.date)+'.';
+    else statusEl.textContent='';
+    statusEl.classList.remove('err');
+  }
+
+  // The header carries today's count whatever day is being browsed: it is the answer to
+  // "is anything open", which does not change because the reader is looking at Saturday.
+  function renderSummary(){
+    const locs=at(todayWeek);
+    const onToday=l=>DAYS.map(n=>dayOf(l,n)).find(x=>x&&x.date===today);
+    const open=locs.filter(l=>{
+      const d=onToday(l);
+      if(!known(d)) return false;
+      const t=d.times||{};
+      return t.currently_open===true || (t.status||'').toLowerCase()==='24hours';
+    }).length;
+    const total=locs.filter(l=>known(onToday(l))).length;
+    summary.textContent=open?open+' of '+total+' locations open now':'all locations closed';
+  }
+
+  /* One week, fetched once and kept. The key is the Sunday LibCal itself returns rather than the
+     one computed here, so the cache can never disagree with the payload about which week it is
+     holding. */
+  async function fetchWeek(date){
+    const res=await fetch(GRID+'&date='+encodeURIComponent(date));
+    if(!res.ok) throw new Error('LibCal returned HTTP '+res.status);
+    const data=await res.json();
+    const locs=(data.locations||[]).filter(l=>l.weeks&&l.weeks[0]);
+    if(!locs.length) throw new Error('LibCal returned no locations');
+    const key=(dayOf(locs[0],'Sunday')||{}).date||sundayOf(date);
+    weeks.set(key,locs);
+    return key;
+  }
+
+  function busy(on){
+    loading=on;
+    [dateIn,todayBtn,prevBtn,nextBtn].forEach(el=>{ if(el) el.disabled=on; });
+  }
+
+  /* Show a date, fetching its week only if this is the first time it has been asked for. */
+  async function show(date){
+    if(loading) return;
+    sel=date;
+    if(dateIn) dateIn.value=date;
+    pick=DAYS[dayIndex(date)];
+    const key=sundayOf(date);
+    if(weeks.has(key)){ cur=key; renderDays(); renderDay(); return; }
+    busy(true);
+    setTimeout(()=>{ if(loading) statusEl.textContent='Asking LibCal…'; },300);
+    out.innerHTML='<div class="hr-lib"><div class="skel" style="width:45%"></div></div>'+
+                  '<div class="hr-lib"><div class="skel" style="width:55%"></div></div>'+
+                  '<div class="hr-lib"><div class="skel" style="width:40%"></div></div>';
+    try{
+      cur=await fetchWeek(date);
+      if(!todayWeek && weeks.get(cur).some(l=>DAYS.some(n=>(dayOf(l,n)||{}).date===today)))
+        todayWeek=cur;
+      renderSummary(); renderDays(); renderDay();
+      loaded=true;
+    }catch(e){
+      out.innerHTML='';
+      if(days) days.innerHTML='';
+      if(!loaded) summary.textContent='hours unavailable';
+      statusEl.innerHTML='Could not reach LibCal: '+esc(e.message||'network error')+'.';
+      statusEl.classList.add('err');
+    }finally{ busy(false); }
+  }
+
+
+  if(dateIn) dateIn.addEventListener('change',e=>{
+    e.stopPropagation();
+    // An emptied or half-typed field is not a date; leave the day on screen alone.
+    if(/^\d{4}-\d{2}-\d{2}$/.test(dateIn.value)) show(dateIn.value);
+    else dateIn.value=sel;
+  });
+  if(todayBtn) todayBtn.addEventListener('click',e=>{ e.stopPropagation(); show(today); });
+  if(prevBtn)  prevBtn.addEventListener('click', e=>{ e.stopPropagation(); show(addDays(sel,-7)); });
+  if(nextBtn)  nextBtn.addEventListener('click', e=>{ e.stopPropagation(); show(addDays(sel,7)); });
+
+  /* The summary rides on the collapsed header, so this week is fetched on load rather than on
+     open: "is anything open" is the question most of the time, and it should not need a click.
+     Other weeks are fetched only when a reader asks for one. */
+  today=localDate();
+  sel=today;
+  if(dateIn){
+    dateIn.value=today;
+    /* A year back and two years on. LibCal answers outside that too, but the far side is all
+       `not-set`, and a picker that offers a date nobody has posted hours for is a picker that
+       promises an answer it cannot give. */
+    dateIn.min=addDays(today,-365);
+    dateIn.max=addDays(today,730);
+  }
+  show(today);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Biomed shelf map — Shelfmark</title>
+<meta name="description" content="A hand-surveyed map of the Biomed Library stacks: 453 shelf faces across ten levels. Type a call number to see which shelf holds it, or plan a walk that collects a whole pull list in one trip.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="canonical" href="https://shelfmark.phineasfritsch.com/map">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#f3efe4">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shelfmark">
+<meta property="og:title" content="The Biomed shelf map — Shelfmark">
+<meta property="og:description" content="A hand-surveyed map of the Biomed Library stacks: 453 shelf faces across ten levels. Type a call number to see which shelf holds it, or plan a walk that collects a whole pull list in one trip.">
+<meta property="og:url" content="https://shelfmark.phineasfritsch.com/map">
+<meta property="og:image" content="https://shelfmark.phineasfritsch.com/og-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="/site.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- The web font sheet used to be an ordinary stylesheet link, which meant nothing painted until
+     Google answered: 803 ms of a 3.5 s first paint, on a page whose own HTML arrives in 50 ms.
+     Nothing here needs Fraunces to be readable, so the sheet is fetched at high priority and
+     applied when it lands, instead of holding the page hostage while it travels. `media="print"`
+     is what makes it non-blocking; the onload swaps it back to every medium. The families both
+     name a system fallback, so the wait is a change of typeface rather than invisible text. -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap">
+<!-- The two font files themselves, fetched alongside the sheet that would otherwise have to
+     arrive first and name them. Without this the browser learns these URLs only after a round
+     trip to Google, and the typeface lands after the page has already painted in Georgia and
+     the system monospace: every line then re-measures at once, which moved the shelf map down
+     the page and was the whole of a 0.375 layout shift on desktop. -->
+<link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/splinesansmono/v13/R70BjzAei_CDNLfgZxrW6wrZOF2WX5KZmE-Z-lw.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/fraunces/v38/6NU78FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0KxC9TeP2Xz5c.woff2">
+<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap"></noscript>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the call-number box</a>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="/">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+              <g class="stack">
+                <rect x="6.5" y="9" width="5" height="16.5" rx="1"/>
+                <rect x="20.5" y="9" width="5" height="16.5" rx="1"/>
+                <rect x="4" y="25.5" width="24" height="3" rx="1.2"/>
+              </g>
+              <path class="marked" d="M13.5 5.6h5v19.9L16 22.6l-2.5 2.9Z"/>
+            </svg>
+      <span><b>Shelfmark</b><span class="tag">the book, then the aisle</span></span>
+    </a>
+    <nav class="site-nav" aria-label="Sections">
+      <a href="/">Search</a>
+      <a href="/map" aria-current="page">Map</a>
+      <a href="/hours">Hours</a>
+      <a href="/databases">Databases</a>
+    </nav>
+  </header>
+
+  <main id="main">
+  <h1>The Biomed shelf map</h1>
+  <p class="lede">Every mapped shelf face in the Biomed stacks, walked and transcribed by hand.
+  Type a call number to find the face that holds it, or tap any shelf to read its range.</p>
+
+  <div class="lookup">
+    <label for="q">Call number:</label>
+    <input id="q" placeholder="WM 100 D299A, W1 AM477, QL737.C22&hellip;" autocomplete="off"
+           enterkeyhint="search" spellcheck="false">
+    <button class="btn" type="button" id="go">Find the shelf</button>
+    <button class="btn ghost" type="button" id="clear">Clear</button>
+  </div>
+  <div class="result" id="result" role="status" aria-live="polite">
+    <div class="examples">Try:
+      <button class="ex" type="button" data-q="QL737.C22 M616g">QL737.C22</button> &middot;
+      <button class="ex" type="button" data-q="W1 BI700">W1 BI700</button> &middot;
+      <button class="ex" type="button" data-q="QW 4 S851b">QW 4 S851b</button> &middot;
+      <button class="ex" type="button" data-q="WZ 100 M549W">WZ 100 M549W</button>
+      &nbsp;&nbsp;Looking for a book by title? <a href="/">Search the catalog</a>.
+    </div>
+  </div>
+
+  <!-- These three sit with the map. They are a statement about which sequence of shelves you are
+       looking at, and the thing they change is the drawing directly below. -->
+  <div class="sect" id="sect" role="group" aria-label="Which part of Biomed to search">
+    <span class="sect-label">Biomed map:</span>
+    <button class="pill active" type="button" data-coll="stacks" aria-pressed="true">Main stacks</button>
+    <button class="pill" type="button" data-coll="ref" aria-pressed="false">Reference &middot; L4</button>
+    <button class="pill" type="button" data-coll="spec" aria-pressed="false">Special Collections &middot; L9</button>
+  </div>
+
+  <div class="levels" id="levels"></div>
+
+  <div class="stage">
+    <!-- role="group", not role="img": the shelves inside are controls, and "img" made every one
+         of them presentational to a screen reader. -->
+    <div class="planwrap"><svg id="plan" viewBox="0 0 720 400" role="group" aria-label="Floor plan"></svg></div>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--orange)"></i>orange &middot; top-0 half (L3, L7)</span>
+      <span><i class="sw" style="background:var(--green)"></i>green &middot; top-1..16 full</span>
+      <span><i class="sw" style="background:var(--char)"></i>black &middot; bottom row</span>
+      <span><i class="sw" style="background:var(--slate)"></i>slate &middot; bot-0 half (L3)</span>
+      <span><i class="sw" style="background:var(--orange)"></i>stairs</span>
+      <span><i class="sw" style="background:var(--accent)"></i>elevator</span>
+      <span>&#9474; = double-sided &middot; filled = mapped &middot; &ndash; = unmapped</span>
+    </div>
+  </div>
+
+  <div class="detail empty" id="detail" aria-live="polite">Tap any shelf to see its mapped ranges, or search a call number above.</div>
+
+<div class="route" id="route">
+    <div class="route-head" id="routeHead">
+      <h2>Plan a pickup walk <span class="h2-sub">Biomed stacks</span></h2>
+      <button class="btn ghost" type="button" id="routeToggle" aria-expanded="false" aria-controls="routeBody"><span class="tgl">Open</span></button>
+    </div>
+    <div class="route-body" id="routeBody" hidden>
+      <p class="route-hint">Upload photos of ILL slips or a pull list (JPEG/PNG) and the call numbers are read for you, or type them in.</p>
+      <p class="route-hint">The walk starts at the highest floor and takes the stairs down one floor at a time. The elevator skips floors or goes up. Over five books is a truck trip, so it is the elevator between every floor.</p>
+      <p class="route-hint">Text recognition runs in your browser and is imperfect, especially on handwriting. Check the list before building.</p>
+      <div class="drop" id="drop">
+        <input type="file" id="files" accept="image/*,.heic,.heif" multiple hidden>
+        <input type="file" id="camera" accept="image/*" capture="environment" hidden>
+        <button class="btn" type="button" id="pick">Choose images</button>
+        <button class="btn" type="button" id="shoot">Take photo</button>
+        <span class="drop-hint">or drag &amp; drop here</span>
+      </div>
+      <div class="ocr-status" id="ocrStatus"></div>
+      <div class="thumbs" id="thumbs"></div>
+      <label class="cn-label" for="cnList">Call numbers, one per line</label>
+      <textarea id="cnList" rows="6" placeholder="W1 AM477&#10;QL 737 C22 M616g&#10;WM 13 D5537"></textarea>
+      <div class="route-actions">
+        <button class="btn" type="button" id="buildRoute">Build route</button>
+        <button class="btn ghost" type="button" id="clearRoute">Clear</button>
+      </div>
+      <div class="itinerary" id="itinerary"></div>
+    </div>
+  </div>
+  </main>
+
+  <footer>
+    <a href="/about">How to use this</a> &middot; <a href="/methodology">How it works</a>
+    <span class="by">Built by <a href="https://phineasfritsch.com">Phineas Fritsch</a>.
+    The shelf map is surveyed by hand and the data comes from UCLA&rsquo;s public endpoints.
+    Not affiliated with, or endorsed by, the UCLA Library.</span>
+  </footer>
+</div>
+<script src="/shelf-data.js"></script>
+<script src="/shelf-core.js"></script>
+<script>
+function renderPlan(){
+  const plan=document.getElementById('plan');
+  if(SPECIAL_FLOORS[level]){
+    const name=SPECIAL_FLOORS[level];
+    plan.innerHTML =
+      `<rect x="40" y="40" width="640" height="160" rx="14" fill="var(--paper-2)" stroke="var(--line)" stroke-dasharray="6 5" stroke-width="1.2"/>`+
+      `<text x="360" y="92" text-anchor="middle" font-family="var(--disp)" font-size="26" font-weight="600" fill="var(--accent)">${name}</text>`+
+      `<text x="360" y="118" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--ink-soft)" letter-spacing="2">FLOOR ${level}</text>`+
+      `<text x="360" y="152" text-anchor="middle" font-family="var(--mono)" font-size="12" fill="var(--ink)">All ${name.toLowerCase()} books are on this floor.</text>`+
+      `<text x="360" y="172" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--ink-soft)">Books are shelved by call number. No per-shelf map.</text>`;
+    plan.setAttribute('viewBox','0 0 720 230');
+    return;
+  }
+  const {botY,botH}=PLAN;
+  let svg=planShelves(level,null,true)+planFeatures();
+  plan.innerHTML=svg; plan.setAttribute('viewBox',`0 0 720 ${botY+botH+16}`);
+  plan.setAttribute('aria-label',`Floor plan, level ${level}`);
+}
+
+/* Bound once, on the container, rather than written into four hundred generated elements: a
+   shelf that answers a click has to answer the keyboard equivalent too. */
+document.getElementById('plan').addEventListener('keydown',e=>{
+  if(e.key!=='Enter' && e.key!==' ' && e.key!=='Spacebar') return;
+  const g=e.target.closest && e.target.closest('g.shelf[role="button"]');
+  if(!g) return;
+  e.preventDefault();
+  g.dispatchEvent(new MouseEvent('click',{bubbles:true}));
+});
+
+/* ===== section pills + level sync ===== */
+/* `.pill` is the shared look, not a group: the catalog's scope and mode pills, the article
+   panel's year pills and the hours day strip all wear it too. Selecting every one of them meant
+   picking a floor quietly un-highlighted "Keyword" and "today" in panels the reader had not
+   touched. The section pills are the ones with a `data-coll`. */
+function setCollection(coll){
+  collection = coll;
+  document.querySelectorAll('#sect .pill').forEach(p=>{
+    const on = p.dataset.coll===coll;
+    p.classList.toggle('active', on);
+    p.setAttribute('aria-pressed', String(on));
+  });
+}
+function syncCollectionToLevel(){
+  setCollection(LEVEL_TO_COLL[level] || 'stacks');
+}
+
+/* ===== levels bar ===== */
+function renderLevels(){
+  const el=document.getElementById('levels'); el.innerHTML='';
+  STACK_LEVELS.forEach(l=>{
+    const has=levelsWithData[l];
+    const special = SPECIAL_FLOORS[l];
+    const n = has ? Object.keys(DATA).filter(k=>k.startsWith(l+'|')).length : 0;
+    // A real button, because it is one: these were plain divs with an onclick, so the whole
+    // floor selector was unreachable without a mouse.
+    const b=document.createElement('button');
+    b.type='button';
+    let cls='lvl'+(l===level?' active':'');
+    if(!has){ cls += special ? ' special' : ' empty'; }
+    b.className=cls;
+    const sub = has ? (n+' faces') : (special ? (l===4?'Ref':'Spec') : '–');
+    b.innerHTML=`${l}<small>${sub}</small>`;
+    b.setAttribute('aria-pressed', String(l===level));
+    b.setAttribute('aria-label', `Level ${l}${special?' · '+special:''}${has?` · ${n} shelf faces mapped`:' · not mapped'}`);
+    b.onclick=()=>{ level=l; selected=null; flashId=null; syncCollectionToLevel(); renderLevels(); renderPlan(); renderDetail(); };
+    el.appendChild(b);
+  });
+  /* The total belongs beside the per-floor counts it is the sum of, not in the masthead of a
+     tool that also searches 21 libraries and answers article questions. */
+  const tot=document.createElement('div');
+  tot.className='lvl-total';
+  tot.innerHTML=`<span class="n">${Object.keys(DATA).length}</span> Biomed shelf faces mapped`;
+  el.appendChild(tot);
+}
+
+/* ===== detail panel ===== */
+function pick(id){ selected=id; flashId=null; renderPlan(); renderDetail(); }
+window.pick=pick;
+function renderDetail(){
+  const el=document.getElementById('detail');
+  if(!selected){ el.className='detail empty'; el.textContent='Tap any shelf to see its mapped ranges, or search a call number above.'; return; }
+  const s=shelfById(selected); el.className='detail';
+  let html=`<h2>Index ${s.index} · ${s.row} row</h2><div class="meta">level ${level} · ${s.group} · ${s.type}-shelf</div>`;
+  let any=false;
+  sidesOf(s).forEach(side=>{
+    const d=DATA[k(level,s.id,side)];
+    if(d){any=true; html+=`<div class="face-row"><span class="fl">${sideName[side]}</span><span class="rg">${d.start} → ${d.end}</span></div>`;}
+  });
+  if(!any) html+=`<div class="face-row"><span class="rg" style="color:var(--ink-soft)">No ranges mapped on this level yet.</span></div>`;
+  el.innerHTML=html;
+}
+
+/* ===== lookup =====
+   The map page's own box, and the only question it asks: which face holds this call number.
+   The search that decides between a shelf, a catalog record and an article lives on the home
+   page; here the answer is always a shelf, so there is nothing to route. */
+function locate(){
+  const inp=document.getElementById('q');
+  let q=inp.value.trim();
+  // "Hist Div WZ 100 ..." typed directly → strip prefix, switch to Special Collections
+  const hd=q.match(/^hist\.?\s*div\.?\s+(.+)/i);
+  if(hd){ q=hd[1].trim(); inp.value=q; setCollection('spec'); }
+  const out=document.getElementById('result');
+  if(collection==='ref'){
+    const subject = q ? `<code>${escHtml(q.toUpperCase())}</code>` : 'Your book';
+    out.innerHTML = `<div class="hit"><div class="loc">Floor 4 · Reference</div>`+
+      `<div class="rng">${subject} is on floor 4, shelved by call number.</div></div>`;
+    level=4; selected=null; flashId=null;
+    renderLevels(); renderPlan(); renderDetail();
+    return;
+  }
+  if(!q){
+    out.innerHTML='';
+    if(collection==='spec'){ level=9; renderLevels(); renderPlan(); renderDetail(); }
+    return;
+  }
+  const hits=findFaces(q, collection);
+  if(!hits.length){
+    out.innerHTML = collection==='spec'
+      ? `<div class="miss">No mapped Special Collections range contains <code>${escHtml(q.toUpperCase())}</code>.</div>`
+      : `<div class="miss">No mapped shelf contains <code>${escHtml(q.toUpperCase())}</code>. It may be on a level not yet entered, or outside the mapped ranges.</div>`;
+    if(collection==='spec'){ level=9; renderLevels(); renderPlan(); renderDetail(); }
+    return;
+  }
+  out.innerHTML=hits.map(h=>{
+    const s=shelfById(h.id);
+    const where = collection==='spec' ? 'Level 9 · Special Collections' : ('Level '+h.lvl);
+    return `<div class="hit"><div class="loc">${where} · ${s?s.row+' row · index '+s.index:'shelf '+escHtml(h.id)} · ${sideName[h.side]} side</div>`
+      +`<div class="rng">${escHtml(h.d.start)} → ${escHtml(h.d.end)}</div></div>`;
+  }).join('')
+  + (hits.length>1?`<div class="examples">${hits.length} shelves match. For serials, check the volume and year on the spine.</div>`:'');
+  const first=hits[0];
+  level=first.lvl; selected=first.id; flashId=first.id;
+  renderLevels(); renderPlan(); renderDetail();
+  setTimeout(()=>{flashId=null;renderPlan();},1600);
+}
+
+/* Accept a whole catalog record pasted out of Primo, not just the call number inside it. */
+function extractCallNumber(text){
+  const mH=text.match(/Biomed\s+Library\s+Hist\.?\s*Div\.?\s*;\s*([^\n\r;(]+)/i);
+  if(mH) return {cn:mH[1].trim(), spec:true};
+  const m=text.match(/Biomed\s+Library\s*;\s*([^\n\r;(]+)/i);
+  if(m) return {cn:m[1].trim(), spec:false};
+  const lines=text.split(/[\n\r]+/).map(l=>l.trim()).filter(Boolean);
+  const cn=lines.find(l=>/^[A-Z*][A-Z0-9]*[\s.]/i.test(l) && l.length<60);
+  if(cn) return {cn, spec:false};
+  return {cn:text.trim(), spec:false};
+}
+
+const qBox=document.getElementById('q');
+document.getElementById('go').onclick=locate;
+document.getElementById('clear').onclick=()=>{
+  qBox.value=''; document.getElementById('result').innerHTML='';
+  selected=null; flashId=null; setCollection('stacks'); renderPlan(); renderDetail();
+};
+qBox.addEventListener('keydown',e=>{ if(e.key==='Enter') locate(); });
+qBox.addEventListener('paste',e=>{
+  const pasted=(e.clipboardData||window.clipboardData).getData('text');
+  if(pasted.includes('\n') || pasted.length>80){
+    const {cn,spec}=extractCallNumber(pasted);
+    if(cn && cn.length<60){
+      e.preventDefault();
+      qBox.value=cn;
+      if(spec) setCollection('spec');
+      setTimeout(locate,60);
+    }
+  }
+});
+document.querySelectorAll('.examples .ex').forEach(b=>b.onclick=()=>{
+  qBox.value=b.dataset.q;
+  setCollection(/^WZ|^WX 27|^WC 160/i.test(b.dataset.q) ? 'spec' : 'stacks');
+  locate();
+});
+document.querySelectorAll('#sect .pill').forEach(p=>{
+  p.onclick=()=>{
+    setCollection(p.dataset.coll);
+    if(collection==='stacks'){ if(SPECIAL_FLOORS[level]) level=3; }
+    else level = COLL_TO_LEVEL[collection];
+    selected=null; flashId=null;
+    renderLevels(); renderPlan(); renderDetail();
+    if(qBox.value.trim()) locate();
+  };
+});
+
+/* Arriving from somewhere else. The catalog links a shelf hit here as `?lvl=8&id=top-3`, and the
+   home page hands a call number over as `?q=…`; both should land on the answer rather than on the
+   default floor with the reader having to type it again. */
+(function(){
+  const p=new URLSearchParams(location.search);
+  const q=(p.get('q')||'').trim();
+  const lvl=parseInt(p.get('lvl'),10), id=p.get('id');
+  if(q){
+    qBox.value=q;
+    if(/^hist\.?\s*div\.?\s/i.test(q) || p.get('coll')==='spec') setCollection('spec');
+    locate();
+    return;
+  }
+  if(Number.isFinite(lvl) && id && shelfById(id) && STACK_LEVELS.includes(lvl)){
+    level=lvl; selected=id; flashId=id;
+    setCollection(LEVEL_TO_COLL[lvl] || 'stacks');
+    renderLevels(); renderPlan(); renderDetail();
+    setTimeout(()=>{ flashId=null; renderPlan(); },1600);
+    return;
+  }
+  renderLevels(); renderPlan(); renderDetail();
+})();
+
+/* ===== Route planner =====
+   OCR (client-side Tesseract.js) fills an editable list of call numbers; the human
+   corrects it; then a deterministic engine builds a top-down walk. Movement model:
+   each stairwell goes DOWN exactly one floor (the quick move); the elevator handles
+   going up or skipping floors. Two stairwells per floor (west ~col 6.5, east ~col 13.5);
+   the elevator sits at the west block (~col 6.5). Within a floor we sweep across the
+   stacks once instead of backtracking. */
+(function(){
+  const ELEV_X=6.5, STAIR_W=6.5, STAIR_E=13.5;
+  const $=id=>document.getElementById(id);
+  const route=$('route'); if(!route) return;
+  const head=$('routeHead'), body=$('routeBody'), statusEl=$('ocrStatus'),
+        thumbs=$('thumbs'), cnList=$('cnList'), itin=$('itinerary'),
+        drop=$('drop'), fileInput=$('files'), cam=$('camera');
+  let tessLoaded=false, heicLoaded=false, tessWorker=null;
+
+  head.addEventListener('click',()=>{
+    body.hidden=!body.hidden;
+    head.querySelector('.tgl').textContent=body.hidden?'Open':'Close';
+    // This was the one disclosure of the four whose state nothing but a sighted reader could see.
+    const t=$('routeToggle');
+    if(t) t.setAttribute('aria-expanded',String(!body.hidden));
+  });
+  $('pick').addEventListener('click',e=>{ e.stopPropagation(); fileInput.click(); });
+  $('shoot').addEventListener('click',e=>{ e.stopPropagation(); cam.click(); });
+  fileInput.addEventListener('change',e=>handleFiles(e.target.files));
+  cam.addEventListener('change',e=>handleFiles(e.target.files));
+  ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{ e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{ e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop',e=>{ if(e.dataTransfer && e.dataTransfer.files) handleFiles(e.dataTransfer.files); });
+  $('buildRoute').addEventListener('click',buildRoute);
+  $('clearRoute').addEventListener('click',()=>{ cnList.value=''; itin.innerHTML=''; thumbs.innerHTML=''; setStatus(''); });
+
+  function setStatus(t,err){ statusEl.textContent=t||''; statusEl.classList.toggle('err',!!err); }
+  function lines(){ return cnList.value.split(/[\n\r]+/).map(s=>s.trim()).filter(Boolean); }
+  function setLines(arr){ cnList.value=arr.join('\n'); }
+
+  /* ---- OCR ----
+     Both libraries are pinned to an exact version and checked against a hash of the bytes that
+     were reviewed. `@5` was a moving target: whatever jsDelivr decided that tag meant on the
+     morning someone opened the page ran here, with the run of the document. */
+  function loadTess(){
+    if(tessLoaded) return Promise.resolve();
+    return new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+      s.integrity='sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F';
+      s.crossOrigin='anonymous';
+      s.onload=()=>{ tessLoaded=true; res(); };
+      s.onerror=()=>rej(new Error('Could not load the text-recognition library (are you offline?). You can still type call numbers below.'));
+      document.head.appendChild(s);
+    });
+  }
+  /* One reusable worker, tuned for short library call-number labels. */
+  async function getWorker(onProgress){
+    await loadTess();
+    if(tessWorker) return tessWorker;
+    tessWorker=await Tesseract.createWorker('eng',1,{logger:onProgress});
+    await tessWorker.setParameters({
+      tessedit_pageseg_mode:'11',                                   // sparse text: find scattered labels on a shelf
+      tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789. ',
+      preserve_interword_spaces:'1'
+    });
+    return tessWorker;
+  }
+  /* iPhone HEIC/HEIF can't be decoded by <canvas>; convert to JPEG first. */
+  function loadHeic(){
+    if(heicLoaded) return Promise.resolve();
+    return new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js';
+      s.integrity='sha384-OTofQ0MEeiSgh62havBcemCIK0gqj809wX6UA0uPISNMRnR6NZyCdGzX3SbLrgwL';
+      s.crossOrigin='anonymous';
+      s.onload=()=>{ heicLoaded=true; res(); };
+      s.onerror=()=>rej(new Error('Could not load the HEIC photo converter (are you offline?).'));
+      document.head.appendChild(s);
+    });
+  }
+  const isHeic=f=>/image\/hei[cf]/i.test(f.type||'') || /\.hei[cf]$/i.test(f.name||'');
+  async function toJpeg(file){
+    if(!isHeic(file)) return file;
+    await loadHeic();
+    const out=await heic2any({blob:file, toType:'image/jpeg', quality:0.85});
+    return Array.isArray(out) ? out[0] : out;
+  }
+  // Otsu: pick the grayscale threshold that best splits ink from paper.
+  function otsu(hist,total){
+    let sum=0; for(let i=0;i<256;i++) sum+=i*hist[i];
+    let sumB=0,wB=0,max=0,thr=127;
+    for(let t=0;t<256;t++){
+      wB+=hist[t]; if(!wB) continue; const wF=total-wB; if(!wF) break;
+      sumB+=t*hist[t];
+      const mB=sumB/wB, mF=(sum-sumB)/wF, between=wB*wF*(mB-mF)*(mB-mF);
+      if(between>max){ max=between; thr=t; }
+    }
+    return thr;
+  }
+  function preprocess(file){
+    return new Promise(res=>{
+      const url=URL.createObjectURL(file), img=new Image();
+      img.onload=()=>{
+        let scale=1900/img.width; scale=Math.max(0.5, Math.min(3, scale));   // shrink big phone photos, enlarge tiny labels
+        const c=document.createElement('canvas'); c.width=Math.round(img.width*scale); c.height=Math.round(img.height*scale);
+        const ctx=c.getContext('2d'); ctx.drawImage(img,0,0,c.width,c.height);
+        try{
+          const d=ctx.getImageData(0,0,c.width,c.height), p=d.data;
+          const hist=new Array(256).fill(0), g=new Uint8Array(p.length/4);
+          for(let i=0,j=0;i<p.length;i+=4,j++){ const v=(0.299*p[i]+0.587*p[i+1]+0.114*p[i+2])|0; g[j]=v; hist[v]++; }
+          const thr=otsu(hist,g.length), bias=thr+8;                          // small bias toward white = cleaner glyphs
+          for(let i=0,j=0;i<p.length;i+=4,j++){ const v=g[j]>=bias?255:0; p[i]=p[i+1]=p[i+2]=v; }
+          ctx.putImageData(d,0,0);
+        }catch(_){}
+        URL.revokeObjectURL(url); res(c);
+      };
+      img.onerror=()=>{ URL.revokeObjectURL(url); res(file); };
+      img.src=url;
+    });
+  }
+  // Books get photographed sideways/upside-down; Tesseract can't read rotated text.
+  function rotateCanvas(src,deg){
+    if(!deg) return src;
+    const c=document.createElement('canvas'), rad=deg*Math.PI/180;
+    if(deg===90||deg===270){ c.width=src.height; c.height=src.width; } else { c.width=src.width; c.height=src.height; }
+    const ctx=c.getContext('2d');
+    ctx.translate(c.width/2,c.height/2); ctx.rotate(rad); ctx.drawImage(src,-src.width/2,-src.height/2);
+    return c;
+  }
+  async function handleFiles(fl){
+    const files=[...fl].filter(f=>/^image\//.test(f.type)||isHeic(f));
+    if(!files.length){ setStatus('Those files are not images. Upload JPEG, PNG or HEIC photos, or type call numbers below.',true); return; }
+    setStatus('Loading text-recognition…');
+    let worker;
+    try{ worker=await getWorker(m=>{ if(m.status==='recognizing text') setStatus(`Reading… ${Math.round(m.progress*100)}%`); }); }
+    catch(e){ setStatus(e.message,true); return; }
+    const found=new Set(lines());
+    for(let i=0;i<files.length;i++){
+      try{
+        let src=files[i];
+        if(isHeic(src)){ setStatus(`Converting iPhone photo ${i+1} of ${files.length}…`); src=await toJpeg(src); }
+        const im=new Image(); im.src=URL.createObjectURL(src); thumbs.appendChild(im);
+        const pre=await preprocess(src);
+        let hits=[];
+        for(const deg of [0,90,270,180]){                                    // try each orientation until one reads
+          setStatus(`Reading image ${i+1} of ${files.length}${deg?` (rotated ${deg}°)`:''}…`);
+          const r=await worker.recognize(rotateCanvas(pre,deg));
+          hits=extractCNs(r.data.text);
+          if(hits.length) break;
+        }
+        hits.forEach(c=>found.add(c));
+      }catch(_){ /* skip an unreadable image */ }
+    }
+    setLines([...found]);
+    setStatus(`Read ${files.length} image${files.length===1?'':'s'}, found ${found.size} call number${found.size===1?'':'s'}. Check the list, then build the route.`);
+  }
+  function extractCNs(text){
+    if(!text) return [];
+    // Labels are stacked one token per line ("W1 / NA388 / no.66 / 1984") — flatten newlines to
+    // spaces so the whole call number assembles, and drop the "Biomed" collection prefix.
+    const norm=' '+text.toUpperCase()
+        .replace(/\bBIOMED\b/g,' ')
+        .replace(/[|=_]+/g,' ')
+        .replace(/[^A-Z0-9. ]/g,' ')
+        .replace(/\s+/g,' ')+' ';
+    const vol='(?:\\s+NO\\.?\\s?\\d+[A-Z]?)?(?:\\s+(?:18|19|20)\\d{2}[A-Z]?)?';  // optional "NO.66" + year
+    const out=[], rx=[
+      new RegExp('\\bW[1-4][A-Z]{0,2}\\s*[A-Z]{1,3}\\s?\\d{1,4}[A-Z]?'+vol,'g'),    // W1 serials: "W1 NA388 NO.66 1984"
+      new RegExp('\\b[A-Z]{1,3}\\s?\\d{1,4}(?:\\.\\d+)?\\s+\\.?[A-Z]\\d[\\dA-Z. ]{0,14}','g')  // NLM/LC: "WM 13 D5537", "QL737.C22"
+    ];
+    rx.forEach(r=>{ let m; while((m=r.exec(norm))) out.push(m[0].replace(/\s+/g,' ').trim().replace(/[ .]+$/,'')); });
+    return out;
+  }
+
+  /* ---- routing ---- */
+  /* Level 9 is Special Collections: a second, parallel sequence whose seventeen faces run
+     `A` to `ZWZ 330` and therefore contain almost every call number in the building. Routing
+     used to search it alongside the general stacks and then take the lowest-numbered floor,
+     which meant **every** book whose real home was level 10 or 11 was routed to level 9 --
+     98 of the 436 mapped faces, i.e. all of both floors. It looked like an OCR failure
+     because the call number on screen was right and only the floor was wrong.
+
+     `shelfHits` in the catalog module and `search` in the iOS port had always excluded level
+     9; only the trip planner did not. It does now. Special Collections is reachable through
+     its own section pill, which is the only place it should ever be reached from. */
+  function routeLocate(cn){
+    const qs=scheme(cn), hits=[];
+    for(const key in DATA){ const d=DATA[key]; if(!d.start||!d.end) continue;
+      if(key.charAt(0)==='9' && key.charAt(1)==='|') continue;
+      if(scheme(d.start)!==qs) continue;
+      if(cmpCN(cn,d.start)>=0 && cmpCN(cn,d.end)<=0){ const [lvl,id,side]=key.split('|'); hits.push({lvl:+lvl,id,side,d}); } }
+    hits.sort((a,b)=>a.lvl-b.lvl);
+    return hits;
+  }
+  // 1-D sweep: cover span [L,R] starting at s, ending at e; return cheaper direction.
+  function sweep(L,R,s,e){
+    const a=Math.abs(s-L)+(R-L)+Math.abs(R-e), b=Math.abs(s-R)+(R-L)+Math.abs(L-e);
+    return a<=b?{cost:a,dir:'LR'}:{cost:b,dir:'RL'};
+  }
+  const rowOrd=s=>s.row==='top'?0:1;
+  function groupStops(items){
+    const m={};
+    items.forEach(it=>{ const s=shelfById(it.hit.id), key=it.hit.id+'|'+it.hit.side;
+      if(!m[key]) m[key]={id:it.hit.id,side:it.hit.side,x:s?s.index:8,row:s?s.row:'',d:it.hit.d,cns:[]};
+      m[key].cns.push(it.cn); });
+    return Object.values(m);
+  }
+  function buildRoute(){
+    const want=[...new Set(lines())];
+    if(!want.length){ itin.innerHTML='<div class="itin-miss">Add call numbers first: upload an image or type them above.</div>'; return; }
+    const located=[], missing=[];
+    want.forEach(cn=>{ const h=routeLocate(cn); if(h.length) located.push({cn,hit:h[0]}); else missing.push(cn); });
+    if(!located.length){ itin.innerHTML=miss(missing); return; }
+    const byLvl={};
+    located.forEach(it=>{ (byLvl[it.hit.lvl]=byLvl[it.hit.lvl]||[]).push(it); });
+    const levels=Object.keys(byLvl).map(Number).sort((a,b)=>b-a);   // top floor first
+
+    /* **Over five books is a truck trip.** You are not carrying nine books down a stairwell, so
+       past that point the stairs stop being an option at all and every floor change is the
+       elevator. The threshold is a load, not a distance, which is why it overrides the routing
+       maths rather than being folded into it as a cost. */
+    const truck = located.length>5;
+
+    let entryKind='elevator', html='', stairs=0, lifts=0;
+    html+=transit('el',`Elevator to Level ${levels[0]} to start.`);
+    for(let i=0;i<levels.length;i++){
+      const lvl=levels[i], stops=groupStops(byLvl[lvl]);
+      const xs=stops.map(s=>s.x), L=Math.min(...xs), R=Math.max(...xs);
+      const entryCol=doorCol(doorFor(entryKind,'in'));
+      let nextTransit='', exitKind='done', nextKind='elevator';
+      if(i<levels.length-1){
+        const nlvl=levels[i+1], gap=lvl-nlvl;
+        const ns=groupStops(byLvl[nlvl]);
+        const nc=ns.reduce((a,st)=>a+standX(st),0)/ns.length;
+        if(gap===1 && !truck){
+          /* Which stairwell is cheaper is a question about doors, not columns. The west
+             stairwell's landing is behind the elevator block: reaching it means walking out to
+             the gap at column 4 and back in, and you arrive on the floor below on its *far*
+             side. The east stairwell opens straight onto the corridor going down, but drops you
+             into the south lobby coming out. Costing them as two bare x-positions gets this
+             backwards on exactly the floors where it matters, so both legs are measured along
+             the paths that will actually be drawn. */
+          let best=null;
+          ['west stairs','east stairs'].forEach(kind=>{
+            const out=doorFor(kind,'out'), back=doorFor(kind,'in');
+            const sc=sweep(L,R,entryCol,doorCol(out)).cost + doorDrop(out) + doorCost(back,nc);
+            if(!best||sc<best.sc) best={kind,sc};
+          });
+          exitKind=nextKind=best.kind; stairs++;
+          nextTransit=transit('st',`${best.kind.replace(' stairs','')} stairwell down one floor to Level ${nlvl}.`);
+        } else {
+          exitKind=nextKind='elevator'; lifts++;
+          const why = truck && gap===1 ? ' (truck trip, no stairs)'
+                    : gap>1 ? ` (skips ${gap-1} floor${gap-1===1?'':'s'})` : '';
+          nextTransit=transit('el',`Elevator down to Level ${nlvl}${why}.`);
+        }
+      }
+      const outDoor=exitKind==='done'?null:doorFor(exitKind,'out');
+      const exitCol=outDoor?doorCol(outDoor):entryCol;
+      const dir=sweep(L,R,entryCol,exitCol).dir;
+      stops.sort((a,b)=> dir==='LR' ? (a.x-b.x)||(rowOrd(a)-rowOrd(b)) : (b.x-a.x)||(rowOrd(a)-rowOrd(b)));
+      html+=floorCard(lvl,stops,entryKind,exitKind);
+      html+=nextTransit; entryKind=nextKind;
+    }
+    const books=located.length, fl=levels.length;
+    let plan;
+    if(fl===1){ plan=`All on Level ${levels[0]}. Elevator there.`; }
+    else if(truck){ plan=`Over five books, so it is a truck trip: elevator between every floor (${lifts} move${lifts===1?'':'s'}).`; }
+    else { plan=`Elevator to Level ${levels[0]}, then ${stairs} stair descent${stairs===1?'':'s'}`+(lifts?` and ${lifts} elevator move${lifts===1?'':'s'}.`:'.'); }
+    const sum=`${books} book${books===1?'':'s'} across ${fl} floor${fl===1?'':'s'}. ${plan}`;
+    html=`<div class="itin-summary">${sum}</div>`+html;
+    if(missing.length) html+=miss(missing);
+    itin.innerHTML=html;
+  }
+  function transit(kind,txt){ const cls=kind==='st'?'st':'el', ic=kind==='st'?'↓':'⇅'; return `<div class="itin-transit"><span class="ic ${cls}">${ic}</span><span>${txt}</span></div>`; }
+  /* ── Order as colour ──────────────────────────────────────────────────────────────────
+     A number badge tells you where a stop sits in the sequence, but only if you read every
+     badge. A colour ramp tells you the *shape* of the walk in one glance — where it starts,
+     which way it sweeps, how far it has to go. So order is encoded twice: the badge is exact,
+     the ramp is instant, and neither is load-bearing alone (colour-blind readers keep the
+     badges; a photocopy keeps the numbers).
+
+     Cool-to-warm, four anchors, because a single-hue light-to-dark ramp loses its middle at
+     the small sizes these maps render at, and because "blue is early, red is late" is the one
+     ramp convention nobody has to be taught. The anchors sit in a narrow luminance band so
+     white badge text stays legible at every position. */
+  const RAMP=[[3,105,161],[46,125,91],[198,138,30],[179,64,26]];
+  function orderColor(i,n){
+    if(n<=1) return `rgb(${RAMP[0].join(',')})`;
+    const t=i/(n-1), seg=Math.min(Math.floor(t*(RAMP.length-1)), RAMP.length-2),
+          f=t*(RAMP.length-1)-seg, a=RAMP[seg], b=RAMP[seg+1];
+    return `rgb(${a.map((v,j)=>Math.round(v+(b[j]-v)*f)).join(',')})`;
+  }
+
+  function floorCard(lvl,stops,entryKind,exitKind){
+    const total=stops.reduce((a,s)=>a+s.cns.length,0);
+    let h=`<div class="itin-floor"><div class="itin-floor-h" onclick="routeShow(${lvl},'${stops[0].id}')"><span class="lv">Level ${lvl}</span><span class="ct">${total} book${total===1?'':'s'} · ${stops.length} stop${stops.length===1?'':'s'} · tap to open the big map</span></div>`;
+    const m=walkMap(lvl,stops,entryKind,exitKind);
+    h+=m.html;
+    h+=walkList(stops,m.entryCol,m.exitCol,m.inDoor,m.outDoor);
+    return h+'</div>';
+  }
+
+  /* `entryKind`/`exitKind` name the stairwell or the elevator; `planDoors()` turns that into the
+     edge you actually come through, and `doorCol`/`doorCost` say what it costs to get from there
+     to the stacks. Which edge is not cosmetic: descending the west stairwell puts you out on its
+     far side, so the same descent that ended "at the stairs" starts you facing the other way on
+     the floor below. */
+  function doorFor(kind,dir){
+    const D=planDoors();
+    if(kind==='elevator') return D.elevator;
+    if(kind==='west stairs') return dir==='out'?D.wsDown:D.wsUp;
+    if(kind==='east stairs') return dir==='out'?D.esDown:D.esUp;
+    return null;
+  }
+  /* ── The map ──────────────────────────────────────────────────────────────────────────
+     One SVG per floor, built from the same `planShelves()` and `planFeatures()` as the big floor
+     plan, so it is that drawing with the walk marked on it rather than a second, different
+     picture of the same building.
+
+     **There is no drawn route.** There was, and it did not survive contact with the building: an
+     aisle is a twelve-pixel gap, a sweep doubles back down the corridor it came along, and every
+     device for keeping those legs apart — offset tracks, rounded corners, arrowheads — added more
+     ink to a picture that was already too busy to read. What a route line was carrying is order,
+     and order fits in the two things already on the map: the face you are going to, tinted, and a
+     numbered badge in the aisle you read it from. Colour gives you the shape of the walk at a
+     glance; the number settles any ambiguity. Neither can overlap anything, because neither is a
+     line.
+
+     Faces you are not visiting keep their shelf-group colour at soft strength, so the floor still
+     reads as the floor. */
+  function walkMap(lvl,stops,entryKind,exitKind){
+    const n=stops.length;
+    const inDoor=doorFor(entryKind,'in'), outDoor=doorFor(exitKind,'out');
+    const entryCol=doorCol(inDoor), exitCol=outDoor?doorCol(outDoor):entryCol;
+
+    const visited={}; stops.forEach((st,i)=>{ visited[st.id+'|'+st.side]=i; });
+    let s=planShelves(lvl,(sh,side,has)=>{
+      const key=sh.id+'|'+side;
+      if(key in visited) return orderColor(visited[key],n);
+      return has ? groupSoft[sh.group] : null;
+    },false);
+    s+=planFeatures();
+
+    /* Where you come in and where you leave. On a truck trip both are the same elevator door, so
+       two captions would land on one point and interleave into gibberish; say it once. */
+    const sameDoor = outDoor && outDoor.x===inDoor.x && outDoor.y===inDoor.y;
+    s+=endCap(inDoor, sameDoor?'START / EXIT':'START', entryKind);
+    if(outDoor && !sameDoor) s+=endCap(outDoor,'EXIT',exitKind);
+
+    /* Badges sit in the aisle you stand in, beside the face they belong to. Two faces read from
+       one aisle are one place to stand, so their badges would land on each other — they get
+       spread along the aisle instead of stacked. */
+    const at={};
+    stops.forEach((st,i)=>{
+      const lane=laneOf(st), x=colX(standX(st)), slot=x+'|'+lane;
+      const k=(at[slot]=(at[slot]||0)+1)-1;
+      const y=LANE_Y[lane]+(k ? (k%2?1:-1)*Math.ceil(k/2)*26 : 0);
+      const col=orderColor(i,n);
+      s+=`<circle cx="${x}" cy="${y}" r="11.5" fill="${col}" stroke="var(--paper)" stroke-width="2.2"/>`;
+      s+=`<text x="${x}" y="${y+4}" text-anchor="middle" font-family="var(--mono)" font-size="12" font-weight="700" fill="#fff">${i+1}</text>`;
+    });
+
+    const h=PLAN.botY+PLAN.botH+30;   // room for the caption under a door on a south edge
+    const html=`<div class="walkwrap"><svg class="walkmap" viewBox="0 0 720 ${h}" role="img" `
+      + `aria-label="Level ${lvl} walking route: ${n} stop${n===1?'':'s'} in order">${s}</svg></div>`
+      + rampLegend(n);
+    return {html, entryCol, exitCol, inDoor, outDoor};
+  }
+  /* The cap sits on the door, in the door's own colour — orange for stairs, blue for the lift,
+     matching the blocks they are drawn on. The caption goes wherever the open floor is, which
+     is the direction the door faces: a caption placed by habit above the door lands inside the
+     orange stairs block, orange on orange, and half of it disappears. */
+  function endCap(door,label,kind){
+    const c=/stairs/.test(kind)?'var(--orange)':'var(--accent)';
+    const {x,y}=door;
+    let t;
+    if(door.via==='lobby')         t=`x="${x+12}" y="${y+16}" text-anchor="start"`;
+    else if(door.via==='corridor') t=`x="${x}" y="${y-13}" text-anchor="middle"`;
+    /* A door on a side edge is approached along its own row, so the caption goes above it —
+       level with it would sit on the line that arrives there. */
+    else if(door.via==='west')     t=`x="${x-2}" y="${y-13}" text-anchor="end"`;
+    else                           t=`x="${x+2}" y="${y-13}" text-anchor="start"`;
+    /* The route line is drawn before this and passes through several of these positions, so the
+       caption carries its own paper-coloured outline rather than relying on finding a clear
+       spot on every floor. */
+    return `<circle cx="${x}" cy="${y}" r="7.5" fill="var(--paper)" stroke="${c}" stroke-width="3"/>`
+         + `<text ${t} font-family="var(--mono)" font-size="9" letter-spacing="1" `
+         + `stroke="var(--paper)" stroke-width="3" paint-order="stroke" fill="${c}">${label}</text>`;
+  }
+  /* Reading key for the ramp. Without it the colours are just pretty; with it they are a scale. */
+  function rampLegend(n){
+    let bar='';
+    for(let i=0;i<24;i++) bar+=`<span style="background:${orderColor(i,24)}"></span>`;
+    return `<div class="ramp"><span class="rl">first stop</span><span class="bar">${bar}</span>`
+         + `<span class="rl">last stop (${n})</span></div>`;
+  }
+
+  /* ── The same walk in words ────────────────────────────────────────────────────────────
+     The map answers "where"; this answers "what do I do next", which is the question you have
+     while walking and not looking at a screen. Distances count shelves passed along the
+     corridor, because that is the unit that is painted on the floor in front of you.
+
+     The first move is measured from a door rather than from another aisle, so it can land on a
+     half shelf; it is stated as a direction rather than a count. Every later move is aisle to
+     aisle and comes out whole. */
+  /* One row per stop, in absolute terms. East and west are the arrow, north and south are the
+     row, and which face in the aisle is the L or R on the label — so nothing here depends on
+     which way the reader happens to be pointing. Anything they already have is left out: the
+     transit line above named the door, and "shelf" and "row" and "face" are the only kinds of
+     thing these numbers could be. */
+  function walkList(stops,entry,exit,inDoor,outDoor){
+    const steps=walkSteps(stops,entry,exit), n=stops.length;
+    const arrow={1:'→','-1':'←',0:'↳'};
+    const face={left:'L',right:'R',single:'R'};
+    const shortDoor = d => d.name.replace('stairwell','stairs');
+    let h='<ol class="itin-steps">';
+    steps.forEach(st=>{
+      /* A move off a door is measured from the middle of a block and can land on half a shelf, so
+         it gives the direction and skips the count. Every later move is aisle to aisle and whole. */
+      const move = st.shelves===0 ? 'same aisle'
+                 : Number.isInteger(st.shelves) ? `${st.shelves} ${st.shelves===1?'shelf':'shelves'}`
+                 : (st.head>0?'east':'west');
+      h+=`<li><span class="sn" style="background:${orderColor(st.n-1,n)}">${st.n}</span>`
+       + `<span class="sd"><span class="k">${arrow[st.head]} ${move}</span> to ${aisleShort(st.x)}</span>`
+       + `<span class="sat"><span class="k">${st.index}${face[st.side]||''}</span> ${st.row}</span>`
+       + `<span class="scn">${st.cns.map(escHtml).join(' · ')}</span>`
+       + `<span class="srng">${st.range.start} → ${st.range.end}</span></li>`;
+    });
+    if(outDoor){
+      h+=`<li class="out"><span class="sn out">↺</span>`
+       + `<span class="sd">back to the <span class="k">${shortDoor(outDoor)}</span></span></li>`;
+    }
+    return h+'</ol>';
+  }
+  /* These are lines out of the textarea. What OCR puts there is filtered down to [A-Z0-9. ],
+     but what a reader types or pastes is whatever they typed or pasted. */
+  function miss(arr){ return `<div class="itin-miss">Not located (${arr.length}): ${arr.map(escHtml).join(' · ')}<br>Mis-read by OCR, shelved in Reference on floor 4, or outside the mapped ranges. Fix the spelling above and rebuild.</div>`; }
+
+  window.routeShow=function(lvl,id){ level=lvl; selected=id; flashId=id; if(typeof syncCollectionToLevel==='function') syncCollectionToLevel(); renderLevels(); renderPlan(); renderDetail(); setTimeout(()=>{ flashId=null; renderPlan(); },1600); const st=document.querySelector('.stage'); if(st) st.scrollIntoView({behavior:'smooth',block:'center'}); };
+})();
+</script>
+</body>
+</html>

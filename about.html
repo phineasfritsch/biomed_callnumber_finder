@@ -20,7 +20,7 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="stylesheet" href="/prose.css">
+<link rel="stylesheet" href="/site.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap">
@@ -41,10 +41,11 @@
       </svg>
       <span><b>Shelfmark</b><span class="tag">the book, then the aisle</span></span>
     </a>
-    <nav class="site-nav">
-      <a href="/">The tool</a>
-      <a href="/about" aria-current="page">How to use</a>
-      <a href="/methodology">Methodology</a>
+    <nav class="site-nav" aria-label="Sections">
+      <a href="/">Search</a>
+      <a href="/map">Map</a>
+      <a href="/hours">Hours</a>
+      <a href="/databases">Databases</a>
     </nav>
   </header>
 
@@ -53,11 +54,20 @@
   <p class="lede">Shelfmark answers two questions that UCLA&rsquo;s own search leaves to you: which
   library holds the thing, and which shelf it is on once you are standing in the building.</p>
 
+  <h2>Where things are</h2>
+  <p>Four pages, and the bar at the top of every one of them goes to all four.</p>
+  <div class="rows">
+    <div><a href="/">Search</a></div><div>The one box, the catalog and the article index. Start here.</div>
+    <div><a href="/map">Map</a></div><div>The Biomed shelf map, floor by floor, and the pickup walk planner.</div>
+    <div><a href="/hours">Hours</a></div><div>Opening hours for all 27 UCLA locations.</div>
+    <div><a href="/databases">Databases</a></div><div>UCLA&rsquo;s whole A to Z list, filterable.</div>
+  </div>
+
   <h2>Everything starts in the one box</h2>
   <p>There used to be a box per question, and you had to know which question you were asking before
   you could ask it. There is one field now and it decides:</p>
   <div class="rows">
-    <div><code>QL737.C22</code></div><div>Anything shaped like a call number goes to the shelf map.</div>
+    <div><code>QL737.C22</code></div><div>Anything shaped like a call number is answered on the spot, with the floor and the shelf face and a small map of that floor. One click opens it on the full map.</div>
     <div><code>10.1056/NEJMoa1816897</code></div><div>A DOI, a PubMed ID or an ISSN goes to the article panel and the link resolver.</div>
     <div>Everything else</div><div>Goes to UCLA&rsquo;s catalog as a title, author or subject search.</div>
   </div>
@@ -78,9 +88,13 @@
     <li>Where a range start equals its end, many volumes share one call number, so every matching
     shelf is returned and you check the spine.</li>
   </ul>
-  <p>Reference is on floor 4 and Special Collections on floor 9. Switch the Biomed map pill to search
-  those. Only Biomed stacks copies resolve to a shelf you can walk to; a copy at Powell or YRL is
-  reported as being there, without a shelf face.</p>
+  <p>Reference is on floor 4 and Special Collections on floor 9. On <a href="/map">the map page</a>,
+  switch the Biomed map pill to search those; from the search box, type <code>Hist Div</code> in
+  front of the call number and it goes to Special Collections on its own. Only Biomed stacks copies
+  resolve to a shelf you can walk to; a copy at Powell or YRL is reported as being there, without a
+  shelf face.</p>
+  <p>A shelf hit in a catalog result is a link. Clicking it opens the map on that floor with the
+  shelf already lit.</p>
 
   <h2>Books</h2>
   <p>Results are scoped to the library you say you are working at, and widen to the rest of UCLA only
@@ -120,20 +134,42 @@
   and for which years. Coverage is worth checking before walking someone over: a provider can carry
   the journal and not the issue.</p>
 
-  <h2>Hours, databases and pickup walks</h2>
-  <p>Opening hours come from LibCal and are read live, so they are as current as the
-  library&rsquo;s own page.</p>
-  <p>The <b>Databases A&ndash;Z</b> panel is UCLA&rsquo;s whole list, about 1,350 of them, taken
-  from the same LibGuides feed the library&rsquo;s own A to Z page is built from and refreshed
-  once a day. Type to narrow it by name, and the two checkboxes narrow it further: <i>best
-  bets</i> is the library&rsquo;s own flag on the ones it recommends first, and <i>open to
-  anyone</i> hides everything that asks for a UCLA login &mdash; useful if you are not on the
-  campus network. The feed carries names and links and nothing else, so there are no
-  descriptions to show; the list is fetched the first time you open the panel rather than on
-  every page load.</p>
-  <p>The pickup walk takes a list of call numbers, or photographs of them, and puts them in the order
-  you would walk the stacks rather than the order you typed them. Photographs are read in the browser
-  with optical character recognition; the images are never uploaded anywhere.</p>
+  <h2>Databases A&ndash;Z</h2>
+  <p><a href="/databases">The databases page</a> is UCLA&rsquo;s whole list &mdash; 1,354 of them
+  &mdash; taken from the same LibGuides feed the library&rsquo;s own A to Z page is built from,
+  and refreshed once a day. It is there for the searches this site cannot do: PsycINFO,
+  Web of Science, CINAHL, a newspaper archive, a dataset. Shelfmark searches UCLA&rsquo;s catalog
+  and its article index; everything else lives behind one of these.</p>
+  <p>Type in the filter box to narrow the list by name. It matches anywhere in the name, so
+  <code>psyc</code> finds PsycINFO and PsycARTICLES, and <code>pub</code> finds PubMed. Filtering
+  happens in your browser against the list already on screen, so it answers as you type and costs
+  nothing.</p>
+  <p>Two checkboxes narrow it further:</p>
+  <div class="rows">
+    <div><b>Best bets only</b></div><div>The library&rsquo;s own flag on the ones it recommends
+    first for a subject. 337 of the 1,354 carry it.</div>
+    <div><b>Open to anyone</b></div><div>Hides everything that asks for a UCLA login, leaving the
+    106 that open from anywhere. Useful when you are off campus with no VPN, or sending a link to
+    someone who is not at UCLA.</div>
+  </div>
+  <p>Every entry opens in a new tab, at the same address the library&rsquo;s page would send you
+  to. A database marked <b>no login</b> should open straight away; everything else will ask you to
+  sign in, on campus or off.</p>
+  <p>What the feed carries is a name, a link, and those two facts. There are no descriptions in it
+  &mdash; the library publishes them on its own page but not through this feed &mdash; so this
+  list does not show a description field that would always be empty. If you need to know what a
+  database covers before opening it, the library&rsquo;s A to Z page has the blurbs.</p>
+
+  <h2>Hours</h2>
+  <p><a href="/hours">Opening hours</a> come from LibCal and are read live, so they are as current
+  as the library&rsquo;s own page. Every UCLA location is listed, not just Biomed. Pick any date
+  within a year back or two years forward; the day strip moves a week at a time.</p>
+
+  <h2>Pickup walks</h2>
+  <p>At the bottom of <a href="/map">the map page</a>, the pickup walk takes a list of call
+  numbers, or photographs of them, and puts them in the order you would walk the stacks rather
+  than the order you typed them. Photographs are read in the browser with optical character
+  recognition; the images are never uploaded anywhere.</p>
 
   <div class="note"><b>Nothing here needs an account.</b> No sign-in, no analytics, no cookies. What
   you type is sent to UCLA&rsquo;s public endpoints to answer the search, and nowhere else.</div>

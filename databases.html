@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Databases A–Z — Shelfmark</title>
+<meta name="description" content="All 1,354 databases UCLA licenses or links to, filterable by name, with the ones that need a campus login marked and the library's own best bets flagged.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="canonical" href="https://shelfmark.phineasfritsch.com/databases">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#f3efe4">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shelfmark">
+<meta property="og:title" content="Databases A–Z — Shelfmark">
+<meta property="og:description" content="All 1,354 databases UCLA licenses or links to, filterable by name, with the ones that need a campus login marked and the library's own best bets flagged.">
+<meta property="og:url" content="https://shelfmark.phineasfritsch.com/databases">
+<meta property="og:image" content="https://shelfmark.phineasfritsch.com/og-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="/site.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- The web font sheet used to be an ordinary stylesheet link, which meant nothing painted until
+     Google answered: 803 ms of a 3.5 s first paint, on a page whose own HTML arrives in 50 ms.
+     Nothing here needs Fraunces to be readable, so the sheet is fetched at high priority and
+     applied when it lands, instead of holding the page hostage while it travels. `media="print"`
+     is what makes it non-blocking; the onload swaps it back to every medium. The families both
+     name a system fallback, so the wait is a change of typeface rather than invisible text. -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap">
+<!-- The two font files themselves, fetched alongside the sheet that would otherwise have to
+     arrive first and name them. Without this the browser learns these URLs only after a round
+     trip to Google, and the typeface lands after the page has already painted in Georgia and
+     the system monospace: every line then re-measures at once, which moved the shelf map down
+     the page and was the whole of a 0.375 layout shift on desktop. -->
+<link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/splinesansmono/v13/R70BjzAei_CDNLfgZxrW6wrZOF2WX5KZmE-Z-lw.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/fraunces/v38/6NU78FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0KxC9TeP2Xz5c.woff2">
+<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap"></noscript>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the list</a>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="/">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+              <g class="stack">
+                <rect x="6.5" y="9" width="5" height="16.5" rx="1"/>
+                <rect x="20.5" y="9" width="5" height="16.5" rx="1"/>
+                <rect x="4" y="25.5" width="24" height="3" rx="1.2"/>
+              </g>
+              <path class="marked" d="M13.5 5.6h5v19.9L16 22.6l-2.5 2.9Z"/>
+            </svg>
+      <span><b>Shelfmark</b><span class="tag">the book, then the aisle</span></span>
+    </a>
+    <nav class="site-nav" aria-label="Sections">
+      <a href="/">Search</a>
+      <a href="/map">Map</a>
+      <a href="/hours">Hours</a>
+      <a href="/databases" aria-current="page">Databases</a>
+    </nav>
+  </header>
+
+  <main id="main">
+  <!-- The list loads with the page here, rather than on first open: this page is the list, and
+       arriving at it is the request. What LibGuides publishes is names, links and one access
+       fact each — there are no descriptions in the feed, so none are promised here. -->
+  <h1>Databases A&ndash;Z</h1>
+  <p class="lede" id="dbSummary">Everything UCLA licenses, plus what is open to anyone. The same
+  list the library&rsquo;s own A to Z page is built from, refreshed once a day.</p>
+
+  <div class="cat open" id="db">
+    <div class="cat-body" id="dbBody">
+      <div class="cat-form">
+        <label class="sr-only" for="dbQ">Filter databases by name</label>
+        <input id="dbQ" type="search" placeholder="PubMed, Embase, Scopus&hellip;" autocomplete="off" spellcheck="false" enterkeyhint="search">
+        <button class="btn ghost" type="button" id="dbClear">Clear</button>
+      </div>
+      <div class="db-filters" role="group" aria-label="Narrow the list">
+        <label class="chk"><input type="checkbox" id="dbBest"> Best bets only</label>
+        <label class="chk"><input type="checkbox" id="dbOpen"> Open to anyone</label>
+      </div>
+      <div class="cat-status" id="dbStatus" role="status" aria-live="polite"></div>
+      <div id="dbOut"></div>
+    </div>
+  </div>
+  </main>
+
+  <footer>
+    <a href="/about">How to use this</a> &middot; <a href="/methodology">How it works</a>
+    <span class="by">Built by <a href="https://phineasfritsch.com">Phineas Fritsch</a>.
+    The shelf map is surveyed by hand and the data comes from UCLA&rsquo;s public endpoints.
+    Not affiliated with, or endorsed by, the UCLA Library.</span>
+  </footer>
+</div>
+<script>
+/* ===== Databases A-Z =====
+   The worker parses LibGuides' widget once a day and hands back the list as JSON; this panel is
+   the reader's end of that. Three things worth saying about the shape:
+
+   - It is fetched on first open, not on load. Roughly 1,350 entries is ~190 KB of JSON, which is
+     not much next to the 1.17 MB of markup the worker reads to get it, but it is a lot to spend
+     on someone who came here to find a book on a shelf. Once fetched it is kept for the session.
+   - Filtering is local. The whole list is already in hand, so a keystroke is a filter and not a
+     request, and the worker's day-long cache does not need to know.
+   - What the feed carries is a name, a link, whether UCLA has to log you in, and whether the
+     library flagged it as a best bet. There are no descriptions in it — all 1,365 description
+     divs come back empty — so this does not print an empty line pretending otherwise.
+*/
+(function(){
+  const $=id=>document.getElementById(id);
+  const root=$('db'); if(!root) return;
+  const body=$('dbBody'),
+        input=$('dbQ'), clear=$('dbClear'), best=$('dbBest'), open=$('dbOpen'),
+        statusEl=$('dbStatus'), out=$('dbOut'), summary=$('dbSummary');
+  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  /* Its own copy, like the escaper above it. This page has no shelves on it, so it does not load
+     shelf-core.js, and four lines here is a better trade than 48 KB of comparator and floor plan
+     fetched to check that a URL starts with http. */
+  const safeHref=u=>{
+    const s=String(u==null?'':u).trim();
+    return /^https?:\/\//i.test(s) ? s : '';
+  };
+
+  let items=null, loading=false, failed=false;
+  /* Long enough that the whole list is never on screen at once, short enough that the first
+     screen arrives instantly. Filtering narrows to well under this almost immediately. */
+  const PAGE=60;
+  let shown=PAGE;
+
+  function setStatus(t,err){ statusEl.textContent=t||''; statusEl.classList.toggle('err',!!err); }
+
+  function matches(){
+    const q=input.value.trim().toLowerCase();
+    return items.filter(i=>
+      (!q || i.name.toLowerCase().includes(q)) &&
+      (!best.checked || i.best) &&
+      (!open.checked || !i.auth));
+  }
+
+  function draw(){
+    if(!items) return;
+    const list=matches();
+    if(!list.length){
+      out.innerHTML='<div class="cat-empty">No database here matches that. The list is UCLA-wide, so try a shorter word &mdash; <span class="k">pub</span> finds PubMed, <span class="k">psyc</span> finds PsycINFO.</div>';
+      setStatus('0 of '+items.length.toLocaleString()+' databases');
+      return;
+    }
+    const page=list.slice(0,shown);
+    out.innerHTML='<div class="db-list">'+page.map(i=>
+      '<div class="db-row"><a href="'+esc(safeHref(i.url))+'" target="_blank" rel="noopener noreferrer">'+esc(i.name)+'</a>'+
+      (i.best?'<span class="db-tag best">best bet</span>':'')+
+      (i.auth?'':'<span class="db-tag open">no login</span>')+
+      '</div>').join('')+'</div>'+
+      (list.length>shown
+        ? '<div class="db-more"><button class="cat-example" type="button" id="dbMore">Show '+
+          Math.min(PAGE,list.length-shown)+' more</button> of '+list.length.toLocaleString()+'</div>'
+        : '');
+    const more=$('dbMore');
+    if(more) more.addEventListener('click',()=>{ shown+=PAGE; draw(); });
+    setStatus(list.length===items.length
+      ? items.length.toLocaleString()+' databases, '+items.filter(i=>i.auth).length.toLocaleString()+' of them needing a UCLA login'
+      : list.length.toLocaleString()+' of '+items.length.toLocaleString()+' databases');
+  }
+
+  function refilter(){ shown=PAGE; draw(); }
+
+  async function load(){
+    if(items || loading) return;
+    loading=true; failed=false;
+    out.innerHTML='<div class="db-list">'+Array.from({length:8},()=>
+      '<div class="db-row"><span class="skel" style="width:'+(120+Math.round(Math.random()*160))+'px"></span></div>').join('')+'</div>';
+    setStatus('Asking LibGuides…');
+    try{
+      const res=await fetch('/api/databases');
+      const data=await res.json();
+      if(!res.ok) throw new Error(data.error||('HTTP '+res.status));
+      /* The worker already drops anything that is not the web, so this is the second of two
+         checks rather than the only one — but the list is somebody else's markup, and the page
+         that draws the link is the last place that can refuse to. */
+      items=(data.items||[]).filter(i=>i && i.name && safeHref(i.url));
+      if(!items.length) throw new Error('the list came back empty');
+      summary.textContent=items.length.toLocaleString()+' databases, refreshed daily';
+      refilter();
+    }catch(e){
+      failed=true;
+      out.innerHTML='';
+      setStatus('Could not load the database list: '+e.message+'. The A to Z page itself is at library.ucla.edu.',true);
+    }finally{ loading=false; }
+  }
+
+  // This page is the list, so arriving is the request.
+  load();
+
+  let t=null;
+  input.addEventListener('input',()=>{ clearTimeout(t); t=setTimeout(refilter,120); });
+  input.addEventListener('keydown',e=>{ if(e.key==='Enter'){ clearTimeout(t); refilter(); } });
+  clear.addEventListener('click',()=>{ input.value=''; best.checked=false; open.checked=false; refilter(); input.focus(); });
+  best.addEventListener('change',refilter);
+  open.addEventListener('change',refilter);
+})();
+</script>
+</body>
+</html>

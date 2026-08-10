@@ -8,15 +8,20 @@
 // planner put raw textarea lines into its "not located" list the same way.
 //
 // The first half of this file is the part that keeps them from coming back: the escaper and the
-// scheme check are exercised against the payloads that worked, using the shipped implementations
-// pulled out of index.html. The second half is a reader over the whole file, because an escaper
-// that exists is worth nothing next to one interpolation that forgot to call it.
+// scheme check are exercised against the payloads that worked, using the shipped implementation
+// pulled out of shelf-core.js. The second half reads every page that ships script, because an
+// escaper that exists is worth nothing next to one interpolation that forgot to call it.
 
 const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const HTML = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+/* Every file that ships script. The escaper lives in shelf-core.js now; the sinks are spread
+   across five pages, and a page left out of this list is a page nothing is checking. */
+const FILES = ['shelf-core.js', 'index.html', 'map.html', 'hours.html', 'databases.html'];
+const SRC = Object.fromEntries(FILES.map(f => [f, fs.readFileSync(path.join(ROOT, f), 'utf8')]));
+const HTML = FILES.map(f => SRC[f]).join('\n/* ---- next file ---- */\n');
+const CORE = SRC['shelf-core.js'];
 
 let pass = 0;
 const failures = [];
@@ -31,10 +36,10 @@ function section(t) { console.log(`\n${t}`); }
 
 /* ---- the shipped helpers ---- */
 function between(start, end, what) {
-  const a = HTML.indexOf(start);
-  const b = HTML.indexOf(end, a);
-  if (a < 0 || b < 0) throw new Error(`could not find ${what} in index.html — did the markers move?`);
-  return HTML.slice(a, b);
+  const a = CORE.indexOf(start);
+  const b = CORE.indexOf(end, a);
+  if (a < 0 || b < 0) throw new Error(`could not find ${what} in shelf-core.js — did the markers move?`);
+  return CORE.slice(a, b);
 }
 const helpers = between('const escHtml =', '/* ===== NLM call-number comparator', 'the shared escaper');
 const sandbox = {};
@@ -92,13 +97,24 @@ for (const { re, what } of READER_INPUT) {
     found.length + ' occurrence(s): ' + found.join(', '));
 }
 
-// The three sinks that were the bug, named so a rewrite cannot quietly drop the escaper.
+// The sinks that were the bug, named so a rewrite cannot quietly drop the escaper.
 for (const marker of [
   'escHtml(q.toUpperCase())',
+  'escHtml(term.toUpperCase())',
   'arr.map(escHtml).join',
   'st.cns.map(escHtml).join',
 ]) {
   ok('`' + marker + '` is still there', HTML.includes(marker));
+}
+
+/* Every page that draws reader input has to have an escaper in reach. shelf-core.js supplies one
+   to the two pages that load it; the hours and databases panels carry their own, for the reason
+   each documents. A page with a sink and no escaper is the failure this catches. */
+for (const f of ['index.html', 'map.html', 'hours.html', 'databases.html']) {
+  const src = SRC[f];
+  const hasSink = /innerHTML\s*=/.test(src);
+  const hasEscaper = /const esc\s*=|escHtml|\/shelf-core\.js/.test(src);
+  ok(f + ' has an escaper for what it prints', !hasSink || hasEscaper);
 }
 
 /* Every href built by string concatenation has to name a scheme check or a literal origin.

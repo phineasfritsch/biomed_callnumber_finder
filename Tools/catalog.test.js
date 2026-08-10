@@ -16,6 +16,10 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
 const HTML = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+/* The dataset and the comparator moved out of the page when the tool became five of them. They
+   are read from where they ship now; the catalog core is still inline on the search page. */
+const DATA_JS = fs.readFileSync(path.join(ROOT, 'shelf-data.js'), 'utf8');
+const CORE_JS = fs.readFileSync(path.join(ROOT, 'shelf-core.js'), 'utf8');
 
 /* ---- extract the shipped code ---- */
 function between(start, end, what) {
@@ -27,16 +31,16 @@ function between(start, end, what) {
 const core = between('/* == catalog-core:start ==', '/* == catalog-core:end == */', 'catalog core')
   .replace(/^[\s\S]*?\*\//, ''); // drop the marker's own block comment tail
 
-// The comparator + dataset the core leans on.
-const dataJson = between('const DATA = ', ';', 'embedded DATA'); // the JSON holds no semicolons
-const comparator = HTML.slice(
-  HTML.indexOf('function parseCN(raw)'),
-  HTML.indexOf('/* ===== layout =====')
+// The comparator + dataset the core leans on, from the two files that ship them.
+const comparator = CORE_JS.slice(
+  CORE_JS.indexOf('function parseCN(raw)'),
+  CORE_JS.indexOf('/* ===== layout =====')
 );
+if (!comparator) throw new Error('could not find the comparator in shelf-core.js — did it move?');
 
 const sandbox = {};
 new Function('exports', `
-  const DATA = ${dataJson};
+  ${DATA_JS}
   ${comparator}
   ${core}
   Object.assign(exports, { DATA, parseCN, cmpCN, scheme,
