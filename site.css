@@ -452,8 +452,11 @@
      coloured thing on it — everything else drops to paper — because at this width the reader is
      looking for one mark, not reading a floor plan. */
   .prevwrap{margin:10px 0 0; padding:10px 12px; background:var(--card); border:1px solid var(--line);
-    border-radius:10px; overflow-x:auto; -webkit-overflow-scrolling:touch}
-  .prevmap{display:block; width:100%; min-width:440px; height:auto}
+    border-radius:10px; overflow-x:auto; -webkit-overflow-scrolling:touch; text-align:center}
+  /* Capped, because a preview that fills the screen is not a preview — at full width the plan
+     runs past 500px tall and pushes the thing it is previewing off the top. The SVG keeps its
+     own aspect ratio, so the height cap pulls the width in with it. */
+  .prevmap{display:block; margin:0 auto; width:100%; min-width:440px; height:auto; max-height:300px}
   .prevmap .shelf{cursor:default}
   a.tomap{display:inline-block; font-size:12px; color:var(--accent); text-decoration:none;
     border-bottom:1px solid var(--line); padding-bottom:1px}
