@@ -566,7 +566,10 @@ function parseAZ(raw) {
 }
 
 async function databases(request, url, ctx) {
-  const key = new Request('https://shelfmark.internal/az-v1', { method: 'GET' });
+  /* The version in this key is what the version is for. The entry is kept for a day, so a fix to
+     how the list is parsed does not reach anybody until the old body expires — bumping the key
+     retires it now. Last bumped when \uXXXX escapes stopped being left in the names. */
+  const key = new Request('https://shelfmark.internal/az-v2', { method: 'GET' });
   const cache = caches.default;
   const hit = await cache.match(key);
   if (hit) {
