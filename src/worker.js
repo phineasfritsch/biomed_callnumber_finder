@@ -35,6 +35,21 @@ function slim(doc) {
      record itself. `cdi_` prefixed ids come from the central index (context PC); everything
      else is a local holding (context L). */
   const c = pnx.control || {};
+  /* The one thing a result row has to answer is whether the reader can get it, and Primo says
+     so in `delivery.availability`. Probed 2026-08-10 across four queries, 60 records:
+     `fulltext` for everything UCLA licenses or hosts, `fulltext_linktorsrc` where the link goes
+     straight to the publisher, `no_fulltext` only when the search is expanded past the
+     holdings. Peer review and open access are facts about the paper, not about whether it can
+     be read here, so they do not belong in the same place. */
+  const dl = doc.delivery || {};
+  const avail = list(dl.availability).map(x => String(x).toLowerCase());
+  const cats = list(dl.deliveryCategory).map(x => String(x).toLowerCase());
+  const has = re => avail.some(x => re.test(x));
+  const access = has(/no_fulltext/) ? 'none'
+    : has(/linktorsrc/) ? 'link'
+    : has(/fulltext/) ? 'full'
+    : cats.some(x => /alma-p/.test(x)) || has(/available_in_library|physical/) ? 'print'
+    : '';
   const recordid = first(c.recordid);
   const context = /^cdi_/.test(recordid) ? 'PC' : 'L';
   const permalink = recordid
@@ -53,7 +68,9 @@ function slim(doc) {
     issn: first(a.issn) || first(a.eissn),
     type: first(d.type),
     source: first(d.source),
-    peer: list(d.lds50).some(x => /peer/i.test(x)) || list(f.toplevel).some(x => /peer/i.test(x)),
+    access: access,
+    // Open access is kept because it *is* an access fact: it is the copy that still opens
+    // from a coffee shop, with no VPN and no proxy.
     oa: list(f.toplevel).some(x => /open_?access/i.test(x)) || !!first(a.oa),
     link: permalink,
   };
@@ -79,6 +96,15 @@ async function articles(request, url, ctx) {
   up.searchParams.set('offset', String(offset));
   if (url.searchParams.get('articlesOnly') !== 'no')
     up.searchParams.set('qInclude', 'facet_rtype,exact,articles');
+
+  /* Primo's default is holdings-only: without `pcAvailability` the central index answers with
+     what UCLA can actually deliver, and nothing else. That is the right default for a tool
+     whose question is "can I read this" — "crispr gene editing" returns 39,743 that way against
+     48,636 expanded, and the 8,893 difference is papers a reader would click into a dead end.
+     The wider search stays one request away, because sometimes knowing a paper exists is the
+     point. Verified 2026-08-10. */
+  const beyond = url.searchParams.get('beyond') === 'yes';
+  if (beyond) up.searchParams.set('pcAvailability', 'true');
 
   // Edge cache keyed on the upstream request, so two readers asking the same thing cost one.
   const key = new Request(up.toString(), { method: 'GET' });
@@ -121,6 +147,7 @@ async function articles(request, url, ctx) {
     total: info.total || 0,
     local: info.totalResultsLocal,
     central: info.totalResultsPC,
+    beyond: beyond,          // so the page can say which of the two searches it is showing
     docs: (data.docs || []).map(slim).filter(d => d.title),
   };
 
@@ -131,7 +158,71 @@ async function articles(request, url, ctx) {
   return stored;
 }
 
-function json(body, status) {
+/* The A-Z database list.
+ *
+ * LibGuides has no JSON API without a key, but the public widget carries the whole list as
+ * escaped HTML inside a JS file. It is CORS-open, so a browser could fetch it — except it is
+ * 1.17 MB of markup to extract about 60 KB of facts. Parsing here and caching for a day means
+ * the page downloads the answer instead of the haystack, and LibGuides sees one request a day
+ * rather than one per reader.
+ *
+ * What it does not carry is an access mode: UCLA tags one database as a trial and none as free
+ * or campus-only, so this is an inventory, not an entitlement list. The free-versus-licensed
+ * question is answered per provider by the OpenURL resolver's `Is_free`, not here.
+ */
+const AZ = 'https://lgapi-us.libapps.com/widgets.php?site_id=705&widget_type=2&output_format=1';
+const AZ_TTL = 86400;
+const Q = String.fromCharCode(34);
+
+function parseAZ(raw) {
+  const html = raw.replace(/\\\//g, '/').replace(/\\"/g, Q).replace(/\\n/g, '\n').replace(/\\t/g, ' ');
+  const blocks = html.split('s-lg-az-result').slice(1);
+  const re = new RegExp('<a[^>]+href=' + Q + '([^' + Q + ']+)' + Q + '[^>]*>([\\s\\S]{0,300}?)<\\/a>');
+  const out = [], seen = new Set();
+  for (const b of blocks) {
+    const a = re.exec(b);
+    if (!a) continue;
+    const name = a[2].replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+    if (!name || name.length > 160) continue;
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    /* The access mode is not a field, it is an icon: entries UCLA licenses carry a key image
+       with alt="Requires UCLA authentication". Everything without one is reachable by anybody,
+       which is the free-versus-campus-only distinction the A-Z page itself draws. */
+    const auth = /Requires UCLA authentication/i.test(b.slice(0, 2000));
+    const best = /Best Bet/i.test(b.slice(0, 2000));
+    const dm = /class=.s-lg-az-result-description[^>]*>([\s\S]{0,700}?)<\/div>/.exec(b);
+    const desc = dm ? dm[1].replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim() : '';
+    out.push({ name: name, url: a[1], desc: desc.slice(0, 320), auth: auth, best: best });
+  }
+  return out.sort((x, y) => x.name.localeCompare(y.name));
+}
+
+async function databases(request, url, ctx) {
+  const key = new Request('https://shelfmark.internal/az-v1', { method: 'GET' });
+  const cache = caches.default;
+  const hit = await cache.match(key);
+  if (hit) {
+    const body = await hit.json();
+    return json(Object.assign({ cached: true }, body));
+  }
+  let res;
+  try {
+    res = await fetch(AZ, { headers: { 'User-Agent': 'Shelfmark/1.0 (UCLA library tool)' } });
+  } catch (e) { return json({ error: 'could not reach the database list' }, 502); }
+  if (!res.ok) return json({ error: 'the database list returned HTTP ' + res.status }, 502);
+
+  const items = parseAZ(await res.text());
+  if (!items.length) return json({ error: 'the database list could not be read' }, 502);
+  const out = { count: items.length, licensed: items.filter(i => i.auth).length, items: items };
+  ctx.waitUntil(cache.put(key, new Response(JSON.stringify(out), {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=' + AZ_TTL },
+  })));
+  return json(out, 200, AZ_TTL);
+}
+
+function json(body, status, ttl) {
   const code = status || 200;
   return new Response(JSON.stringify(body), {
     status: code,
@@ -140,7 +231,7 @@ function json(body, status) {
       /* Only a good answer is worth keeping. Caching the failures too meant one transient 522
          from Primo was stored by the browser for ten minutes, so the panel kept reporting an
          outage that had already ended and no retry could get past it. */
-      'Cache-Control': code === 200 ? 'public, max-age=' + TTL : 'no-store',
+      'Cache-Control': code === 200 ? 'public, max-age=' + (ttl || TTL) : 'no-store',
       'Access-Control-Allow-Origin': '*',
     },
   });
@@ -150,9 +241,12 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname === '/api/articles') {
-      if (request.method !== 'GET')
-        return json({ error: 'GET only' }, 405);
+      if (request.method !== 'GET') return json({ error: 'GET only' }, 405);
       return articles(request, url, ctx);
+    }
+    if (url.pathname === '/api/databases') {
+      if (request.method !== 'GET') return json({ error: 'GET only' }, 405);
+      return databases(request, url, ctx);
     }
     return env.ASSETS.fetch(request);
   },

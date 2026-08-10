@@ -120,6 +120,8 @@ HTML = r"""<!DOCTYPE html>
   /* ── article access (OpenURL resolver) ── */
   .art-lookup{margin-top:14px}
   .prov .pick{margin-top:8px}
+  .prov-note{font-size:11.5px; color:var(--ink-soft); margin-top:11px; padding-left:2px; line-height:1.8}
+  .prov-note .chip{margin:0 1px}
   .art-ex{font-size:11px; color:var(--ink-soft); margin:8px 2px 0; display:flex; gap:7px; align-items:center; flex-wrap:wrap}
   .prov{border:1px solid var(--line); border-radius:9px; padding:11px 13px; margin-top:9px; background:var(--paper)}
   .prov-h{display:flex; align-items:baseline; gap:9px; flex-wrap:wrap}
@@ -133,7 +135,14 @@ HTML = r"""<!DOCTYPE html>
   .chip.free{background:var(--green-soft); color:var(--good)}
 
   /* ── hours ── */
-  .hr-days{display:flex; gap:5px; flex-wrap:wrap; margin:14px 0 4px}
+  .hr-when{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:14px; font-size:11.5px; color:var(--ink-soft)}
+  .hr-when input[type=date]{font-family:var(--mono); font-size:12px; color:var(--ink); background:var(--card);
+    border:1px solid var(--line); border-radius:8px; padding:6px 9px; min-height:34px}
+  .hr-when input[type=date]:focus-visible{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--orange-soft)}
+  .hr-when .cat-example{margin-top:0}
+  .hr-wk{display:inline-flex; gap:4px; margin-left:auto}
+  .hr-when input[type=date]:disabled{opacity:.5}
+  .hr-days{display:flex; gap:5px; flex-wrap:wrap; margin:10px 0 4px}
   .hr-days .pill{font-size:12px}
   .hr-d{color:var(--ink-faint)}
   .hr-days .pill.active .hr-d{color:inherit; opacity:.8}
@@ -592,6 +601,12 @@ HTML = r"""<!DOCTYPE html>
       <button class="btn ghost" type="button" id="hrsToggle" aria-expanded="false" aria-controls="hrsBody"><span class="tgl">Open</span></button>
     </div>
     <div class="cat-body" id="hrsBody" hidden>
+      <div class="hr-when">
+        <label for="hrsDate">Date:</label>
+        <input type="date" id="hrsDate">
+        <button class="cat-example" type="button" id="hrsToday">Today</button>
+        <span class="hr-wk"><button class="cat-example" type="button" id="hrsPrev" aria-label="Previous week">&lsaquo; week</button><button class="cat-example" type="button" id="hrsNext" aria-label="Next week">week &rsaquo;</button></span>
+      </div>
       <div class="hr-days" id="hrsDays" role="group" aria-label="Day of the week"></div>
       <div class="cat-status" id="hrsStatus" role="status" aria-live="polite"></div>
       <div id="hrsOut"></div>
@@ -1151,18 +1166,27 @@ function showRouted(kind,typed){
   if(!el) return;
   if(!kind){ el.hidden=true; el.innerHTML=''; return; }
   el.hidden=false;
+  /* Every reading the box could have taken is offered, not just the two it was choosing
+     between. A subject typed here is a plausible catalog search *and* a plausible article
+     search, and the reader is the one who knows which they meant. */
+  const CAT='<button type="button" class="linky" id="routeToCat">Search the catalog for this instead</button>';
+  const ART='<button type="button" class="linky" id="routeToArt">Search articles on this topic</button>';
+  const SHELF='<button type="button" class="linky" id="routeToShelf">Treat it as a call number instead</button>';
   el.innerHTML = kind==='shelf'
-    ? 'Read as a call number and looked up on the shelf map. '+
-      '<button type="button" class="linky" id="routeToCat">Search the catalog for this instead</button>'
+    ? 'Read as a call number and looked up on the shelf map. '+CAT+' '+ART
     : kind==='article'
-    ? 'Read as an article or journal identifier and sent to the link resolver. '+
-      '<button type="button" class="linky" id="routeToCat">Search the catalog for this instead</button>'
-    : 'Searched the catalog. '+
-      '<button type="button" class="linky" id="routeToShelf">Treat it as a call number instead</button>';
+    ? 'Read as an article or journal identifier and sent to the link resolver. '+CAT
+    : kind==='articles'
+    ? 'Searched the article index for this topic. '+CAT+' '+SHELF
+    : 'Searched the catalog. '+SHELF+' '+ART;
+  const typedNow=()=>{ const f=document.getElementById('q'); return f?f.value.trim():''; };
   const a=document.getElementById('routeToCat');
   if(a) a.onclick=()=>{ showRouted('catalog'); if(window.catalogSearch) window.catalogSearch(); };
   const b=document.getElementById('routeToShelf');
   if(b) b.onclick=()=>{ showRouted('shelf'); locate(); };
+  const c=document.getElementById('routeToArt');
+  if(c) c.onclick=()=>{ const t=typedNow(); if(!t||!window.articleLookup) return;
+                        showRouted('articles',t); window.articleLookup(t); };
 }
 /* A DOI, a PubMed ID or an ISSN identifies an *article or a journal run*, which the catalog
    answers badly and the link resolver answers exactly. Recognised here so the one box keeps
@@ -3773,13 +3797,24 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       const mat=(k['electronic_material_type']||'').toLowerCase();
       let h='<div class="prov"><div class="prov-h"><span class="prov-n">'+esc(name)+'</span>';
       if(iface && iface!==name) h+='<span class="prov-i">via '+esc(iface)+'</span>';
-      if(free) h+='<span class="chip free">Free to read</span>';
+      /* `Is_free` separates "anyone can read this" from "UCLA pays for this". Both work on the
+         campus network, which is why neither is a warning; the difference only bites off
+         campus, and a reader deserves to know which link survives the walk home. Verified:
+         NEJM returns 5 licensed and 0 free, PLOS ONE returns 4 free of 7. */
+      h+= free ? '<span class="chip free">Free anywhere</span>'
+               : '<span class="chip">UCLA licensed</span>';
       if(mat && mat!=='journal') h+='<span class="chip">'+esc(mat)+'</span>';
       h+='</div>';
       if(cov) h+='<div class="prov-c">'+esc(cov)+'</div>';
       if(s.url) h+='<a class="go" href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer">Open at '+esc(iface||name)+'</a>';
       return h+'</div>';
     }).join('');
+    // Said once under the list rather than repeated on every row.
+    const lic=full.filter(x=>x.keys['Is_free']!=='1').length;
+    if(lic) out.innerHTML+='<div class="prov-note">All of these open on the UCLA network. '+
+      'The '+lic+' marked <span class="chip">UCLA licensed</span> need the library VPN or proxy off campus; '+
+      'anything marked <span class="chip free">Free anywhere</span> does not. '+
+      'Check the coverage years before walking a reader over: a provider can carry the journal and not the issue.</div>';
     return full.length;
   }
 
@@ -3795,7 +3830,8 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
      SRU indexes UCLA's own holdings and knows nothing about articles, and the OpenURL resolver
      answers about a journal run rather than a paper. Neither can produce a result list. Primo's
      index can, and it is the same index the official search uses, so a search here returns what
-     a reader would see there: title, authors, journal, volume, pages, peer review, open access. */
+     a reader would see there: title, authors, journal, volume, pages, and — the part that
+     matters on a shelf-finding tool — whether UCLA can actually get you the thing. */
   function fmtCite(d){
     const bits=[];
     if(d.jtitle) bits.push(esc(d.jtitle));
@@ -3808,16 +3844,37 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     return bits.join(' · ');
   }
 
+  /* One chip per result, and it answers the only question this panel exists to answer.
+     "Peer reviewed" and "Open access" were facts about the paper; neither told a reader whether
+     they could open it, which is what they came for. Primo's `delivery.availability` does. */
+  /* `fulltext` and `fulltext_linktorsrc` are a distinction about *how Primo hands the reader
+     over* — a licensed copy versus a jump straight to the publisher — and not about whether
+     they can read it. Both mean yes. Two different green chips for one answer only invited the
+     question of what the difference was, so they say the same thing. */
+  const ACCESS={
+    full: {cls:'ok', word:'UCLA has full text'},
+    link: {cls:'ok', word:'UCLA has full text'},
+    print:{cls:'',   word:'In the library in print'},
+    none: {cls:'no', word:'Not at UCLA'},
+  };
+
   function renderArticles(data,q){
     if(!data.docs.length){
-      out.innerHTML='<div class="cat-empty">No articles match &ldquo;'+esc(q)+'&rdquo; in UCLA&rsquo;s index. '+
-        'Check the spelling, or paste a DOI.</div>';
+      out.innerHTML='<div class="cat-empty">No articles match &ldquo;'+esc(q)+'&rdquo; in '+
+        (data.beyond?'UCLA&rsquo;s index or the wider one':'what UCLA can get you')+'. '+
+        'Check the spelling, or paste a DOI.</div>'+wider(data,q);
+      bindWider(q);
       return 0;
     }
     out.innerHTML=data.docs.map(d=>{
       let h='<div class="prov"><div class="prov-h"><span class="prov-n">'+esc(d.title)+'</span>';
-      if(d.peer) h+='<span class="chip">Peer reviewed</span>';
-      if(d.oa)   h+='<span class="chip free">Open access</span>';
+      /* "Not at UCLA" beside "Free anywhere" is a contradiction on the page even though both
+         fields are true: an open access paper is readable whether or not UCLA holds it, so
+         holdings are not the answer to give. Open access wins that row outright. */
+      const a=ACCESS[d.access];
+      if(a && !(d.access==='none' && d.oa)) h+='<span class="chip '+a.cls+'">'+a.word+'</span>';
+      // Open access is an access fact too: the copy that still opens with no VPN and no proxy.
+      if(d.oa) h+='<span class="chip free">Free anywhere</span>';
       h+='</div>';
       const au=(d.authors||[]).slice(0,4).join(' · ')+((d.authors||[]).length>4?' and others':'');
       if(au)  h+='<div class="prov-c">'+esc(au)+'</div>';
@@ -3827,21 +3884,37 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       // A DOI is a question the resolver can answer precisely, so offer it rather than guess.
       if(d.doi)  h+=' <button class="cat-example pick" type="button" data-doi="'+esc(d.doi)+'">Who has full text</button>';
       return h+'</div>';
-    }).join('');
+    }).join('')+wider(data,q);
     out.querySelectorAll('.pick').forEach(b=>b.addEventListener('click',()=>{
       input.value=b.dataset.doi; look();
     }));
+    bindWider(q);
     return data.docs.length;
   }
 
-  async function searchArticles(q,signal){
-    const res=await fetch('/api/articles?q='+encodeURIComponent(q)+'&limit=10',{signal});
+  /* Said once under the list, not on every row. The default search is holdings-only, so every
+     row above is something UCLA can deliver; the wider search is offered rather than assumed,
+     because a result nobody can read is worse than no result when the question is access. */
+  function wider(data,q){
+    return '<div class="prov-note">'+(data.beyond
+      ? 'Showing everything the index knows about, including papers UCLA does not hold — those are marked <span class="chip no">Not at UCLA</span> and would have to come through interlibrary loan. '
+      : 'Only papers UCLA can get you. ')+
+      '<button class="cat-example wider" type="button" data-beyond="'+(data.beyond?'no':'yes')+'">'+
+      (data.beyond?'Limit to UCLA&rsquo;s holdings':'Search beyond UCLA&rsquo;s holdings')+'</button></div>';
+  }
+  function bindWider(q){
+    const b=out.querySelector('.wider');
+    if(b) b.addEventListener('click',()=>look(b.dataset.beyond==='yes'));
+  }
+
+  async function searchArticles(q,beyond,signal){
+    const res=await fetch('/api/articles?q='+encodeURIComponent(q)+'&limit=10'+(beyond?'&beyond=yes':''),{signal});
     const data=await res.json();
     if(!res.ok) throw new Error(data.error||('HTTP '+res.status));
     return data;
   }
 
-  async function look(){
+  async function look(beyond){
     const raw=(input.value||'').trim();
     if(!raw){ out.innerHTML=''; setStatus('Paste a DOI, a PubMed ID, an ISSN, or search by title.'); return; }
     const id=identify(raw);
@@ -3866,11 +3939,12 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
                     : 'Read as a '+esc(id.label)+': '+esc(id.value));
         return;
       }
-      setStatus('Searching UCLA’s article index…');
-      const data=await searchArticles(raw,ctl.signal);
+      setStatus(beyond?'Searching the whole index…':'Searching what UCLA can get you…');
+      const data=await searchArticles(raw,beyond,ctl.signal);
       if(mine!==seq) return;
       const n=renderArticles(data,raw);
-      if(n) setStatus(data.total.toLocaleString()+' article'+(data.total===1?'':'s')+' match “'+esc(raw)+
+      if(n) setStatus(data.total.toLocaleString()+' article'+(data.total===1?'':'s')+
+                      (data.beyond?'':' UCLA can get you')+' match “'+esc(raw)+
                       '” · showing '+n+(data.cached?' · from cache':''));
       else setStatus('');
     }catch(e){
@@ -3909,8 +3983,16 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
 
 /* ===== hours, from LibCal =====
    `api_hours_grid.php` is keyless, CORS-open and carries no personal data. One request returns
-   all seven days for all 32 locations, so the day selector costs nothing extra: the whole week
+   all seven days for all 32 locations, so moving between days in a week costs nothing: the week
    is already in hand and switching days is a re-render, not a fetch.
+
+   Any date can be asked for. `date=YYYY-MM-DD` returns the Sunday-anchored week containing it —
+   `from=` and `start=` are ignored, which is worth knowing because they fail silently by
+   returning this week and looking like they worked. Weeks are kept once fetched, so walking
+   back and forth over a term costs one request per new week and none for a revisit. Past and
+   future both answer; far enough out everything comes back `not-set`, which means nobody has
+   posted those hours yet and is said as much rather than rendered as a blank list.
+   Probed 2026-08-10: 2026-01, 2026-11, 2027-06 all answered; 2028-03 was almost entirely unset.
 
    Departments nest under their library by `parent_lid`, which is the only structure in the
    payload and the only thing that makes it readable. Probed 2026-08-06. */
@@ -3918,11 +4000,16 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
   const $=id=>document.getElementById(id);
   const root=$('hrs'); if(!root) return;
   const head=$('hrsHead'), body=$('hrsBody'), toggle=$('hrsToggle'),
-        summary=$('hrsSummary'), statusEl=$('hrsStatus'), out=$('hrsOut'), days=$('hrsDays');
+        summary=$('hrsSummary'), statusEl=$('hrsStatus'), out=$('hrsOut'), days=$('hrsDays'),
+        dateIn=$('hrsDate'), todayBtn=$('hrsToday'), prevBtn=$('hrsPrev'), nextBtn=$('hrsNext');
   const GRID='https://api2.libcal.com/api_hours_grid.php?iid=3244&weeks=1&format=json';
   const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  let locs=[], today='', pick='', loaded=false, loading=false;
+  /* One entry per week, keyed on its Sunday. `sel` is the date being looked at; `cur` is the
+     week holding it. Today's week is remembered separately because the header count is always
+     about today, whatever week the reader has wandered into. */
+  const weeks=new Map();
+  let today='', sel='', cur='', todayWeek='', pick='', loaded=false, loading=false;
 
   // Local date as YYYY-MM-DD. Not toISOString(), which is UTC and puts Los Angeles on
   // tomorrow's row after 4pm.
@@ -3930,6 +4017,18 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     const d=new Date();
     return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   }
+  /* Date arithmetic in UTC on purpose: a local Date built from a date string lands at midnight,
+     and adding days across a DST boundary in local time can give 23 or 25 hours and slip a day.
+     These are calendar dates, not moments, so UTC is the arithmetic that matches the meaning. */
+  const parse=ds=>{ const p=String(ds).split('-'); return Date.UTC(+p[0],+p[1]-1,+p[2]); };
+  const fmt=ms=>new Date(ms).toISOString().slice(0,10);
+  const addDays=(ds,n)=>fmt(parse(ds)+n*86400000);
+  const sundayOf=ds=>addDays(ds,-new Date(parse(ds)).getUTCDay());
+  const dayIndex=ds=>new Date(parse(ds)).getUTCDay();
+  const longDate=ds=>new Date(parse(ds)).toLocaleDateString(undefined,
+    {weekday:'long', day:'numeric', month:'long', year:'numeric', timeZone:'UTC'});
+
+  const at=key=>weeks.get(key)||[];
   const dayOf=(loc,name)=>((loc.weeks&&loc.weeks[0])||{})[name]||null;
 
   /* LibCal returns `not-set` for a day nobody has filled in. Rendering those as "unknown" pads
@@ -3941,17 +4040,29 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
      only claimed for today — on any other day the honest word is just "Open". */
   function statusOf(d,isToday){
     const t=(d&&d.times)||{}, s=(t.status||'').toLowerCase();
-    if(s==='24hours') return {cls:'open', word:'24 hours'};
-    if(s==='byapp')   return {cls:'', word:'By appointment'};
-    if(s==='closed')  return {cls:'shut', word:'Closed'};
-    if(s==='open')    return {cls:'open', word:(isToday && t.currently_open===true)?'Open now':'Open'};
-    if(s==='text')    return {cls:'', word:'See note'};
+    if(s==='byapp')  return {cls:'', word:'By appointment'};
+    if(s==='closed') return {cls:'shut', word:'Closed'};
+    if(s==='text')   return {cls:'', word:'See note'};
+    if(s==='24hours') return isToday ? {cls:'open', word:'Open now'} : {cls:'open', word:'24 hours'};
+    if(s==='open'){
+      /* `status: open` means "has hours on this day", not "is open at this moment". At 6.45pm
+         the Collaboration Hub is still `open` for a 9am-6pm day, and rendering that green beside
+         the word Open told a reader to walk to a closed room. On today, `currently_open` is the
+         only field that answers the question being asked; the posted hours stay on the row so
+         the reader can see when it reopens. */
+      if(!isToday) return {cls:'', word:'Open'};
+      return t.currently_open===true ? {cls:'open', word:'Open now'}
+                                     : {cls:'shut', word:'Closed now'};
+    }
     return {cls:'', word:esc(t.status||'unknown')};
   }
 
   function row(loc,name,isToday){
     const d=dayOf(loc,name), s=statusOf(d,isToday);
-    const when=esc((d&&d.rendered)||'');
+    /* `rendered` is a display string LibCal writes by hand, and some of it carries markup:
+       the Law Reference Desk reads "9am - 5pm </br>(1pm-4pm in-person)". Escaping is what keeps
+       that safe, but escaping alone printed the tag, so line breaks become a separator first. */
+    const when=esc(String((d&&d.rendered)||'').replace(/<\/?br\s*\/?>/gi,' · ').replace(/\s+/g,' ').trim());
     return '<div class="hr-row">'+
       '<span class="hr-n">'+esc(loc.name||'Unnamed location')+'</span>'+
       (when && when.toLowerCase()!==s.word.toLowerCase() ? '<span class="hr-t">'+when+'</span>' : '')+
@@ -3960,29 +4071,38 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
 
   function renderDays(){
     if(!days) return;
-    const first=locs[0];
+    const first=at(cur)[0];
     days.innerHTML=DAYS.map(n=>{
       const d=dayOf(first,n), date=(d&&d.date)||'';
       const num=date?date.slice(8).replace(/^0/,''):'';
       const isToday=date===today;
       return '<button class="pill'+(n===pick?' active':'')+'" type="button" data-day="'+n+'"'+
-             ' aria-pressed="'+(n===pick)+'">'+n.slice(0,3)+
+             ' data-date="'+esc(date)+'" aria-pressed="'+(n===pick)+'">'+n.slice(0,3)+
              (num?' <span class="hr-d">'+num+'</span>':'')+
              (isToday?' <span class="hr-today">today</span>':'')+'</button>';
     }).join('');
     days.querySelectorAll('.pill').forEach(b=>b.addEventListener('click',e=>{
-      e.stopPropagation(); pick=b.dataset.day; renderDays(); renderDay();
+      e.stopPropagation();
+      // Within a loaded week this is still a re-render, not a fetch.
+      pick=b.dataset.day;
+      if(b.dataset.date){ sel=b.dataset.date; if(dateIn) dateIn.value=sel; }
+      renderDays(); renderDay();
     }));
   }
 
   function renderDay(){
-    const isToday=(dayOf(locs[0],pick)||{}).date===today;
+    const locs=at(cur);
+    const d0=dayOf(locs[0],pick)||{};
+    const isToday=d0.date===today;
     const shown=locs.filter(l=>known(dayOf(l,pick)));
     const parents=shown.filter(l=>!l.parent_lid);
     const kids={};
     shown.forEach(l=>{ if(l.parent_lid) (kids[l.parent_lid]=kids[l.parent_lid]||[]).push(l); });
     if(!parents.length){
-      out.innerHTML='<div class="cat-empty">No hours are published for '+esc(pick)+'.</div>';
+      /* Far enough ahead LibCal has nothing entered for anybody. That is not an error and not
+         "closed": it is hours nobody has posted yet, and saying so is the only honest reading. */
+      out.innerHTML='<div class="cat-empty">No hours are posted for '+
+        esc(d0.date?longDate(d0.date):pick)+' yet.</div>';
       return;
     }
     out.innerHTML=parents.map(p=>{
@@ -3991,50 +4111,72 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       if(sub.length) h+='<div class="hr-sub">'+sub.map(k=>row(k,pick,isToday)).join('')+'</div>';
       return h+'</div>';
     }).join('');
+    // Which day is on screen, so a reader four weeks out is never guessing.
+    if(d0.date && !isToday) statusEl.textContent='Showing '+longDate(d0.date)+'.';
+    else statusEl.textContent='';
+    statusEl.classList.remove('err');
   }
 
   // The header carries today's count whatever day is being browsed: it is the answer to
   // "is anything open", which does not change because the reader is looking at Saturday.
   function renderSummary(){
+    const locs=at(todayWeek);
+    const onToday=l=>DAYS.map(n=>dayOf(l,n)).find(x=>x&&x.date===today);
     const open=locs.filter(l=>{
-      const d=DAYS.map(n=>dayOf(l,n)).find(x=>x&&x.date===today);
+      const d=onToday(l);
       if(!known(d)) return false;
       const t=d.times||{};
       return t.currently_open===true || (t.status||'').toLowerCase()==='24hours';
     }).length;
-    const total=locs.filter(l=>{
-      const d=DAYS.map(n=>dayOf(l,n)).find(x=>x&&x.date===today);
-      return known(d);
-    }).length;
+    const total=locs.filter(l=>known(onToday(l))).length;
     summary.textContent=open?open+' of '+total+' locations open now':'all locations closed';
   }
 
-  async function load(){
+  /* One week, fetched once and kept. The key is the Sunday LibCal itself returns rather than the
+     one computed here, so the cache can never disagree with the payload about which week it is
+     holding. */
+  async function fetchWeek(date){
+    const res=await fetch(GRID+'&date='+encodeURIComponent(date));
+    if(!res.ok) throw new Error('LibCal returned HTTP '+res.status);
+    const data=await res.json();
+    const locs=(data.locations||[]).filter(l=>l.weeks&&l.weeks[0]);
+    if(!locs.length) throw new Error('LibCal returned no locations');
+    const key=(dayOf(locs[0],'Sunday')||{}).date||sundayOf(date);
+    weeks.set(key,locs);
+    return key;
+  }
+
+  function busy(on){
+    loading=on;
+    [dateIn,todayBtn,prevBtn,nextBtn].forEach(el=>{ if(el) el.disabled=on; });
+  }
+
+  /* Show a date, fetching its week only if this is the first time it has been asked for. */
+  async function show(date){
     if(loading) return;
-    loading=true;
+    sel=date;
+    if(dateIn) dateIn.value=date;
+    pick=DAYS[dayIndex(date)];
+    const key=sundayOf(date);
+    if(weeks.has(key)){ cur=key; renderDays(); renderDay(); return; }
+    busy(true);
     setTimeout(()=>{ if(loading) statusEl.textContent='Asking LibCal…'; },300);
     out.innerHTML='<div class="hr-lib"><div class="skel" style="width:45%"></div></div>'+
                   '<div class="hr-lib"><div class="skel" style="width:55%"></div></div>'+
                   '<div class="hr-lib"><div class="skel" style="width:40%"></div></div>';
     try{
-      const res=await fetch(GRID);
-      if(!res.ok) throw new Error('LibCal returned HTTP '+res.status);
-      const data=await res.json();
-      locs=(data.locations||[]).filter(l=>l.weeks&&l.weeks[0]);
-      if(!locs.length) throw new Error('LibCal returned no locations');
-      today=localDate();
-      const match=DAYS.find(n=>(dayOf(locs[0],n)||{}).date===today);
-      pick=match||DAYS[new Date().getDay()];
+      cur=await fetchWeek(date);
+      if(!todayWeek && weeks.get(cur).some(l=>DAYS.some(n=>(dayOf(l,n)||{}).date===today)))
+        todayWeek=cur;
       renderSummary(); renderDays(); renderDay();
-      statusEl.textContent=''; statusEl.classList.remove('err');
       loaded=true;
     }catch(e){
       out.innerHTML='';
       if(days) days.innerHTML='';
-      summary.textContent='hours unavailable';
+      if(!loaded) summary.textContent='hours unavailable';
       statusEl.innerHTML='Could not reach LibCal: '+esc(e.message||'network error')+'.';
       statusEl.classList.add('err');
-    }finally{ loading=false; }
+    }finally{ busy(false); }
   }
 
   head.addEventListener('click',()=>{
@@ -4042,12 +4184,33 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     body.hidden=!open;
     toggle.setAttribute('aria-expanded',String(open));
     toggle.querySelector('.tgl').textContent=open?'Close':'Open';
-    if(open && !loaded) load();
+    if(open && !loaded) show(sel||today);
   });
-  /* The summary rides on the collapsed header, so the week is fetched once on load rather than
-     on open: "is anything open" is the question most of the time, and it should not need a
-     click. One request covers all seven days, and switching days never touches the network. */
-  load();
+
+  if(dateIn) dateIn.addEventListener('change',e=>{
+    e.stopPropagation();
+    // An emptied or half-typed field is not a date; leave the day on screen alone.
+    if(/^\d{4}-\d{2}-\d{2}$/.test(dateIn.value)) show(dateIn.value);
+    else dateIn.value=sel;
+  });
+  if(todayBtn) todayBtn.addEventListener('click',e=>{ e.stopPropagation(); show(today); });
+  if(prevBtn)  prevBtn.addEventListener('click', e=>{ e.stopPropagation(); show(addDays(sel,-7)); });
+  if(nextBtn)  nextBtn.addEventListener('click', e=>{ e.stopPropagation(); show(addDays(sel,7)); });
+
+  /* The summary rides on the collapsed header, so this week is fetched on load rather than on
+     open: "is anything open" is the question most of the time, and it should not need a click.
+     Other weeks are fetched only when a reader asks for one. */
+  today=localDate();
+  sel=today;
+  if(dateIn){
+    dateIn.value=today;
+    /* A year back and two years on. LibCal answers outside that too, but the far side is all
+       `not-set`, and a picker that offers a date nobody has posted hours for is a picker that
+       promises an answer it cannot give. */
+    dateIn.min=addDays(today,-365);
+    dateIn.max=addDays(today,730);
+  }
+  show(today);
 })();
 </script>
 </body>
