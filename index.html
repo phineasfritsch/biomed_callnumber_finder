@@ -144,13 +144,14 @@
   .examples .ex:hover{color:var(--accent); border-color:var(--accent)}
   .examples .ex:focus-visible{outline:none; border-radius:3px; box-shadow:0 0 0 3px var(--orange-soft)}
 
-  .sect{display:flex; gap:6px; align-items:center; margin:8px 2px 0; flex-wrap:wrap}
+  /* Sits above the levels bar, so the gap below it is the one that closes onto the map. */
+  .sect{display:flex; gap:6px; align-items:center; margin:22px 2px 9px; flex-wrap:wrap}
   .sect-label{font-size:11px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:1px; margin-right:4px}
   .pill{font-family:var(--mono); font-size:11px; padding:6px 13px; background:var(--card); color:var(--ink-soft); border:1px solid var(--line); border-radius:99px; cursor:pointer; transition:.15s}
   .pill:hover{border-color:var(--ink-soft); color:var(--ink)}
   .pill.active{background:var(--ink); color:var(--paper); border-color:var(--ink)}
 
-  .levels{display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin:22px 0 8px}
+  .levels{display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin:0 0 8px}
   .lvl-total{margin-left:auto; padding-left:12px; font-size:12px; color:var(--ink-faint); line-height:1.5; text-align:right}
   .lvl-total .n{color:var(--accent); font-size:13px}
   .lvl{font-family:var(--mono); font-size:13px; font-weight:500; min-width:48px; padding:7px 5px 6px; text-align:center; background:var(--card); border:1px solid var(--line); border-radius:8px; cursor:pointer; color:var(--ink-soft)}
@@ -678,12 +679,6 @@
     <button class="btn ghost" type="button" id="clear">Clear</button>
   </div>
   <div class="routed" id="routed" hidden></div>
-  <div class="sect" id="sect" role="group" aria-label="Which part of Biomed to search">
-    <span class="sect-label">Biomed map:</span>
-    <button class="pill active" type="button" data-coll="stacks" aria-pressed="true">Main stacks</button>
-    <button class="pill" type="button" data-coll="ref" aria-pressed="false">Reference · L4</button>
-    <button class="pill" type="button" data-coll="spec" aria-pressed="false">Special Collections · L9</button>
-  </div>
   <div class="result" id="result" role="status" aria-live="polite">
     <div class="examples">Try a call number:
       <button class="ex" type="button" data-q="QL737.C22 M616g">QL737.C22</button> ·
@@ -1014,6 +1009,16 @@
       </div>
       <div class="itinerary" id="itinerary"></div>
     </div>
+  </div>
+
+  <!-- These three sit with the map rather than with the search box. They are a statement about
+       which sequence of shelves you are looking at, and up beside the field they read as a filter
+       on the search — which is only half true: they steer the shelf lookup and nothing else. -->
+  <div class="sect" id="sect" role="group" aria-label="Which part of Biomed to search">
+    <span class="sect-label">Biomed map:</span>
+    <button class="pill active" type="button" data-coll="stacks" aria-pressed="true">Main stacks</button>
+    <button class="pill" type="button" data-coll="ref" aria-pressed="false">Reference · L4</button>
+    <button class="pill" type="button" data-coll="spec" aria-pressed="false">Special Collections · L9</button>
   </div>
 
   <div class="levels" id="levels"></div>

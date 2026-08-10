@@ -48,3 +48,7 @@ ios/
 # and "assets.directory" is the repo root, so anything not listed here is published.
 *.pdf
 src/
+
+# The deployment's own configuration. Nothing secret in it, but it is how the site is built
+# rather than part of the site, and it was being served at /wrangler.jsonc.
+wrangler.jsonc
