@@ -33,6 +33,7 @@ Tools/
 .claude/
 .gitattributes
 .assetsignore
+.gitignore
 
 # Source, not site
 ios/
