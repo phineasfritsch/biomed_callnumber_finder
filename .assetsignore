@@ -44,9 +44,13 @@ ios/
 *.msix
 *.xz
 *.tar
-# Scans and other documents that landed here — the app serves index.html, not paperwork,
-# and "assets.directory" is the repo root, so anything not listed here is published.
-*.pdf
+# Scans and other paperwork that landed here. This was `*.pdf`, which is the right instinct and
+# the wrong mechanism now that one PDF is meant to ship: gitignore negation would work, but a
+# `!rule` that Cloudflare silently ignored would look identical to one that worked, and the file
+# would just not be there. So the excluded files are named, and Tools/assets.test.js asserts the
+# published set exactly — a new PDF dropped in this directory fails that test rather than
+# quietly appearing on the web.
+BookScanCenter.pdf
 src/
 
 # The deployment's own configuration. Nothing secret in it, but it is how the site is built

@@ -415,6 +415,13 @@
   .hr-where a{color:var(--accent)}
   .hr-where a:hover{text-decoration:none}
   .hr-where a:focus-visible{outline:none; border-radius:3px; box-shadow:0 0 0 3px var(--orange-soft)}
+  /* The map is the one you grab, so it looks like a thing to press rather than a word in a
+     sentence — 44px tall, because the hand reaching for it is usually holding something else. */
+  .hr-where .hr-map{display:inline-block; font-weight:600; text-decoration:none;
+    background:var(--paper-2); border:1px solid var(--line); border-radius:8px;
+    padding:8px 13px; min-height:36px; line-height:20px; margin:2px 0}
+  .hr-where .hr-map:hover{border-color:var(--accent); background:var(--orange-soft)}
+  .hr-where .hr-meta{font-size:11px; color:var(--ink-faint); white-space:nowrap}
 
   .chk-note{color:var(--ink-faint)}
   .work{border:1px solid var(--line); border-radius:10px; overflow:hidden; margin:9px 0; background:var(--paper)}

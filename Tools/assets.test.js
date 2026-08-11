@@ -71,6 +71,8 @@ const EXPECTED = [
   'favicon.svg',
   'og-card.png',
   'robots.txt',
+  // UCLA's own campus map of the nine library locations, linked from /hours
+  'ucla-library-locations-2026.pdf',
 ].sort();
 
 section('what this deployment publishes');
@@ -83,8 +85,10 @@ ok('nothing is published that was not meant to be', extra.length === 0,
   '\n      → add it to .assetsignore, or to EXPECTED in this file if it belongs on the site');
 ok('everything the pages need is published', gone.length === 0,
   'missing: ' + gone.join(', '));
-ok('the published set is exactly fifteen files', published.length === 15,
+ok('the published set is exactly sixteen files', published.length === 16,
   published.length + ': ' + published.join(', '));
+// The other PDF in this directory is a scan that has never been served and must stay that way.
+ok('the scan stays off the site', ignored('BookScanCenter.pdf'));
 
 /* Every page has to reach the one stylesheet and, if it draws shelves, the two shared scripts.
    A page that links a file which is not published renders unstyled, which is the kind of break
