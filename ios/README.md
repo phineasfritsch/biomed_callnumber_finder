@@ -55,6 +55,7 @@ node ios/Tools/confusable.test.js          # the O/0 rule, across all 906 range 
 node ios/Tools/geometry.test.js            # the scan band vs the controls, every iPhone size
 node ios/Tools/fonts.test.js               # bundled fonts vs UIAppFonts vs what the Swift asks for
 node ios/Tools/headcount.parity.test.mjs   # the pinned form schema vs better_headcount's
+node ios/Tools/shelforder.test.js          # shelf reading: volume order, and who gets blamed
 ```
 
 `swiftcheck.test.js` is the compiler stand-in. It will not catch a wrong argument type. It does
@@ -66,8 +67,16 @@ Fixture generators, for when the dataset or the form schema changes:
 ```bash
 node ios/Tools/golden.js         biomed-shelf-ranges.json ios/Tests/CallNumberGolden.json
 node ios/Tools/routeGolden.js    biomed-shelf-ranges.json ios/Tests/RouteGolden.json
+node ios/Tools/shelfOrderGolden.js biomed-shelf-ranges.json ios/Tests/ShelfOrderGolden.json
 node ios/Tools/headcountGolden.mjs                        ios/Tests/HeadcountGolden.json
 ```
+
+`shelforder.test.js` is worth singling out. Shelf reading is the one feature whose failures accuse
+a real book of being in the wrong place, so the expensive assertion in it is not a list of examples
+— it is ten thousand rows built from the real dataset, all correctly ordered, asserting that
+nothing is flagged. A missed misfile costs a walk past a shelf; a false one sends a librarian to
+reshelve a book that was already right, and that only has to happen twice before nobody believes a
+red box again.
 
 Then run the test target (⌘U). `CallNumberTests` re-sorts all 651 endpoints and asserts the order
 matches JS exactly; `RouterTests` asserts whole routes match step-for-step; `HeadcountLogicTests`
