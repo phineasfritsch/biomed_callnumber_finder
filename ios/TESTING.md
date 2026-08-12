@@ -123,8 +123,20 @@ Then replay classifies every mistake into three buckets, which need completely d
 - **MISSED** — a real label the pipeline threw away. Costs a manual entry. Annoying, not dangerous.
 - **SPURIOUS** — invented a call number from a book title or shelf sign. Pollutes the trip list.
 
-Edit the regexes at the top of `replay.js`, re-run, compare. Seconds per iteration. When it's
-right, port the identical change into the Swift and deploy **once**.
+Edit `ios/Tools/recognizer.js` — one copy of the model, shared by `replay.js`, `pipeline.js` and
+`confusable.test.js` — re-run, compare. Seconds per iteration. When it's right, port the identical
+change into the Swift and deploy **once**.
+
+Before you deploy, run the two suites that do not need a corpus:
+
+```bash
+node ios/Tools/pipeline.js            # named cases, readable
+node ios/Tools/confusable.test.js     # the same rules across all 906 range endpoints
+```
+
+`confusable.test.js` is the one that catches collateral damage: it resolves every endpoint through
+the old pipeline and the new one and fails if *any* of them changed where it routes. A grammar
+tweak that fixes your label and quietly moves forty others will not get past it.
 
 ### Reading the JPEGs
 

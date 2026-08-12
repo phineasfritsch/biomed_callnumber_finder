@@ -187,6 +187,76 @@ final class CallNumberTests: XCTestCase {
         }
     }
 
+    // MARK: - O read as zero (see CallNumberRecognizer.restoringConfusableO)
+
+    /// The dangerous half. `W1 J0506` was well-formed under the old grammar, located, and sent
+    /// you to a shelf the book is not on — for every one of the 49 `JO` endpoints in the
+    /// building, which is most of a floor. The grammar must now reject it outright, exactly as
+    /// it rejects `NA3B8`.
+    func testGrammarRejectsCutterDigitsStartingWithZero() {
+        for s in ["W1 J0506", "W1 J0955 no.66 1984", "W1 M0644", "WM 13 D0537"] {
+            XCTAssertFalse(CallNumber.parse(s)?.isWellFormed ?? false, "must reject: \(s)")
+        }
+    }
+
+    /// The useful half: having rejected it, the recognizer must still find the book.
+    func testRecognizerRestoresOMisreadAsZero() throws {
+        let router = try Router(bundledRanges: "biomed-shelf-ranges")
+        let recognizer = CallNumberRecognizer(router: router)
+
+        // Stacked exactly as Vision returns a spine label.
+        guard case let .located(cn, hit)? = recognizer.resolve(
+            candidates: ["Biomed\nW1\nJ0506\nno.66\n1984"]
+        ) else { return XCTFail("expected a located result") }
+
+        XCTAssertEqual(cn.raw, "W1 JO506 NO.66 1984")
+
+        let truth = try XCTUnwrap(CallNumber.parse("W1 JO506 no.66 1984"))
+        XCTAssertEqual(hit.level, router.locate(truth)?.level)
+        XCTAssertEqual(hit.shelfID, router.locate(truth)?.shelfID)
+        XCTAssertEqual(hit.side, router.locate(truth)?.side)
+    }
+
+    /// Ordering: a repair is a *fallback within one candidate*, never a promotion above a
+    /// better-ranked candidate that reads cleanly on its own.
+    func testRepairNeverOutranksACleanRead() throws {
+        let router = try Router(bundledRanges: "biomed-shelf-ranges")
+        let recognizer = CallNumberRecognizer(router: router)
+
+        let result = recognizer.resolve(candidates: [
+            ("W1 NA388 no.66 1984", 0.90),   // clean, ranked first
+            ("W1 J0506", 0.95),              // would repair, ranked second
+        ])
+        guard case let .located(cn, _)? = result else { return XCTFail("expected located") }
+        XCTAssertEqual(cn.raw, "W1 NA388 NO.66 1984")
+
+        XCTAssertEqual(CallNumberRecognizer.readings(of: "W1 J0506").count, 2)
+        XCTAssertTrue(CallNumberRecognizer.readings(of: "W1 J0506")[0].contains("J0506"))
+        XCTAssertTrue(CallNumberRecognizer.readings(of: "W1 J0506")[1].contains("JO506"))
+    }
+
+    /// The repair must stay out of everything it was not aimed at. A false positive here is a
+    /// wrong shelf invented out of a read that was previously just a miss.
+    func testRepairLeavesEverythingElseAlone() {
+        let untouched = [
+            "W1 NA388 no.66 1984",   // clean label
+            "W1 A1C7",               // jammed double cutter
+            "WM 13 D5537",
+            "QL737.C22",
+            "W1 NA388 pt.3",         // trailers containing digits
+            "W1 NA388 v.2",
+            "W1 NA388 2001",         // a year with zeros in it
+            "W1 NA1991 no.100",      // a volume with zeros in it
+            "W1 NA3O8",              // O *inside* a digit run: deliberately NOT repaired
+        ]
+        for s in untouched {
+            XCTAssertNil(
+                CallNumberRecognizer.restoringConfusableO(CallNumberRecognizer.normalized(s)),
+                "repair must not fire on: \(s)"
+            )
+        }
+    }
+
     /// A documented, accepted limit — not a bug to fix by tightening the grammar.
     ///
     /// `NA3BB` (a 2-letter-suffix corruption of `NA388`) is structurally identical to the real

@@ -61,19 +61,23 @@ struct CallNumberRecognizer {
         ].map { try! NSRegularExpression(pattern: $0) }
     }()
 
-    /// Pull every call-number-shaped substring out of an OCR line.
+    /// Uppercase and strip every character a call number cannot contain.
     ///
     /// Spine labels are stacked one token per line ("W1 / NA388 / no.66 / 1984"), so newlines
-    /// collapse to spaces before matching — otherwise the volume and year get orphaned.
-    /// "Biomed" is the collection prefix, not part of the call number.
-    static func extract(from text: String) -> [String] {
+    /// collapse to spaces — otherwise the volume and year get orphaned. "Biomed" is the
+    /// collection prefix, not part of the call number. The result is space-padded at both ends so
+    /// token-boundary rules below can rely on it.
+    static func normalized(_ text: String) -> String {
         var s = text.uppercased()
         s = s.replacingOccurrences(of: "\\bBIOMED\\b", with: " ", options: .regularExpression)
         s = s.replacingOccurrences(of: "[|=_]+", with: " ", options: .regularExpression)
         s = s.replacingOccurrences(of: "[^A-Z0-9. ]", with: " ", options: .regularExpression)
         s = s.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
-        s = " " + s.trimmingCharacters(in: .whitespaces) + " "
+        return " " + s.trimmingCharacters(in: .whitespaces) + " "
+    }
 
+    /// Pull every call-number-shaped substring out of an already-normalized line.
+    static func matches(in s: String) -> [String] {
         // Deduped: the W1 and NLM patterns both match a string like "W1 NA388", and callers that
         // iterate every hit (the request-sheet importer) would otherwise see it twice.
         var out: [String] = []
@@ -91,6 +95,62 @@ struct CallNumberRecognizer {
         return out
     }
 
+    static func extract(from text: String) -> [String] { matches(in: normalized(text)) }
+
+    // MARK: O read as zero
+
+    private static let confusableZero = try! NSRegularExpression(
+        pattern: "(?<= )([A-Z])0(\\d{2,})([A-Z]{0,2})(?= )")
+
+    /// A `0` immediately after a cutter's single leading letter, with at least two more digits
+    /// behind it, restored to the `O` it must be.
+    ///
+    /// **Why this is allowed to exist when DESIGN.md §3.4 deleted character repair.** That pass
+    /// substituted confusable glyphs and accepted whichever variant landed in a shelf range,
+    /// which is a machine for inventing plausible wrong shelves — `W1 ZZZ999` locates too. This
+    /// one is scored on nothing. It restores the only reading the *notation* permits, and the
+    /// result still has to pass `isWellFormed` like any other candidate. The grammar does the
+    /// rejecting, as always.
+    ///
+    /// The fact it rests on, measured against the live dataset (906 range endpoints): **a
+    /// cutter's digit run never starts with 0** — 0 of 906. So the `0` in `J0506` sits where a
+    /// digit is not allowed to sit, and `JO506` is the only legal reading. `JO` is a real,
+    /// populous cutter block (49 endpoints, most of a floor); `J0` does not exist.
+    ///
+    /// Two guards, both measured rather than guessed:
+    /// * **One** leading letter, so the repair can only ever produce a two-letter block. Every
+    ///   cutter block in the collection is 1 or 2 letters (308 and 355 of 663); none is 3.
+    ///   Allowing two would let `C0756` become `COO756`, which passes the grammar and locates —
+    ///   a wrong shelf invented out of a string that is currently a harmless miss.
+    /// * At least two more digits, which keeps trailers out: `PT03` and `NO.06` are volume
+    ///   tokens, not cutters, and neither reaches this rule.
+    ///
+    /// The mirror rule — "a letter inside a digit run must be a misread 0" — was written,
+    /// measured and cut. It is false here: `A1C7`, `R81R8` and `P3R5D` are real jammed double
+    /// cutters, so a hypothetical `R81O8` would become `R8108`, which passes the grammar and
+    /// locates. `NA3O8` therefore stays a miss, which is the safe failure.
+    ///
+    /// Returns nil when nothing changed, so `readings` can skip a redundant second pass.
+    static func restoringConfusableO(_ normalized: String) -> String? {
+        let out = confusableZero.stringByReplacingMatches(
+            in: normalized,
+            options: [],
+            range: NSRange(normalized.startIndex..., in: normalized),
+            withTemplate: "$1O$2$3"
+        )
+        return out == normalized ? nil : out
+    }
+
+    /// Every reading of one OCR candidate worth trying, best-supported first.
+    ///
+    /// Order matters: the unrepaired text is always tried first, so a repair can never outrank a
+    /// reading that is already legal on its own.
+    static func readings(of text: String) -> [String] {
+        let base = normalized(text)
+        guard let repaired = restoringConfusableO(base) else { return [base] }
+        return [base, repaired]
+    }
+
     // MARK: Resolution
 
     /// Resolve ranked OCR candidates into a single answer.
@@ -104,10 +164,14 @@ struct CallNumberRecognizer {
     /// sees is not a call number.
     func resolve(candidates: [(text: String, confidence: Float)]) -> Result? {
         for candidate in candidates where candidate.confidence >= minConfidence {
-            for text in Self.extract(from: candidate.text) {
-                guard let cn = CallNumber.parse(text), cn.isWellFormed else { continue }
-                if let hit = router.locate(cn) { return .located(cn, hit) }
-                return .unlocated(cn)
+            // Both readings of ONE candidate are tried before moving on, so an O/0 repair never
+            // outranks a higher-confidence candidate that reads cleanly without one.
+            for reading in Self.readings(of: candidate.text) {
+                for text in Self.matches(in: reading) {
+                    guard let cn = CallNumber.parse(text), cn.isWellFormed else { continue }
+                    if let hit = router.locate(cn) { return .located(cn, hit) }
+                    return .unlocated(cn)
+                }
             }
         }
         return nil
@@ -119,7 +183,13 @@ struct CallNumberRecognizer {
     }
 }
 
-// MARK: - On character repair (deliberately absent)
+// MARK: - On character repair (still deliberately absent, with one measured exception)
+//
+// The exception is `restoringConfusableO` above, and it is worth being precise about why it is
+// not the thing described below. It substitutes nothing on the strength of where the result
+// lands: it applies a rule the notation itself states (a cutter's digit run cannot start with 0),
+// and hands the result to the same grammar gate every other candidate goes through. Nothing is
+// scored on containment. Everything below still holds for the general case.
 //
 // An earlier design substituted confusable glyphs (O↔0, B↔8, S↔5 …) and accepted a variant if it
 // landed in a shelf range. Measuring it against the live dataset killed the idea twice over:

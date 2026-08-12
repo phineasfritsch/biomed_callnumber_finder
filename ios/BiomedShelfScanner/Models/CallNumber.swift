@@ -106,11 +106,18 @@ struct CallNumber: Equatable {
     // A cutter is letters + digits + at most a 2-letter suffix: NA388, NE286DB, CA756TA.
     // Crucially it may NOT re-enter digits after the suffix — that's what rejects the OCR
     // misread "NA3B8" (NA + 3 + B + 8).
-    private static let cutterForm = try! NSRegularExpression(pattern: "^[A-Z]{1,3}\\d+[A-Z]{0,2}$")
+    //
+    // `[1-9]\d*` rather than `\d+`: the digit run may not start with 0. Measured — 0 of the 906
+    // range endpoints have one — and load-bearing, because "O" and "0" are indistinguishable on
+    // these spine labels. Without it "W1 J0506" is well-formed, locates, and sends you to a
+    // shelf the book is not on; with it the read is rejected and
+    // `CallNumberRecognizer.restoringConfusableO` gets to offer "W1 JO506" instead. `JO` is a
+    // 49-endpoint cutter block covering most of a floor, so this was not a rare failure.
+    private static let cutterForm = try! NSRegularExpression(pattern: "^[A-Z]{1,3}[1-9]\\d*[A-Z]{0,2}$")
     // The NLM "A1" serial form is the only genuine jammed double cutter in this collection
     // (A1C7, A1C8, A1Q2). Whitelisted narrowly rather than by a general rule, because a general
     // "letters-digits-letters-digits" rule would also admit NA3B8.
-    private static let a1Form = try! NSRegularExpression(pattern: "^A1[A-Z]\\d+[A-Z]{0,2}$")
+    private static let a1Form = try! NSRegularExpression(pattern: "^A1[A-Z][1-9]\\d*[A-Z]{0,2}$")
     private static let trailForm = try! NSRegularExpression(
         pattern: "^(NO\\.?\\d+[A-Z]?|(18|19|20)\\d{2}[A-Z]?|V\\.?\\d+|PT\\.?\\d+)$")
     private static let classAlphaOnly = try! NSRegularExpression(pattern: "^[A-Z]{1,3}$")
@@ -125,6 +132,9 @@ struct CallNumber: Equatable {
     /// read is real. Measured against the live dataset, this grammar accepts 644 of 651 real
     /// endpoints while rejecting the misreads that matter — including `WI NA388`, where a 1→I slip
     /// flips the scheme and would otherwise route you to the wrong floor entirely.
+    ///
+    /// It also rejects a cutter whose digits start with 0 (`W1 J0506`), which is how the O/0
+    /// confusion is stopped from routing silently — see `cutterForm`.
     ///
     /// Known limits, both acceptable:
     /// * 7 genuinely odd real endpoints fail (`A`, `ZWZ 330`, `Q 41 R81R8`, `WX 27 GF7 P3R5D`,
