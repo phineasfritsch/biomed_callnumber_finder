@@ -28,7 +28,17 @@ enum ScanGeometry {
     static let barTopPadding: CGFloat = 8
     /// The shutter's outer ring. Matches `ScanView.scanButton`.
     static let shutter: CGFloat = 78
-    /// The trip sheet's peek detent. **Must match `presentationDetents` in `ScanView`.**
+
+    /// The trip sheet's peek detent, as **requested** in `presentationDetents`.
+    ///
+    /// This is a request, not a measurement, and the difference cost a bug. A `.height(104)`
+    /// detent does not produce a sheet whose top edge is 104pt above the bottom of the screen:
+    /// the system adds the grabber, its own bottom safe-area inset, and its minimum height, and
+    /// none of that is published anywhere you can read it. Laying the shutter out against this
+    /// number put the shutter underneath the sheet.
+    ///
+    /// So it is now only a floor and a first-frame fallback. What the layout actually uses is
+    /// `ScanView`'s measurement of where the sheet's top edge really is — see `sheetHeight`.
     static let sheetPeek: CGFloat = 104
     /// Air between any two of the above. One value, so the rhythm is uniform.
     static let gap: CGFloat = 16
@@ -45,14 +55,26 @@ enum ScanGeometry {
 
     // MARK: Derived layout
 
+    /// How much of the screen the trip sheet actually covers, in points up from the bottom edge.
+    ///
+    /// `measured` is what `ScanView` reads back from the sheet itself. Everything below is laid
+    /// out against this rather than against `sheetPeek`, because the detent and the sheet are not
+    /// the same size and only one of them is real.
+    static func sheetHeight(measured: CGFloat?) -> CGFloat {
+        guard let measured, measured.isFinite else { return sheetPeek }
+        // Floor at the requested detent so a mid-animation or zero reading cannot drop the
+        // shutter back under the sheet, which is the failure this whole path exists to prevent.
+        return max(sheetPeek, measured)
+    }
+
     /// The shutter's bottom padding, *inside* the safe area — which is where `ScanView` applies it.
     ///
-    /// Derived rather than typed in, because the number it has to clear is the sheet's peek
-    /// detent, and that is measured from the bottom of the screen while the padding is measured
-    /// from the bottom of the safe area. On a home-indicator phone those differ by 34pt, which is
-    /// exactly the kind of gap that gets a button tucked half-under a sheet.
-    static func shutterBottomPadding(safeBottom: CGFloat) -> CGFloat {
-        max(gap, sheetPeek + gap - safeBottom)
+    /// Derived rather than typed in, because the number it has to clear is measured from the
+    /// bottom of the **screen** while the padding is applied from the bottom of the **safe area**.
+    /// On a home-indicator phone those differ by 34pt, which is exactly the size of gap that gets
+    /// a button tucked half under a sheet.
+    static func shutterBottomPadding(safeBottom: CGFloat, sheetHeight: CGFloat) -> CGFloat {
+        max(gap, sheetHeight + gap - safeBottom)
     }
 
     /// Screen top → top of the band.
@@ -61,8 +83,9 @@ enum ScanGeometry {
     }
 
     /// Screen bottom → bottom of the band.
-    static func bottomChrome(safeBottom: CGFloat) -> CGFloat {
-        safeBottom + shutterBottomPadding(safeBottom: safeBottom) + shutter + gap
+    static func bottomChrome(safeBottom: CGFloat, sheetHeight: CGFloat) -> CGFloat {
+        safeBottom + shutterBottomPadding(safeBottom: safeBottom, sheetHeight: sheetHeight)
+            + shutter + gap
     }
 
     /// The scan band, in **upright portrait normalized coordinates with a bottom-left origin** —
@@ -76,12 +99,13 @@ enum ScanGeometry {
         precision: Bool,
         screen: CGSize,
         safeTop: CGFloat,
-        safeBottom: CGFloat
+        safeBottom: CGFloat,
+        sheetHeight: CGFloat
     ) -> CGRect {
         let h = screen.height
         guard h > 0 else { return CGRect(x: 0, y: 0.25, width: 1, height: 0.5) }
 
-        let bottom = min(bottomChrome(safeBottom: safeBottom), h)
+        let bottom = min(bottomChrome(safeBottom: safeBottom, sheetHeight: sheetHeight), h)
         // Give up top chrome before band height. See `minBandHeight`.
         let top = min(topChrome(safeTop: safeTop), max(0, h - bottom - minBandHeight))
         let free = max(0, h - top - bottom)

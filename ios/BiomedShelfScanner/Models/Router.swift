@@ -416,7 +416,7 @@ extension Router.Route {
     /// One-line plan summary, e.g. "Elevator to Level 8, then 2 stair descents and 1 elevator move."
     func summary(levels topLevel: Int) -> String {
         if floorCount <= 1 {
-            return "All on Level \(topLevel) — take the elevator there."
+            return "All on Level \(topLevel). Take the elevator there."
         }
         if isTruckTrip {
             return "Over five books, so this is a truck trip: the elevator between every floor "

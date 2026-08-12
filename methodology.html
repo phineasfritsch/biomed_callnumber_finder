@@ -269,11 +269,12 @@
   are dropped rather than passed through to the page. An empty parse is reported as an error rather than
   as an empty list, because those are different facts. Verified against the live widget on 10 August 2026:
   1,360 databases, 1,254 of them needing a login, 340 best bets, and 106 that open to anybody.</p>
-  <p>Two things the list does not carry. There are no descriptions &mdash; every one of the 1,365
-  description elements in the payload is empty, and asking the widget for them changes nothing &mdash;
-  so the panel shows names and links and does not pretend otherwise. And there is no entitlement in
-  general: UCLA tags one database as a trial and none as free, so this is an inventory, and the
-  free-versus-licensed question is answered per provider by the resolver instead.</p>
+  <p>Two things the list does not carry. The first is descriptions. Every one of the 1,365
+  description elements in the payload is empty, and asking the widget for them changes nothing, so
+  the panel shows names and links and does not pretend to more. The second is entitlement. UCLA
+  tags one database as a trial and none as free, which makes this an inventory rather than an
+  access map, so the free-versus-licensed question is answered per provider by the resolver
+  instead.</p>
 
   <h2>5. The OpenURL resolver, who carries the full text</h2>
   <p><code>https://ucla.alma.exlibrisgroup.com/view/uresolver/01UCS_LAL/openurl</code></p>
@@ -360,18 +361,18 @@
   <ul>
     <li><code>GET /api/articles</code>, <code>GET /api/suggest</code> and
     <code>GET /api/databases</code>, plus <code>HEAD</code> and a CORS preflight on each. Any other
-    method is a 405 naming what it does allow, and any other path falls through to the static assets
-    &mdash; which answer with a real 404 page, not the tool with a 200 on it.</li>
+    method is a 405 naming what it does allow, and any other path falls through to the static
+    assets. Those answer with a real 404 page rather than the tool wearing a 200.</li>
     <li>Only the parameters documented above reach Primo, and the ones identifying the institution are
     fixed in the source. It is not an open proxy and cannot be pointed anywhere else. Every value is
     checked against a list of the ones that mean something, and a value that is not on it is refused
     rather than passed along: an unknown facet does not fail upstream, it comes back as a full,
     plausible, unfiltered result set wearing a filter&rsquo;s label.</li>
     <li>Two characters carry grammar in Primo&rsquo;s query language and are therefore not passed
-    through as text. A comma opens a new clause, so commas in a search phrase become spaces &mdash;
-    which changes no result, since <code>smith, john</code> and <code>smith john</code> return the same
-    395,471 records. The <code>|,|</code> that separates facets means a journal-title filter containing
-    a vertical bar is refused outright.</li>
+    through as text. A comma opens a new clause, so commas in a search phrase become spaces. That
+    changes no result: <code>smith, john</code> and <code>smith john</code> return the same 395,471
+    records. The <code>|,|</code> that separates facets means a journal-title filter containing a
+    vertical bar is refused outright.</li>
     <li>Replies carry <code>Access-Control-Allow-Origin: *</code>, since they hold nothing but
     bibliographic facts, and a <code>Cache-Control</code> matching the edge cache. Errors are sent
     <code>no-store</code>. Every reply is JSON, including the ones nobody planned for: an unexpected

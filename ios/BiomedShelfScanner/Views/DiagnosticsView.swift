@@ -26,7 +26,7 @@ struct DiagnosticsView: View {
                     ))
                     .frame(minHeight: 44)
                 } footer: {
-                    Text("Captures the raw candidates behind every scan. Turn on, scan a shelf, then export and replay the file on your computer — no rebuild needed to try a fix.")
+                    Text("Captures the raw candidates behind every scan. Turn it on, scan a shelf, export. You can then replay the file on your computer and try a fix without rebuilding.")
                 }
 
                 Section("Captured") {

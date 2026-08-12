@@ -14,6 +14,10 @@ struct TripSheet: View {
     /// mode is up. Route, request-sheet capture and headcount all cover the preview completely.
     let onPresentFullScreen: () -> Void
     let onDismissFullScreen: () -> Void
+    /// Reports this sheet's top edge in global (screen) coordinates, so `ScanView` can lay the
+    /// shutter and the scan band out against where the sheet **is** rather than against the
+    /// detent height it asked for. Those are not the same number.
+    let onTopEdgeChanged: (CGFloat) -> Void
 
     @State private var editing: TripItem?
     @State private var showManualEntry = false
@@ -31,6 +35,15 @@ struct TripSheet: View {
             ZStack {
                 PaperBackground()
                 list
+            }
+            // Reports on every drag frame, which is what lets the shutter get out of the way as
+            // the sheet comes up rather than after it has arrived.
+            .background {
+                GeometryReader { g in
+                    Color.clear
+                        .onAppear { onTopEdgeChanged(g.frame(in: .global).minY) }
+                        .onChange(of: g.frame(in: .global).minY) { _, y in onTopEdgeChanged(y) }
+                }
             }
             .toolbarBackground(Theme.paper, for: .navigationBar)
             .navigationBarTitleDisplayMode(.inline)
@@ -228,7 +241,7 @@ struct TripSheet: View {
             Text("Point the camera at a spine label")
                 .font(Theme.display(17))
                 .foregroundStyle(Theme.ink)
-            Text("Press the shutter once per book. Keep your eyes on the books — the phone tells you what it got.")
+            Text("One press per book. Keep your eyes on the shelf rather than the screen, and the phone will tell you what it got.")
                 .font(Theme.mono(12, relativeTo: .footnote))
                 .foregroundStyle(Theme.inkSoft)
                 .multilineTextAlignment(.center)

@@ -6,15 +6,15 @@ Scanning and routing are fully offline; only a headcount submission touches the 
 
 It shares a visual system with Shelfmark (`../index.html`) and Headcount
 (`../better_headcount/`): warm paper, Fraunces for display, Spline Sans Mono for everything else.
-Tokens live in `Views/Theme.swift` and are copied from those files rather than re-derived — see
-`better_headcount/DESIGN.md`.
+Tokens live in `Views/Theme.swift`. They are copied from those files rather than re-derived, and
+`better_headcount/DESIGN.md` says why.
 
-**Read [DESIGN.md](DESIGN.md) first** — particularly §3.3, which documents a trap that looks
-obviously correct and is not.
+**Read [DESIGN.md](DESIGN.md) first.** Especially §3.3. It documents a trap that looks obviously
+correct and is not.
 
-**Then [TESTING.md](TESTING.md)** — how to get it on a phone from a cloud Mac, and how to tune OCR
-*without* redeploying. That second part matters more than it sounds: the build loop here is ~15
-minutes, and recognition tuning needs dozens of cycles.
+**Then [TESTING.md](TESTING.md).** It covers getting the app onto a phone from a cloud Mac, and
+tuning OCR *without* redeploying. The second half matters more than it sounds. A build loop here is
+about fifteen minutes and recognition tuning needs dozens of cycles.
 
 ---
 
@@ -28,9 +28,8 @@ open BiomedShelfScanner.xcodeproj
 ```
 
 Set `DEVELOPMENT_TEAM` in `project.yml` (or pick a team in Xcode's Signing tab) before running on
-a device. **The camera does not work in the Simulator** — the scanner needs real hardware. Manual
-entry and routing work fine in the Simulator, which is enough to exercise everything except
-Vision.
+a device. **The camera does not work in the Simulator.** The scanner needs real hardware. Manual
+entry and routing are fine there, which is enough to exercise everything except Vision.
 
 The project is generated rather than checked in: `project.pbxproj` is unreviewable in a diff and
 merge-hostile. `project.yml` is neither.
@@ -42,9 +41,9 @@ merge-hostile. `project.yml` is neither.
 The routing logic was ported from working JavaScript. Two golden fixtures, generated from that
 JavaScript running over the real dataset, prove the port is faithful:
 
-Nothing here can be compiled on the machine it is written on — the Mac is in the cloud and the
-loop is ten to fifteen minutes. So most of what a compiler and a test run would tell you is
-instead checked by reading the sources as text and by running the logic's JavaScript twin.
+Nothing here compiles on the machine it is written on. The Mac is in the cloud and a round trip
+is ten to fifteen minutes. So most of what a compiler and a test run would tell you is instead
+checked by reading the sources as text, and by running the logic's JavaScript twin.
 
 **Everything below runs on any machine with Node, in under a second, with no network.**
 
@@ -58,9 +57,9 @@ node ios/Tools/fonts.test.js               # bundled fonts vs UIAppFonts vs what
 node ios/Tools/headcount.parity.test.mjs   # the pinned form schema vs better_headcount's
 ```
 
-`swiftcheck.test.js` is the compiler stand-in. It will not catch a wrong argument type; it does
-catch what actually goes wrong when you edit twenty files at once — a renamed token, a view that
-no longer exists, a file a scripted edit truncated.
+`swiftcheck.test.js` is the compiler stand-in. It will not catch a wrong argument type. It does
+catch what actually goes wrong when you edit twenty files at once: a renamed token, a view that no
+longer exists, a file some scripted edit truncated halfway through.
 
 Fixture generators, for when the dataset or the form schema changes:
 
@@ -77,9 +76,9 @@ replays 2016 snapped slots; `ScanGeometryTests` walks every shipping iPhone size
 **Run these before touching the camera.** Everything else rests on the comparator, and it is the
 easiest thing to break invisibly.
 
-If the dataset changes, regenerate the fixtures and re-run. If `testGrammarAcceptsRealEndpoints`
-starts failing, the grammar (§3.3) no longer fits the collection — re-measure, don't just widen it
-until the test passes.
+If the dataset changes, regenerate the fixtures and re-run. A failing
+`testGrammarAcceptsRealEndpoints` means the grammar in §3.3 no longer fits the collection. Measure
+again. Do not widen it until the test goes green.
 
 ---
 
@@ -134,18 +133,18 @@ Tools/
 ### Headcount
 
 The app carries the second job the same person does on the same shift: the two-hourly walk of the
-building with a tally counter. It is a port of `better_headcount`, and it submits through that
-project's existing Cloudflare Worker. **No server change was needed** — the Worker's CORS
-allowlist keys off the `Origin` header, and a native app sends none.
+building with a tally counter. It is a port of `better_headcount` and it submits through that
+project's existing Cloudflare Worker. **No server change was needed.** The Worker's CORS allowlist
+keys off the `Origin` header, and a native app sends none.
 
 Two things to know before touching it.
 
 `Headcount/HeadcountConfig.swift` is a **second copy of a pinned schema**, which is precisely what
 `better_headcount` avoids by having its client and its Worker import one `config.js`. A native app
 cannot import a JS module, so the copy is unavoidable.
-`node ios/Tools/headcount.parity.test.mjs` is the compensating control — it diffs the two, field
-by field and byte by byte, including every `entry.NNNNNNN` id. **Run it before every release.** A
-transposed digit in a field id puts Level 9's count in Level 8's column, and nothing anywhere
+`node ios/Tools/headcount.parity.test.mjs` is the compensating control. It diffs the two field by
+field and byte by byte, including every `entry.NNNNNNN` id. **Run it before every release.** A
+transposed digit in one of those ids puts Level 9's count in Level 8's column, and nothing anywhere
 reports it.
 
 `better_headcount` is its own git repository that happens to sit in this working tree, so it is
@@ -171,13 +170,13 @@ Do this whenever the ranges change, or the app will route against stale shelves.
 
 - **This code has never been compiled.** It was written on Windows without Xcode. The logic is
   verified against the real dataset via the Node fixtures, and `Tools/swiftcheck.test.js` catches
-  unbalanced files and unresolved symbols, but nothing here type-checks. Expect to fix some build
-  errors — start with `xcodegen generate && xcodebuild` and work through them.
+  unbalanced files and unresolved symbols, but nothing here type-checks. Expect build errors.
+  Start with `xcodegen generate && xcodebuild` and work through them.
 - **The bundled fonts fail silently.** `Font.custom("Fraunces-SemiBold", …)` with nothing
   registered does not throw or warn; it renders the system face, which looks fine and is simply
   not the design. `Tools/fonts.test.js` checks the three things that have to agree: the files on
-  disk, the `UIAppFonts` list, and the PostScript names the Swift asks for — iOS resolves by
-  PostScript name, not by filename.
+  disk, the `UIAppFonts` list, and the PostScript names the Swift asks for. iOS resolves a font by
+  its PostScript name rather than its filename, which is the part that catches people out.
 - **The scan band is derived, not chosen.** `ScanGeometry` computes it from the controls drawn on
   top of the preview, because the band is also what `FrameProcessor` filters observations by: the
   drawn rect and the scanned region are one value by construction. Hard-coding it is what put the
@@ -186,16 +185,17 @@ Do this whenever the ranges change, or the app will route against stale shelves.
   not a preference. Turning it on makes Vision bend `NA388` toward English words. See DESIGN.md §3.1.
 - **The seam tiebreak in `Router.locate`** exists because 237 of 651 endpoints match two faces at
   once and Swift's `Dictionary` order is randomized per launch. Removing the `$0.key < $1.key`
-  tiebreak reintroduces a bug that changes answers between runs — it will look like flaky OCR.
-- **`SWIFT_STRICT_CONCURRENCY` starts at `minimal`.** Not because the design can't take `complete`
-  — `FrameProcessor` is `@unchecked Sendable` on the specific grounds that
-  `AVCaptureVideoDataOutput` serialises its delegate callbacks — but because strict checking on a
-  first build buries real errors under concurrency noise. Raise it in `project.yml` once the app
-  runs. If you add a second caller to `FrameProcessor`, that `@unchecked` reasoning stops holding.
+  tiebreak reintroduces a bug that changes answers between runs, and it will look like flaky OCR.
+- **`SWIFT_STRICT_CONCURRENCY` starts at `minimal`.** The design can take `complete`.
+  `FrameProcessor` is `@unchecked Sendable` on the specific grounds that
+  `AVCaptureVideoDataOutput` serialises its delegate callbacks. The reason to start low is that
+  strict checking on a first build buries the real errors under concurrency noise. Raise it in
+  `project.yml` once the app runs. Add a second caller to `FrameProcessor` and that `@unchecked`
+  reasoning stops holding.
 - **`Info.plist` is hand-written**, so it must carry `CFBundleIdentifier`, `CFBundleExecutable`,
   `CFBundlePackageType` and friends itself. Omitting `CFBundleIdentifier` still *builds*, then
-  fails at install with `Missing bundle ID` (IXErrorDomain 13) — a confusing error, because
-  nothing went wrong at compile time.
+  fails at install with `Missing bundle ID` (IXErrorDomain 13). Confusing, because nothing went
+  wrong at compile time.
 - **Never add a `resources:` key for a path already covered by `sources:`.** XcodeGen routes
   non-compilable files into the Resources phase automatically; listing them twice produces
   "Multiple commands produce …".

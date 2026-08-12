@@ -17,6 +17,21 @@ struct ScanView: View {
     @State private var seeing: CallNumberRecognizer.Result?
     @State private var flash: FlashState?
 
+    /// Where the trip sheet's top edge actually is, in points up from the bottom of the screen.
+    ///
+    /// Measured rather than assumed. `.presentationDetents([.height(104)])` does *not* produce a
+    /// sheet 104pt tall — the system adds the grabber, its own bottom safe-area inset and its
+    /// minimum height, publishes none of it, and the first version of this laid the shutter out
+    /// against the requested 104 and put it underneath the sheet.
+    ///
+    /// `resting` is the smallest height ever observed, which is the sheet sitting at its peek
+    /// detent; `live` is where it is now. The band is laid out against `resting` so that dragging
+    /// the sheet does not move the scan frame under the user's hands, and the shutter hides when
+    /// `live` rises above it — dragging the sheet up means you have stopped scanning and started
+    /// reviewing, and a shutter buried under a sheet is worse than no shutter.
+    @State private var restingSheetHeight: CGFloat?
+    @State private var liveSheetHeight: CGFloat = ScanGeometry.sheetPeek
+
     private let router: Router
 
     init(router: Router) {
@@ -46,11 +61,13 @@ struct ScanView: View {
                 width: geo.size.width,
                 height: geo.size.height + safeTop + safeBottom
             )
+            let sheetHeight = ScanGeometry.sheetHeight(measured: restingSheetHeight)
             let band = ScanGeometry.band(
                 precision: engine.isPrecisionMode,
                 screen: screen,
                 safeTop: safeTop,
-                safeBottom: safeBottom
+                safeBottom: safeBottom,
+                sheetHeight: sheetHeight
             )
 
             ZStack {
@@ -63,9 +80,11 @@ struct ScanView: View {
                 VStack {
                     topBar
                     Spacer()
-                    if engine.captureMode == .single {
+                    if engine.captureMode == .single, liveSheetHeight <= sheetHeight + 40 {
                         scanButton
-                            .padding(.bottom, ScanGeometry.shutterBottomPadding(safeBottom: safeBottom))
+                            .padding(.bottom, ScanGeometry.shutterBottomPadding(
+                                safeBottom: safeBottom, sheetHeight: sheetHeight))
+                            .transition(.opacity)
                     }
                 }
 
@@ -99,9 +118,19 @@ struct ScanView: View {
                 router: router,
                 onToggleDiagnostics: { engine.setDiagnosing($0) },
                 onPresentFullScreen: { engine.stop() },
-                onDismissFullScreen: { Task { await engine.start() } }
+                onDismissFullScreen: { Task { await engine.start() } },
+                // Preferences do not cross a presentation boundary, so the sheet cannot publish
+                // its geometry upward the usual way. A closure does — it is just a captured
+                // function, and the sheet lives in the same window, so `.global` is screen space.
+                onTopEdgeChanged: { topY in
+                    let screenHeight = UIScreen.main.bounds.height
+                    let height = max(0, screenHeight - topY)
+                    liveSheetHeight = height
+                    restingSheetHeight = min(restingSheetHeight ?? height, height)
+                }
             )
-            // ScanGeometry.sheetPeek must match this. The band is measured off it.
+            // The band and the shutter are laid out against the MEASURED sheet, not this number.
+            // See `restingSheetHeight` and `ScanGeometry.sheetPeek`.
             .presentationDetents([.height(ScanGeometry.sheetPeek), .medium, .large])
             .presentationBackgroundInteraction(.enabled(upThrough: .medium))
             .presentationDragIndicator(.visible)

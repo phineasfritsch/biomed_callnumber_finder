@@ -38,19 +38,30 @@ struct BiomedShelfScannerApp: App {
             for: .normal)
     }
 
-    /// The router and store are built once and shared. Loading 453 ranges is trivial, but the
-    /// router is the app's single source of truth about the building — there should be exactly one.
+    /// The router and the stores are built once and shared. Loading 453 ranges is trivial, but
+    /// the router is the app's single source of truth about the building — there should be
+    /// exactly one.
+    ///
+    /// **`headcount` is held here for a harder reason.** It was previously constructed inline as
+    /// `.environment(HeadcountStore())`, which builds a *new* store every time this body is
+    /// evaluated — which is every time anything changes. Each new store re-ran its initialiser,
+    /// re-read the saved round off disk, and set `resumable`, so a single tap on `+` wrote to
+    /// disk, triggered a re-render, built a fresh store, and greeted the user with "an unfinished
+    /// round is saved on this phone". Pressing Start walking did the same thing and took the
+    /// walk screen down with it. A store with a lifetime shorter than the thing it stores is not
+    /// a store.
     @State private var router: Router?
     @State private var store: TripStore?
+    @State private var headcount: HeadcountStore?
     @State private var loadError: String?
 
     var body: some Scene {
         WindowGroup {
             Group {
-                if let router, let store {
+                if let router, let store, let headcount {
                     ScanView(router: router)
                         .environment(store)
-                        .environment(HeadcountStore())
+                        .environment(headcount)
                 } else if let loadError {
                     // If the bundled dataset is missing the app has no reason to exist — fail
                     // loudly rather than presenting an empty scanner that silently locates nothing.
@@ -69,6 +80,7 @@ struct BiomedShelfScannerApp: App {
                     let r = try Router(bundledRanges: "biomed-shelf-ranges")
                     router = r
                     store = TripStore(router: r)
+                    headcount = HeadcountStore()
                 } catch {
                     loadError = "biomed-shelf-ranges.json could not be loaded from the app bundle."
                 }

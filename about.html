@@ -55,7 +55,8 @@
   library holds the thing, and which shelf it is on once you are standing in the building.</p>
 
   <h2>Where things are</h2>
-  <p>Four pages, and the bar at the top of every one of them goes to all four.</p>
+  <p>Shelfmark has four pages. The bar at the top of each one links to all four, so getting from
+  any page to any other never costs more than a single click.</p>
   <div class="rows">
     <div><a href="/">Search</a></div><div>The one box, the catalog and the article index. Start here.</div>
     <div><a href="/map">Map</a></div><div>The Biomed shelf map, floor by floor, and the pickup walk planner.</div>
@@ -64,22 +65,25 @@
   </div>
 
   <h2>Everything starts in the one box</h2>
-  <p>There used to be a box per question, and you had to know which question you were asking before
-  you could ask it. There is one field now and it decides:</p>
+  <p>Earlier versions of this tool gave each kind of question its own box, which meant you had to
+  know what sort of thing you were looking for before you could look for it. That is a bad
+  assumption at a reference desk. There is one field now, and it decides what you meant:</p>
   <div class="rows">
     <div><code>QL737.C22</code></div><div>Anything shaped like a call number is answered on the spot, with the floor and the shelf face and a small map of that floor. One click opens it on the full map.</div>
     <div><code>10.1056/NEJMoa1816897</code></div><div>A DOI, a PubMed ID or an ISSN goes to the article panel and the link resolver.</div>
     <div>Everything else</div><div>Goes to UCLA&rsquo;s catalog as a title, author or subject search.</div>
   </div>
-  <p>The choice it made is always shown, and always reversible in one click. Guessing wrong quietly
-  would be worse than asking.</p>
+  <p>Whatever it decides is named on screen, and one click sends the same text down a different
+  path. The alternative would be a tool that guesses wrong and says nothing about it, which is a
+  worse failure than simply asking you which you meant.</p>
 
   <h2>Call numbers and the shelf map</h2>
   <p>Type a call number as printed. Spaces and the Cutter dot are optional, so <code>QL737.C22</code>,
   <code>QL 737 C22</code> and <code>W1 JO600</code> all work. A W1 number needs the space after W1.</p>
-  <p>The locator finds the shelf whose range contains it, comparing class letters, then class number,
-  then each Cutter as a decimal, so AM4733 sorts before AM477. That last part is the one people trip
-  over: Cutters are decimals, not integers.</p>
+  <p>The locator then finds the shelf whose range contains that number. It compares the class
+  letters first, then the class number, and then each Cutter as a decimal, which is why AM4733
+  sorts before AM477. Cutters being decimals rather than whole numbers is the part that catches
+  people out, including people who have shelved for years.</p>
   <h3>Reading the map</h3>
   <ul>
     <li>Each green column is a double-sided shelf, with an L and an R face.</li>
@@ -88,21 +92,22 @@
     <li>Where a range start equals its end, many volumes share one call number, so every matching
     shelf is returned and you check the spine.</li>
   </ul>
-  <p>Reference is on floor 4 and Special Collections on floor 9. On <a href="/map">the map page</a>,
-  switch the Biomed map pill to search those; from the search box, type <code>Hist Div</code> in
-  front of the call number and it goes to Special Collections on its own. Only Biomed stacks copies
-  resolve to a shelf you can walk to; a copy at Powell or YRL is reported as being there, without a
-  shelf face.</p>
-  <p>A shelf hit in a catalog result is a link. Clicking it opens the map on that floor with the
-  shelf already lit.</p>
+  <p>Reference sits on floor 4 and Special Collections on floor 9. To search either one, switch the
+  Biomed map pill on <a href="/map">the map page</a>. From the search box you can also type
+  <code>Hist Div</code> in front of a call number and it will go to Special Collections on its own.
+  Only copies in the Biomed stacks resolve to a shelf you can walk to. A copy at Powell or YRL is
+  reported as being there and nothing more, because this site has no survey of those buildings.</p>
+  <p>Any shelf shown in a catalog result is a link. Click it and the map opens on that floor with
+  the shelf already lit.</p>
 
   <h2>Books</h2>
-  <p>Results are scoped to the library you say you are working at, and widen to the rest of UCLA only
-  if yours has nothing. All 21 libraries work.</p>
-  <p>The catalog ranks nothing and corrects no spelling, so both happen here. A title that matches no
-  record is checked against Primo&rsquo;s dictionary first and against the catalog&rsquo;s own
-  vocabulary second, and any correction is named rather than applied quietly. A typo or two still
-  finds the book.</p>
+  <p>Results are scoped to whichever library you say you are working at, and they widen to the rest
+  of UCLA only when yours turns up nothing. All 21 libraries are supported.</p>
+  <p>UCLA&rsquo;s catalog neither ranks results nor corrects spelling, so both of those happen here
+  instead. A title that matches no record is checked against Primo&rsquo;s dictionary first and
+  against the catalog&rsquo;s own vocabulary second. Any correction it makes is named on screen
+  rather than applied quietly, which matters because a silent correction can send you looking for a
+  book that was never the one you wanted. A typo or two will still find the book.</p>
   <h3>Filters and syntax</h3>
   <p>The Filters panel is shorthand for tokens you can type instead, and the Search syntax panel in
   the tool lists all of them. The ones worth knowing by heart:</p>
@@ -127,19 +132,19 @@
     <div><b>In print at UCLA</b></div><div>There is a physical copy. Search its call number to find the shelf.</div>
     <div><b>Not at UCLA</b></div><div>Interlibrary loan can usually get it.</div>
   </div>
-  <p>The button takes the best route in and says which door it is. Everything else the library offers
-  for that paper sits behind &ldquo;other ways in&rdquo;, because a reader after one paper does not
-  need eight buttons to choose between.</p>
-  <p>Paste an identifier instead of a title and the link resolver answers who carries the full text,
-  and for which years. Coverage is worth checking before walking someone over: a provider can carry
-  the journal and not the issue.</p>
+  <p>The button takes the best available route in and names which door it is using. Everything else
+  the library offers for that paper sits behind &ldquo;other ways in&rdquo;. Someone who wants to
+  read one paper should not have to choose between eight buttons to do it.</p>
+  <p>Paste an identifier instead of a title and the link resolver will answer who carries the full
+  text, and for which years. Check those years before you walk someone over to a shelf. A provider
+  can carry a journal without carrying the issue you need.</p>
 
   <h2>Databases A&ndash;Z</h2>
-  <p><a href="/databases">The databases page</a> is UCLA&rsquo;s whole list &mdash; 1,360 of them
-  &mdash; taken from the same LibGuides feed the library&rsquo;s own A to Z page is built from,
-  and refreshed once a day. It is there for the searches this site cannot do: PsycINFO,
-  Web of Science, CINAHL, a newspaper archive, a dataset. Shelfmark searches UCLA&rsquo;s catalog
-  and its article index; everything else lives behind one of these.</p>
+  <p><a href="/databases">The databases page</a> carries UCLA&rsquo;s whole list, all 1,360 of them.
+  It comes from the same LibGuides feed the library&rsquo;s own A to Z page is built from and is
+  refreshed once a day. The page exists for the searches this site cannot do itself: PsycINFO, Web
+  of Science, CINAHL, a newspaper archive, a dataset. Shelfmark searches UCLA&rsquo;s catalog and
+  its article index, and everything beyond those two lives behind one of these entries.</p>
   <p>Type in the filter box to narrow the list by name. It matches anywhere in the name, so
   <code>psyc</code> finds PsycINFO and PsycARTICLES, and <code>pub</code> finds PubMed. Filtering
   happens in your browser against the list already on screen, so it answers as you type and costs
@@ -152,31 +157,31 @@
     106 that open from anywhere. Useful when you are off campus with no VPN, or sending a link to
     someone who is not at UCLA.</div>
   </div>
-  <p>Every entry opens in a new tab, at the same address the library&rsquo;s page would send you
-  to. A database marked <b>no login</b> should open straight away; everything else will ask you to
-  sign in, on campus or off.</p>
-  <p>What the feed carries is a name, a link, and those two facts. There are no descriptions in it
-  &mdash; the library publishes them on its own page but not through this feed &mdash; so this
-  list does not show a description field that would always be empty. If you need to know what a
+  <p>Every entry opens in a new tab, at the same address the library&rsquo;s own page would send you
+  to. A database marked <b>no login</b> should open straight away. Everything else will ask you to
+  sign in, whether you are on campus or off.</p>
+  <p>The feed carries a name, a link, and those two facts. It carries no descriptions. The library
+  publishes them on its own page but does not put them through this feed, so this list leaves out a
+  description column that would have been empty on all 1,360 rows. When you need to know what a
   database covers before opening it, the library&rsquo;s A to Z page has the blurbs.</p>
 
   <h2>Hours, and where the buildings are</h2>
   <p><a href="/hours">Opening hours</a> come from LibCal and are read live, so they are as current
   as the library&rsquo;s own page. Every UCLA location is listed, not just Biomed. Pick any date
   within a year back or two years forward; the day strip moves a week at a time.</p>
-  <p>That page answers <i>when</i>. For <i>where</i> &mdash; the question you get asked at a desk,
-  with someone standing in front of you &mdash; it also carries
+  <p>That page answers <i>when</i>. <i>Where</i> is a different question, and it is usually the one
+  asked at a desk with somebody standing in front of you. So the page also carries
   <a href="/ucla-library-locations-2026.pdf" target="_blank" rel="noopener noreferrer">UCLA&rsquo;s
   campus map of the nine library locations</a>, which is the thing to hold up and point at, and a
   link to <a href="https://www.library.ucla.edu/locations/" target="_blank" rel="noopener noreferrer">the
-  library&rsquo;s own Locations &amp; Hours page</a> for the same information in text. The map is
-  UCLA&rsquo;s, reproduced here so it opens in one tap rather than three.</p>
+  library&rsquo;s own Locations &amp; Hours page</a> for the same information written out. The map
+  belongs to UCLA and is reproduced here so that it opens in one tap instead of three.</p>
 
   <h2>Pickup walks</h2>
-  <p>At the bottom of <a href="/map">the map page</a>, the pickup walk takes a list of call
-  numbers, or photographs of them, and puts them in the order you would walk the stacks rather
-  than the order you typed them. Photographs are read in the browser with optical character
-  recognition; the images are never uploaded anywhere.</p>
+  <p>The pickup walk sits at the bottom of <a href="/map">the map page</a>. Give it a list of call
+  numbers, or photographs of them, and it returns them in the order you would actually walk the
+  stacks rather than the order you happened to type. Photographs are read in your own browser using
+  optical character recognition, and the images are never uploaded anywhere.</p>
 
   <div class="note"><b>Nothing here needs an account.</b> No sign-in, no analytics, no cookies. What
   you type is sent to UCLA&rsquo;s public endpoints to answer the search, and nowhere else.</div>

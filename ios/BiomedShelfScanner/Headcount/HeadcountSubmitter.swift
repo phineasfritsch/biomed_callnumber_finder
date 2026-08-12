@@ -69,8 +69,8 @@ final class HeadcountSubmitter {
         let clock = HeadcountLogic.clockPlausible()
         guard clock.ok else {
             blocker = clock.reason == "before-build"
-                ? "This phone's clock is set before this app was built. Fix the date before counting — every round is filed by day and time."
-                : "This phone's clock is years ahead. Fix the date before counting."
+                ? "This phone's clock is set before this app was built. Every round is filed by day and time, so fix the date before you count."
+                : "This phone's clock is years ahead. Fix the date before you count."
             phase = .done
             return
         }
@@ -169,7 +169,7 @@ final class HeadcountSubmitter {
                     submissionId: item.submissionId, at: .now, formId: form.id,
                     day: item.payload[form.dayEntry] ?? "",
                     time: item.payload[form.timeEntry] ?? "",
-                    total: item.total, result: "Failed — \(message)", code: code))
+                    total: item.total, result: "Failed. \(message)", code: code))
             }
         }
     }
@@ -178,7 +178,7 @@ final class HeadcountSubmitter {
         switch outcome {
         case .confirmed:        return "Confirmed"
         case .queue:            return "Queued"
-        case let .failed(_, m): return "Failed — \(m)"
+        case let .failed(_, m): return "Failed. \(m)"
         }
     }
 }

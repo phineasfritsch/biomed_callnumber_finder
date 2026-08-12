@@ -32,7 +32,7 @@ struct SearchView: View {
                         .frame(minHeight: 44)
                 } footer: {
                     // The web app's footer, condensed: same forgiveness, same warning.
-                    Text("Spaces and the Cutter dot are optional — QL737.C22, QL 737 C22 and W1 JO600 all work.")
+                    Text("Spaces and the Cutter dot are optional. QL737.C22, QL 737 C22 and W1 JO600 all work.")
                 }
 
                 if let cn = parsed {
@@ -54,7 +54,7 @@ struct SearchView: View {
                             if hits.count > 1 {
                                 // Verbatim intent from the web app: serial runs share one call
                                 // number across shelves; the spine's volume/year disambiguates.
-                                Text("\(hits.count) shelves match — for serials, check the volume/year on the spine to pick the right one.")
+                                Text("\(hits.count) shelves match. For a serial, the volume and year on the spine tell you which one.")
                             }
                         }
                     }

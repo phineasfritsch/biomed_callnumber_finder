@@ -73,14 +73,14 @@ struct ManualEntryView: View {
             let matches = router.search(cn).count
             Label(
                 matches > 1
-                    ? "Level \(hit.level) · \(hit.shelfID) · \(hit.side) — \(matches) shelves match (serial run; check volume/year)"
+                    ? "Level \(hit.level) · \(hit.shelfID) · \(hit.side). \(matches) shelves match; it is a serial run, so check the volume and year."
                     : "Level \(hit.level) · \(hit.shelfID) · \(hit.side)",
                 systemImage: "checkmark.circle.fill"
             )
             .foregroundStyle(Theme.located)
         } else if CallNumber.parse(text) != nil {
             Label(
-                "Not in the mapped ranges. It may be Reference (Floor 4), or outside the mapped stacks. You can still add it.",
+                "Not in the mapped ranges. It may be Reference on Floor 4, or outside the mapped stacks. Add it anyway if that is what the spine says.",
                 systemImage: "exclamationmark.triangle.fill"
             )
             .foregroundStyle(Theme.unlocated)

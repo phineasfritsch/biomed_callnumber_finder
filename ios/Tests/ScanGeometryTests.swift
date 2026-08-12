@@ -30,9 +30,17 @@ final class ScanGeometryTests: XCTestCase {
         .init(name: "15 Pro Max",           size: .init(width: 430, height: 932), safeTop: 59, safeBottom: 34),
     ]
 
+    /// Plausible real sheet heights. A `.height(104)` detent does not produce a 104pt sheet —
+    /// the system adds the grabber, its own bottom safe-area inset and its minimum height, and
+    /// publishes none of it. Laying out against the requested number is what buried the shutter,
+    /// so every case here is checked across the range the sheet can actually come back as.
+    private let sheetHeights: [CGFloat?] = [nil, 104, 138, 172]
+
     /// Top of the shutter, measured from the bottom of the screen.
-    private func shutterTop(_ d: Device) -> CGFloat {
-        d.safeBottom + ScanGeometry.shutterBottomPadding(safeBottom: d.safeBottom) + ScanGeometry.shutter
+    private func shutterTop(_ d: Device, _ sheet: CGFloat) -> CGFloat {
+        d.safeBottom
+            + ScanGeometry.shutterBottomPadding(safeBottom: d.safeBottom, sheetHeight: sheet)
+            + ScanGeometry.shutter
     }
 
     /// The band's bottom edge, measured from the bottom of the screen.
@@ -47,10 +55,12 @@ final class ScanGeometryTests: XCTestCase {
 
     func testBandNeverOverlapsTheShutter() {
         for d in devices {
+          for measured in sheetHeights {
+            let sheet = ScanGeometry.sheetHeight(measured: measured)
             for precision in [false, true] {
                 let band = ScanGeometry.band(
                     precision: precision, screen: d.size,
-                    safeTop: d.safeTop, safeBottom: d.safeBottom
+                    safeTop: d.safeTop, safeBottom: d.safeBottom, sheetHeight: sheet
                 )
                 XCTAssertGreaterThanOrEqual(
                     bandBottom(band, d), shutterTop(d),
@@ -58,6 +68,7 @@ final class ScanGeometryTests: XCTestCase {
                     + "\(bandBottom(band, d)) is below the shutter top \(shutterTop(d))"
                 )
             }
+          }
         }
     }
 
@@ -65,36 +76,59 @@ final class ScanGeometryTests: XCTestCase {
     /// below it is a region the user cannot see but the recognizer still reads.
     func testBandNeverOverlapsTheSheetPeek() {
         for d in devices {
+          for measured in sheetHeights {
+            let sheet = ScanGeometry.sheetHeight(measured: measured)
             for precision in [false, true] {
                 let band = ScanGeometry.band(
                     precision: precision, screen: d.size,
-                    safeTop: d.safeTop, safeBottom: d.safeBottom
+                    safeTop: d.safeTop, safeBottom: d.safeBottom, sheetHeight: sheet
                 )
                 XCTAssertGreaterThanOrEqual(
                     bandBottom(band, d), ScanGeometry.sheetPeek,
                     "\(d.name) \(precision ? "precision" : "wide"): band runs under the sheet"
                 )
             }
+          }
         }
     }
 
-    /// …and the shutter itself must clear the sheet, or the button is half behind it.
-    func testShutterClearsTheSheetPeek() {
+    /// The shutter must clear the sheet's real top edge, not the detent height it was asked for.
+    ///
+    /// This is the bug that shipped. `.height(104)` produced a sheet taller than 104pt, the
+    /// shutter was laid out against 104, and the sheet covered it by about 18pt on a
+    /// home-indicator phone.
+    func testShutterClearsTheSheetWhateverHeightItTurnsOutToBe() {
         for d in devices {
-            let bottom = d.safeBottom + ScanGeometry.shutterBottomPadding(safeBottom: d.safeBottom)
-            XCTAssertGreaterThanOrEqual(
-                bottom, ScanGeometry.sheetPeek + ScanGeometry.gap,
-                "\(d.name): shutter bottom \(bottom) does not clear the sheet peek"
-            )
+            for measured in sheetHeights {
+                let sheet = ScanGeometry.sheetHeight(measured: measured)
+                let bottom = d.safeBottom
+                    + ScanGeometry.shutterBottomPadding(safeBottom: d.safeBottom, sheetHeight: sheet)
+                XCTAssertGreaterThanOrEqual(
+                    bottom, sheet + ScanGeometry.gap,
+                    "\(d.name) [sheet \(sheet)]: shutter bottom \(bottom) does not clear it"
+                )
+            }
         }
+    }
+
+    /// A measurement below the requested detent is a mid-animation or zero reading, and taking it
+    /// at face value would drop the shutter straight back under the sheet.
+    func testSheetHeightFloorsAtTheRequestedDetent() {
+        XCTAssertEqual(ScanGeometry.sheetHeight(measured: nil), ScanGeometry.sheetPeek)
+        XCTAssertEqual(ScanGeometry.sheetHeight(measured: 0), ScanGeometry.sheetPeek)
+        XCTAssertEqual(ScanGeometry.sheetHeight(measured: 40), ScanGeometry.sheetPeek)
+        XCTAssertEqual(ScanGeometry.sheetHeight(measured: 138), 138)
+        XCTAssertEqual(ScanGeometry.sheetHeight(measured: .infinity), ScanGeometry.sheetPeek)
     }
 
     func testBandNeverOverlapsTheTopBar() {
         for d in devices {
+          for measured in sheetHeights {
+            let sheet = ScanGeometry.sheetHeight(measured: measured)
             for precision in [false, true] {
                 let band = ScanGeometry.band(
                     precision: precision, screen: d.size,
-                    safeTop: d.safeTop, safeBottom: d.safeBottom
+                    safeTop: d.safeTop, safeBottom: d.safeBottom, sheetHeight: sheet
                 )
                 let barBottom = d.safeTop + ScanGeometry.barTopPadding + ScanGeometry.barHeight
                 XCTAssertGreaterThanOrEqual(
@@ -103,16 +137,19 @@ final class ScanGeometryTests: XCTestCase {
                     + "is above the mode chips at \(barBottom)"
                 )
             }
+          }
         }
     }
 
     /// A band that clears everything by collapsing to nothing would pass the tests above.
     func testBandStaysBigEnoughToAimWith() {
         for d in devices {
+          for measured in sheetHeights {
+            let sheet = ScanGeometry.sheetHeight(measured: measured)
             for precision in [false, true] {
                 let band = ScanGeometry.band(
                     precision: precision, screen: d.size,
-                    safeTop: d.safeTop, safeBottom: d.safeBottom
+                    safeTop: d.safeTop, safeBottom: d.safeBottom, sheetHeight: sheet
                 )
                 XCTAssertGreaterThanOrEqual(
                     band.height * d.size.height, ScanGeometry.minBandHeight,
@@ -122,6 +159,7 @@ final class ScanGeometryTests: XCTestCase {
                 XCTAssertTrue((0...1).contains(band.minY) && (0...1).contains(band.maxY),
                               "\(d.name): band escaped the screen — \(band)")
             }
+          }
         }
     }
 
@@ -131,7 +169,8 @@ final class ScanGeometryTests: XCTestCase {
     func testPrecisionBandIsTallAndNarrow() {
         for d in devices {
             let band = ScanGeometry.band(
-                precision: true, screen: d.size, safeTop: d.safeTop, safeBottom: d.safeBottom
+                precision: true, screen: d.size, safeTop: d.safeTop, safeBottom: d.safeBottom,
+                sheetHeight: ScanGeometry.sheetHeight(measured: nil)
             )
             XCTAssertGreaterThan(band.height * d.size.height, band.width * d.size.width, d.name)
             XCTAssertEqual(band.midX, 0.5, accuracy: 0.001, "\(d.name): precision band is off-centre")
@@ -143,7 +182,8 @@ final class ScanGeometryTests: XCTestCase {
     func testSweepBandStaysAStrip() {
         for d in devices {
             let band = ScanGeometry.band(
-                precision: false, screen: d.size, safeTop: d.safeTop, safeBottom: d.safeBottom
+                precision: false, screen: d.size, safeTop: d.safeTop, safeBottom: d.safeBottom,
+                sheetHeight: ScanGeometry.sheetHeight(measured: nil)
             )
             XCTAssertLessThanOrEqual(band.height, ScanGeometry.sweepHeightFraction + 0.001, d.name)
             XCTAssertEqual(band.width, 1, "\(d.name): sweep must span the full width")
@@ -153,7 +193,8 @@ final class ScanGeometryTests: XCTestCase {
     /// A zero-size screen happens for exactly one layout pass before `GeometryReader` reports.
     /// It must not produce a band that scans nothing or crashes on a divide.
     func testDegenerateScreenIsSurvivable() {
-        let band = ScanGeometry.band(precision: true, screen: .zero, safeTop: 0, safeBottom: 0)
+        let band = ScanGeometry.band(precision: true, screen: .zero, safeTop: 0, safeBottom: 0,
+                                     sheetHeight: ScanGeometry.sheetHeight(measured: nil))
         XCTAssertGreaterThan(band.height, 0)
         XCTAssertTrue((0...1).contains(band.minY))
     }

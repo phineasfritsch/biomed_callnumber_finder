@@ -26,10 +26,24 @@ struct HeadcountView: View {
         NavigationStack {
             ZStack {
                 PaperBackground()
-                content
+                // Walk mode is a *mode of this screen*, not another presentation.
+                //
+                // It was a fullScreenCover — raised from a view that is itself a fullScreenCover,
+                // raised from a sheet. Three presentation layers deep, and this file's own
+                // neighbour already carries a comment about the second layer being unreliable.
+                // In the field it took the whole screen down with it. A mode has no presentation
+                // context to lose.
+                if showWalk {
+                    HeadcountWalkView(feedback: feedback, onDone: { showWalk = false })
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else {
+                    content
+                        .transition(.opacity)
+                }
             }
-            .navigationTitle("Headcount")
+            .navigationTitle(showWalk ? "" : "Headcount")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar(showWalk ? .hidden : .visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
@@ -44,9 +58,6 @@ struct HeadcountView: View {
                     }
                     .accessibilityLabel(feedback.isSoundOn ? "Mute the tones" : "Unmute the tones")
                 }
-            }
-            .fullScreenCover(isPresented: $showWalk) {
-                HeadcountWalkView(feedback: feedback)
             }
             .sheet(isPresented: $showConfirm) {
                 HeadcountConfirmSheet(submitter: submitter) {
@@ -120,7 +131,7 @@ struct HeadcountView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Include the Collab Hub")
                         .font(Theme.mono(13, weight: .medium))
-                    Text("one Submit, two rows, two sheets — never merged")
+                    Text("One Submit. Two rows to two sheets, never merged.")
                         .font(Theme.mono(11, relativeTo: .caption))
                         .foregroundStyle(Theme.inkSoft)
                 }
@@ -142,21 +153,21 @@ struct HeadcountView: View {
         if store.isBlockedByDrift {
             banner(
                 title: "The Google Form changed",
-                body: "Submitting now would write into the wrong columns. Enter this round by "
-                    + "hand and tell whoever maintains the form.",
+                body: "Submitting now would write into the wrong columns. Enter the round by hand, "
+                    + "then tell whoever maintains the form.",
                 detail: store.forms.flatMap { store.drift[$0.id] ?? [] }
             )
         } else if !clock.ok {
             banner(
                 title: "This phone's clock is wrong",
-                body: "Every round is filed by day and time. Fix the date in Settings before counting.",
+                body: "Every round is filed by day and time. Fix the date in Settings before you count.",
                 detail: []
             )
         } else if store.persistenceFailed {
             banner(
                 title: "This phone cannot save the round",
-                body: "Storage is full or restricted. Finish and submit without closing the app — "
-                    + "a count that cannot be saved will be lost if the app is killed.",
+                body: "Storage is full or restricted. Finish and submit without closing the app. "
+                    + "A count that cannot be saved is gone if the app is killed.",
                 detail: []
             )
         } else if store.daysDisagree() {
@@ -302,7 +313,7 @@ struct HeadcountView: View {
 
     private var startWalking: some View {
         Button {
-            showWalk = true
+            withAnimation(Theme.spring) { showWalk = true }
             feedback.fire(.next)
         } label: {
             HStack(spacing: 8) {

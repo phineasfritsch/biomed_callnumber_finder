@@ -119,7 +119,7 @@ struct HeadcountClient {
         case "form-missing":
             return "Google returned 404. The form was deleted or the id is wrong."
         case "no-marker":
-            return "Google returned 200 without its confirmation. The row may not exist — do not assume it landed."
+            return "Google returned 200 without its confirmation. The row may not exist. Do not assume it landed."
         case "rate-limited":
             return "The proxy is rate limiting. Wait a moment and try again."
         default:

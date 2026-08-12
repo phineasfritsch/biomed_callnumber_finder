@@ -13,10 +13,12 @@ import SwiftUI
 struct HeadcountWalkView: View {
 
     @Environment(HeadcountStore.self) private var store
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let feedback: HeadcountFeedback
+    /// Not `@Environment(\.dismiss)`: this is a mode of `HeadcountView`, not a presentation, so
+    /// there is nothing to dismiss. See the note where it is switched in.
+    let onDone: () -> Void
 
     @State private var flash: Color?
 
@@ -46,7 +48,7 @@ struct HeadcountWalkView: View {
         HStack(alignment: .center) {
             Button {
                 feedback.fire(.press)
-                dismiss()
+                withAnimation(Theme.spring) { onDone() }
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "chevron.down")
