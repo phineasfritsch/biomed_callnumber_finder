@@ -22,7 +22,7 @@ struct ManualEntryView: View {
             Form {
                 Section {
                     TextField("W1 NA388 no.66 1984", text: $text)
-                        .font(Theme.callNumber(.body))
+                        .font(Theme.callNumber())
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()          // same reason as usesLanguageCorrection = false
                         .focused($focused)
@@ -43,6 +43,7 @@ struct ManualEntryView: View {
                     }
                 }
             }
+            .paperScroll()
             .navigationTitle(existing == nil ? "Add call number" : "Edit")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -85,7 +86,7 @@ struct ManualEntryView: View {
             .foregroundStyle(Theme.unlocated)
         } else {
             Label("Not recognisable as a call number yet.", systemImage: "questionmark.circle")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.inkSoft)
         }
     }
 
@@ -132,6 +133,7 @@ struct SheetImportReview: View {
                     }
                 }
             }
+            .paperScroll()
             .navigationTitle("^[\(found.count) found](inflect: true)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -160,7 +162,7 @@ struct SheetImportReview: View {
                 .foregroundStyle(isIn ? Theme.accent : .secondary)
             VStack(alignment: .leading, spacing: 4) {
                 Text(cn.raw)
-                    .font(Theme.callNumber(.body))
+                    .font(Theme.callNumber())
                     .fixedSize(horizontal: false, vertical: true)
                 if let hit {
                     Label("L\(hit.level) · \(hit.shelfID) · \(hit.side)", systemImage: "checkmark.circle.fill")
@@ -204,12 +206,13 @@ struct HistoryView: View {
                                 .font(.headline)
                             Text("\(trip.kind.title) · ^[\(trip.bookCount) book](inflect: true)")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Theme.inkSoft)
                         }
                         .padding(.vertical, 2)
                     }
                 }
             }
+            .paperScroll()
             .navigationTitle("Past trips")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

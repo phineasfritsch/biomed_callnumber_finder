@@ -44,8 +44,10 @@ struct RouteView: View {
                         if !route.unlocated.isEmpty { unlocatedSection }
                     }
                     .listStyle(.insetGrouped)
+                    .paperScroll()
                 }
             }
+            .background(PaperBackground())
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -141,7 +143,7 @@ struct RouteView: View {
             HStack {
                 Text("Level \(leg.level)")
                 Spacer()
-                Text(mapCaption(leg)).foregroundStyle(.secondary)
+                Text(mapCaption(leg)).foregroundStyle(Theme.inkSoft)
             }
         } footer: {
             Text("Tap a numbered stop to tick it off. The map follows you to the next floor.")
@@ -156,10 +158,10 @@ struct RouteView: View {
     private var progressHeader: some View {
         VStack(alignment: .leading, spacing: 8) {
             ProgressView(value: Double(completedCount), total: Double(max(route.bookCount, 1)))
-                .tint(Theme.accent)
+                .tint(Theme.green)
             Text(route.summary(levels: topLevel))
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.inkSoft)
         }
         .padding(.vertical, 4)
     }
@@ -181,7 +183,7 @@ struct RouteView: View {
         Section {
             ForEach(route.unlocated, id: \.self) { cn in
                 Text(cn)
-                    .font(Theme.callNumber(.callout))
+                    .font(Theme.callNumber(14))
                     .fixedSize(horizontal: false, vertical: true)
             }
         } header: {
@@ -268,7 +270,7 @@ struct FloorSection: View {
                     systemImage: leg.direction == .leftToRight ? "arrow.right" : "arrow.left"
                 )
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.inkSoft)
             }
         }
     }
@@ -299,7 +301,7 @@ struct StopRow: View {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: done ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
-                    .foregroundStyle(done ? Theme.located : Color.secondary)
+                    .foregroundStyle(done ? Theme.located : Theme.inkFaint)
 
                 VStack(alignment: .leading, spacing: 6) {
                     // One phrasing per stop. This used to print the location twice — a header
@@ -322,7 +324,7 @@ struct StopRow: View {
                                     .fixedSize(horizontal: false, vertical: true)
                                 Text(step.target)
                                     .font(.footnote)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Theme.inkSoft)
                                     .fixedSize(horizontal: false, vertical: true)
                             } else {
                                 Text("Index \(stop.x, format: .number) · \(rowLabel) · \(sideLabel)")
@@ -334,16 +336,16 @@ struct StopRow: View {
 
                     ForEach(stop.callNumbers, id: \.raw) { cn in
                         Text(cn.raw)
-                            .font(Theme.callNumber(.callout))
+                            .font(Theme.callNumber(14))
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
-                    Text("\(stop.range.start) → \(stop.range.end)")
+                    Text("\(stop.range.start) – \(stop.range.end)")
                         .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(Theme.inkFaint)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                .strikethrough(done, color: .secondary)
+                .strikethrough(done, color: Theme.inkFaint)
                 .opacity(done ? 0.5 : 1)
 
                 Spacer(minLength: 0)
@@ -352,7 +354,9 @@ struct StopRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .listRowBackground(isCurrent && !done ? Theme.accent.opacity(0.07) : nil)
+        // The stop you are walking to now is tinted with the same green-soft the website uses
+        // for a hit, so the current row is findable at a glance on a moving phone.
+        .listRowBackground(isCurrent && !done ? Theme.greenSoft : Theme.card)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(done ? [.isSelected] : [])
         .accessibilityHint(done ? "Double tap to mark not done" : "Double tap to mark \(kind.pastVerb.lowercased())")
@@ -389,15 +393,15 @@ struct TruckSortView: View {
                         HStack(spacing: 12) {
                             Text("\(i + 1)")
                                 .font(.caption.weight(.semibold).monospacedDigit())
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Theme.inkSoft)
                                 .frame(minWidth: 24, alignment: .trailing)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(entry.cn)
-                                    .font(Theme.callNumber(.callout))
+                                    .font(Theme.callNumber(14))
                                     .fixedSize(horizontal: false, vertical: true)
                                 Text("L\(entry.level) · \(entry.shelf)")
                                     .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Theme.inkSoft)
                             }
                         }
                         .padding(.vertical, 2)

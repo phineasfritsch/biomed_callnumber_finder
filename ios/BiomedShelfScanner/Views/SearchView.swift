@@ -25,7 +25,7 @@ struct SearchView: View {
             List {
                 Section {
                     TextField("W1 JO600, QL737.C22, WM 13 D5537…", text: $query)
-                        .font(Theme.callNumber(.body))
+                        .font(Theme.callNumber())
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
                         .focused($focused)
@@ -43,7 +43,7 @@ struct SearchView: View {
                             } icon: {
                                 Image(systemName: "questionmark.circle")
                             }
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.inkSoft)
                         }
                     } else {
                         Section {
@@ -60,6 +60,7 @@ struct SearchView: View {
                     }
                 }
             }
+            .paperScroll()
             .navigationTitle("Find a shelf")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -77,9 +78,9 @@ struct SearchView: View {
         return VStack(alignment: .leading, spacing: 4) {
             Text("Level \(hit.level) · \(place) · \(side) side")
                 .font(.subheadline.weight(.semibold))
-            Text("\(hit.range.start) → \(hit.range.end)")
-                .font(Theme.callNumber(.caption))
-                .foregroundStyle(.secondary)
+            Text("\(hit.range.start) – \(hit.range.end)")
+                .font(Theme.callNumber(12))
+                .foregroundStyle(Theme.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.vertical, 2)

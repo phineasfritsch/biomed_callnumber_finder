@@ -32,7 +32,7 @@ struct DiagnosticsView: View {
                 Section("Captured") {
                     Text(diagnostics.summary)
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.inkSoft)
                 }
 
                 if !diagnostics.records.isEmpty {
@@ -61,6 +61,7 @@ struct DiagnosticsView: View {
                     }
                 }
             }
+            .paperScroll()
             .navigationTitle("Scan diagnostics")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -94,15 +95,15 @@ private struct RecordRow: View {
                 .font(.caption)
             VStack(alignment: .leading, spacing: 2) {
                 Text(record.callNumber ?? record.candidates.first?.text ?? "—")
-                    .font(Theme.callNumber(.caption))
+                    .font(Theme.callNumber(12))
                     .lineLimit(1)
                 Text(record.at, format: .dateTime.hour().minute().second())
                     .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(Theme.inkFaint)
             }
             Spacer()
             if record.accepted {
-                Image(systemName: "checkmark").font(.caption2).foregroundStyle(.secondary)
+                Image(systemName: "checkmark").font(.caption2).foregroundStyle(Theme.inkSoft)
             }
         }
     }
@@ -141,11 +142,11 @@ private struct RecordDetail: View {
                     ForEach(Array(record.candidates.enumerated()), id: \.offset) { i, c in
                         VStack(alignment: .leading, spacing: 2) {
                             Text(c.text)
-                                .font(Theme.callNumber(.caption))
+                                .font(Theme.callNumber(12))
                                 .fixedSize(horizontal: false, vertical: true)
                             Text("#\(i + 1) · confidence \(c.confidence, format: .number.precision(.fractionLength(2)))")
                                 .font(.caption2)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Theme.inkSoft)
                         }
                     }
                 }
@@ -153,10 +154,10 @@ private struct RecordDetail: View {
                 Section("Extracted") {
                     if record.extracted.isEmpty {
                         Text("Nothing matched the call-number patterns.")
-                            .font(.footnote).foregroundStyle(.secondary)
+                            .font(.footnote).foregroundStyle(Theme.inkSoft)
                     } else {
                         ForEach(record.extracted, id: \.self) {
-                            Text($0).font(Theme.callNumber(.caption))
+                            Text($0).font(Theme.callNumber(12))
                         }
                     }
                 }
@@ -170,6 +171,7 @@ private struct RecordDetail: View {
                     LabeledContent("Committed", value: record.accepted ? "yes" : "no")
                 }
             }
+            .paperScroll()
             .navigationTitle("Frame")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

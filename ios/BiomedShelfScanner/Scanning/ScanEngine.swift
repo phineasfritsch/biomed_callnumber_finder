@@ -200,7 +200,11 @@ final class FrameProcessor: @unchecked Sendable {
         pixelBuffer: CVPixelBuffer
     ) {
         guard isDiagnosing else { return }
-        let extracted = candidates.flatMap { CallNumberRecognizer.extract(from: $0.text) }
+        // Both readings, so a corpus shows whether a frame failed before or after O/0 restoration
+        // — the difference between "Vision misread it" and "the repair did not fire".
+        let extracted = candidates.flatMap { c in
+            CallNumberRecognizer.readings(of: c.text).flatMap(CallNumberRecognizer.matches(in:))
+        }
         var frame: Data?
         if result == nil || !accepted {
             frame = Self.jpeg(from: pixelBuffer)
@@ -278,11 +282,13 @@ final class ScanEngine {
         didSet { setTorch(isTorchOn) }
     }
 
-    /// Narrows the scan band to one spine. Both rects are portrait-normalized, bottom-left
-    /// origin — the same space the overlay draws in and the processor filters in.
-    var isPrecisionMode = false {
-        didSet { processor.setBand(isPrecisionMode ? Self.precisionROI : Self.wideROI) }
-    }
+    /// Narrows the scan band to one spine.
+    ///
+    /// The band itself is not stored here. It depends on the screen and its safe areas, which
+    /// only the view knows, so `ScanView` computes it with `ScanGeometry` and pushes it in
+    /// through `setBand` — the same rect it draws. See `ScanGeometry` for why the band is derived
+    /// from the control layout rather than being a constant.
+    var isPrecisionMode = false
 
     // MARK: Capture mode
 
@@ -317,13 +323,9 @@ final class ScanEngine {
         processor.isActive = captureMode == .sweep || isArmed
     }
 
-    /// Wide: horizontal band for sweeping along a shelf — labels sit at roughly the same height
-    /// across a row of shelved books.
-    static let wideROI = CGRect(x: 0.0, y: 0.25, width: 1.0, height: 0.5)
-    /// Precision: TALL and narrow, because it frames a single *vertical spine* — the stacked
-    /// label reads top-to-bottom. The first build shipped this wide (a landscape strip), which is
-    /// a shape no spine label ever has.
-    static let precisionROI = CGRect(x: 0.30, y: 0.18, width: 0.40, height: 0.64)
+    /// The band the recognizer filters observations by, in upright portrait normalized
+    /// coordinates. Set by the view from `ScanGeometry` — see `isPrecisionMode`.
+    func setBand(_ rect: CGRect) { processor.setBand(rect) }
 
     /// Set by the view. Called on the main actor.
     var onEvent: ((Event) -> Void)?
@@ -340,7 +342,9 @@ final class ScanEngine {
 
     init(router: Router) {
         self.processor = FrameProcessor(router: router)
-        processor.setBand(Self.wideROI)
+        // A placeholder only, and it lasts one layout pass: ScanView pushes the real band as soon
+        // as it can measure the screen. FrameProcessor's own default is the same rect.
+        processor.setBand(CGRect(x: 0, y: 0.25, width: 1, height: 0.5))
         processor.isDiagnosing = ScanDiagnostics.shared.isRecording
         syncActive()   // default single-shot: recognizer idle until the button arms it
     }

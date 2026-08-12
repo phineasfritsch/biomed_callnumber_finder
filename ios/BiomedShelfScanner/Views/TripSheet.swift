@@ -10,6 +10,10 @@ struct TripSheet: View {
 
     let router: Router
     let onToggleDiagnostics: (Bool) -> Void
+    /// The camera is a battery and thermal cost with nothing to show for it while a full-screen
+    /// mode is up. Route, request-sheet capture and headcount all cover the preview completely.
+    let onPresentFullScreen: () -> Void
+    let onDismissFullScreen: () -> Void
 
     @State private var editing: TripItem?
     @State private var showManualEntry = false
@@ -17,72 +21,21 @@ struct TripSheet: View {
     @State private var showHistory = false
     @State private var showDiagnostics = false
     @State private var showRoute = false
+    @State private var showHeadcount = false
     @State private var showSheetScanner = false
     @State private var pendingImport: [(CallNumber, Router.Hit?)] = []
     @State private var confirmClear = false
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    header
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                        .listRowSeparator(.hidden)
-                }
-
-                if store.current.isEmpty {
-                    Section { emptyState.listRowSeparator(.hidden) }
-                } else {
-                    Section {
-                        ForEach(store.current.items) { item in
-                            TripRow(item: item) { editing = item }
-                                .swipeActions(edge: .trailing) {
-                                    Button(role: .destructive) {
-                                        store.remove(item)
-                                    } label: {
-                                        Label("Remove", systemImage: "trash")
-                                    }
-                                }
-                        }
-                    } header: {
-                        Text("^[\(store.current.bookCount) book](inflect: true)")
-                    }
-                }
+            ZStack {
+                PaperBackground()
+                list
             }
-            .listStyle(.plain)
+            .toolbarBackground(Theme.paper, for: .navigationBar)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Menu {
-                        Button { showSearch = true } label: {
-                            Label("Find a shelf", systemImage: "magnifyingglass")
-                        }
-                        Button { showManualEntry = true } label: {
-                            Label("Type a call number", systemImage: "keyboard")
-                        }
-                        Button { showSheetScanner = true } label: {
-                            Label("Scan a request sheet", systemImage: "doc.viewfinder")
-                        }
-                        Divider()
-                        Button { showHistory = true } label: {
-                            Label("Past trips", systemImage: "clock.arrow.circlepath")
-                        }
-                        Button { showDiagnostics = true } label: {
-                            Label("Scan diagnostics", systemImage: "stethoscope")
-                        }
-                        if !store.current.isEmpty {
-                            Divider()
-                            // Destructive action, visually and spatially separated.
-                            Button(role: .destructive) { confirmClear = true } label: {
-                                Label("Clear trip", systemImage: "trash")
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle").frame(width: 44, height: 44)
-                    }
-                    .accessibilityLabel("More actions")
-                }
-            }
+            .toolbar { toolbar }
+            .tint(Theme.ink)
             .sheet(item: $editing) { item in
                 ManualEntryView(router: router, existing: item) { text in
                     store.updateText(text, for: item)
@@ -94,19 +47,16 @@ struct TripSheet: View {
                     store.add(cn, hit: router.locate(cn), typed: true)
                 }
             }
-            .sheet(isPresented: $showSearch) {
-                SearchView(router: router)
-            }
-            .sheet(isPresented: $showHistory) {
-                HistoryView()
-            }
-            .sheet(isPresented: $showDiagnostics) {
-                DiagnosticsView(onToggle: onToggleDiagnostics)
-            }
-            .fullScreenCover(isPresented: $showRoute) {
+            .sheet(isPresented: $showSearch) { SearchView(router: router) }
+            .sheet(isPresented: $showHistory) { HistoryView() }
+            .sheet(isPresented: $showDiagnostics) { DiagnosticsView(onToggle: onToggleDiagnostics) }
+            .fullScreenCover(isPresented: $showRoute, onDismiss: onDismissFullScreen) {
                 RouteView(route: store.route())
             }
-            .fullScreenCover(isPresented: $showSheetScanner) {
+            .fullScreenCover(isPresented: $showHeadcount, onDismiss: onDismissFullScreen) {
+                HeadcountView()
+            }
+            .fullScreenCover(isPresented: $showSheetScanner, onDismiss: onDismissFullScreen) {
                 DocumentScanner(
                     router: router,
                     onFinish: { pendingImport = $0; showSheetScanner = false },
@@ -132,12 +82,110 @@ struct TripSheet: View {
         }
     }
 
+    private var list: some View {
+        List {
+            Section {
+                header
+                    .listRowInsets(EdgeInsets(top: 8, leading: 14, bottom: 8, trailing: 14))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+            }
+
+            if store.current.isEmpty {
+                Section {
+                    emptyState
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                }
+            } else {
+                Section {
+                    ForEach(store.current.items) { item in
+                        TripRow(item: item) { editing = item }
+                            .listRowInsets(EdgeInsets(top: 4, leading: 14, bottom: 4, trailing: 14))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                            .swipeActions(edge: .trailing) {
+                                Button(role: .destructive) {
+                                    store.remove(item)
+                                } label: {
+                                    Label("Remove", systemImage: "trash")
+                                }
+                            }
+                    }
+                } header: {
+                    MicroLabel(text: "\(store.current.bookCount) "
+                        + (store.current.bookCount == 1 ? "book" : "books"))
+                        .padding(.leading, 2)
+                }
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .environment(\.defaultMinListRowHeight, 0)
+    }
+
+    @ToolbarContentBuilder
+    private var toolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            Menu {
+                Button { showSearch = true } label: {
+                    Label("Find a shelf", systemImage: "magnifyingglass")
+                }
+                Button { showManualEntry = true } label: {
+                    Label("Type a call number", systemImage: "keyboard")
+                }
+                Button { showSheetScanner = true; onPresentFullScreen() } label: {
+                    Label("Scan a request sheet", systemImage: "doc.viewfinder")
+                }
+                Divider()
+                Button { showHistory = true } label: {
+                    Label("Past trips", systemImage: "clock.arrow.circlepath")
+                }
+                Button { showDiagnostics = true } label: {
+                    Label("Scan diagnostics", systemImage: "stethoscope")
+                }
+                if !store.current.isEmpty {
+                    Divider()
+                    // Destructive action, visually and spatially separated.
+                    Button(role: .destructive) { confirmClear = true } label: {
+                        Label("Clear trip", systemImage: "trash")
+                    }
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .foregroundStyle(Theme.ink)
+                    .frame(width: 44, height: 44)
+            }
+            .accessibilityLabel("More actions")
+        }
+
+        // Headcount is the other job this phone does on a shift, and it is on a two-hour clock —
+        // it does not belong buried in an overflow menu behind the job you happen to be doing
+        // now. One tap, and the scanner keeps the root position it was designed around.
+        ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                showHeadcount = true
+                onPresentFullScreen()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "person.2.fill").font(.system(size: 12, weight: .semibold))
+                    Text("Headcount").font(Theme.mono(12, relativeTo: .footnote, weight: .semibold))
+                }
+                .foregroundStyle(Theme.ink)
+                .padding(.horizontal, 10)
+                .frame(height: 44)
+            }
+            .accessibilityLabel("Headcount")
+            .accessibilityHint("Opens the headcount round for this walk.")
+        }
+    }
+
     // MARK: Header
 
     private var header: some View {
         // Bindings are built by hand rather than via @Bindable: every mutation goes through a
         // TripStore method so it can persist, and $store.current.kind would bypass that.
-        VStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 12) {
             Picker("Trip type", selection: Binding(
                 get: { store.current.kind },
                 set: { store.setKind($0) }
@@ -146,50 +194,48 @@ struct TripSheet: View {
             }
             .pickerStyle(.segmented)
 
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("^[\(store.current.bookCount) book](inflect: true)")
-                        .font(.headline)
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("\(store.current.bookCount)")
+                        .font(Theme.display(26, relativeTo: .title))
                         .monospacedDigit()
-                    if store.current.bookCount > 0 {
-                        Text(subtitle)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                        .foregroundStyle(Theme.ink)
+                    Text(subtitle)
+                        .font(Theme.mono(11, relativeTo: .caption))
+                        .foregroundStyle(Theme.inkSoft)
                 }
-                Spacer()
-                Button { showRoute = true } label: {
-                    Text("Plan route")
-                        .frame(minHeight: 44)
-                        .padding(.horizontal, 8)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Theme.accent)
-                .disabled(store.current.locatedCount == 0)
+                Spacer(minLength: 0)
+                Button("Plan route") { showRoute = true; onPresentFullScreen() }
+                    .buttonStyle(.shelf)
+                    .disabled(store.current.locatedCount == 0)
             }
         }
+        .card()
     }
 
     private var subtitle: String {
+        guard store.current.bookCount > 0 else { return "nothing scanned yet" }
         let missing = store.current.bookCount - store.current.locatedCount
-        if missing == 0 { return "All located" }
+        if missing == 0 { return "all located" }
         return "\(store.current.locatedCount) located · \(missing) need attention"
     }
 
     private var emptyState: some View {
         VStack(spacing: 10) {
             Image(systemName: "barcode.viewfinder")
-                .font(.largeTitle)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 26))
+                .foregroundStyle(Theme.inkFaint)
             Text("Point the camera at a spine label")
-                .font(.headline)
-            Text("Call numbers are added automatically — no need to tap. Keep your eyes on the books.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+                .font(Theme.display(17))
+                .foregroundStyle(Theme.ink)
+            Text("Press the shutter once per book. Keep your eyes on the books — the phone tells you what it got.")
+                .font(Theme.mono(12, relativeTo: .footnote))
+                .foregroundStyle(Theme.inkSoft)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 24)
+        .padding(.vertical, 22)
+        .padding(.horizontal, 14)
     }
 }
 
@@ -204,18 +250,17 @@ struct TripRow: View {
     let onEdit: () -> Void
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(item.text)
-                    .font(Theme.callNumber(.body))
+                    .font(Theme.callNumber())
+                    .foregroundStyle(Theme.ink)
                     .fixedSize(horizontal: false, vertical: true)   // wrap, don't truncate
 
-                HStack(spacing: 8) {
-                    StatusChip(item: item)
+                HStack(spacing: 6) {
+                    StatusChip(item: item, onSoftGround: true)
                     if item.wasTyped {
-                        Label("Typed", systemImage: "keyboard")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                        Chip(text: "typed", tone: .info, symbol: "keyboard", onSoftGround: true)
                     }
                 }
             }
@@ -224,13 +269,25 @@ struct TripRow: View {
 
             if item.quantity > 1 {
                 Text("×\(item.quantity)")
-                    .font(.subheadline.weight(.semibold))
+                    .font(Theme.mono(14, weight: .semibold))
                     .monospacedDigit()
                     .foregroundStyle(Theme.accent)
                     .accessibilityLabel("\(item.quantity) copies")
             }
         }
-        .padding(.vertical, 4)
+        // Rows carry the same green-soft "this is a hit" / orange-soft "look at this" grounds the
+        // website uses, so a row's state reads before you get as far as the chip. The chip is
+        // still there — colour is never the only carrier.
+        .padding(12)
+        .background(
+            item.isLocated ? Theme.greenSoft : Theme.orangeSoft,
+            in: RoundedRectangle(cornerRadius: Theme.radius)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: Theme.radius)
+                .strokeBorder(item.isLocated ? Theme.green.opacity(0.28) : Theme.orange.opacity(0.3),
+                              lineWidth: 1)
+        }
         .contentShape(Rectangle())
         .onTapGesture(perform: onEdit)
         .accessibilityElement(children: .combine)

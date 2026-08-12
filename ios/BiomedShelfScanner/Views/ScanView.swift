@@ -29,37 +29,52 @@ struct ScanView: View {
         var color: Color {
             switch self {
             case .accepted:  return Theme.located
-            case .duplicate: return Theme.accent
+            case .duplicate: return Theme.hi
             case .warning:   return Theme.unlocated
             }
         }
     }
 
     var body: some View {
-        ZStack {
-            CameraPreview(session: engine.session)
-                .ignoresSafeArea()
-
-            ViewfinderOverlay(
-                roi: engine.isPrecisionMode ? ScanEngine.precisionROI : ScanEngine.wideROI,
-                seeing: seeing,
-                flash: flash?.color
+        GeometryReader { geo in
+            // One measurement, two consumers: the rect the overlay draws and the band the
+            // recognizer filters by are the same value, so they cannot drift apart. See
+            // ScanGeometry — this is what stopped the outline running under the shutter.
+            let safeTop = geo.safeAreaInsets.top
+            let safeBottom = geo.safeAreaInsets.bottom
+            let screen = CGSize(
+                width: geo.size.width,
+                height: geo.size.height + safeTop + safeBottom
             )
-            .ignoresSafeArea()
+            let band = ScanGeometry.band(
+                precision: engine.isPrecisionMode,
+                screen: screen,
+                safeTop: safeTop,
+                safeBottom: safeBottom
+            )
 
-            VStack {
-                topBar
-                Spacer()
-                if engine.captureMode == .single {
-                    scanButton
-                        // Clears the sheet's peek detent (104pt) plus breathing room.
-                        .padding(.bottom, 128)
+            ZStack {
+                CameraPreview(session: engine.session)
+                    .ignoresSafeArea()
+
+                ViewfinderOverlay(band: band, seeing: seeing, flash: flash?.color)
+                    .ignoresSafeArea()
+
+                VStack {
+                    topBar
+                    Spacer()
+                    if engine.captureMode == .single {
+                        scanButton
+                            .padding(.bottom, ScanGeometry.shutterBottomPadding(safeBottom: safeBottom))
+                    }
+                }
+
+                if let message = engine.errorMessage {
+                    cameraUnavailable(message)
                 }
             }
-
-            if let message = engine.errorMessage {
-                cameraUnavailable(message)
-            }
+            .onChange(of: band) { _, new in engine.setBand(new) }
+            .onAppear { engine.setBand(band) }
         }
         .task { await engine.start() }
         .onAppear {
@@ -82,11 +97,15 @@ struct ScanView: View {
         .sheet(isPresented: .constant(true)) {
             TripSheet(
                 router: router,
-                onToggleDiagnostics: { engine.setDiagnosing($0) }
+                onToggleDiagnostics: { engine.setDiagnosing($0) },
+                onPresentFullScreen: { engine.stop() },
+                onDismissFullScreen: { Task { await engine.start() } }
             )
-            .presentationDetents([.height(104), .medium, .large])
+            // ScanGeometry.sheetPeek must match this. The band is measured off it.
+            .presentationDetents([.height(ScanGeometry.sheetPeek), .medium, .large])
             .presentationBackgroundInteraction(.enabled(upThrough: .medium))
             .presentationDragIndicator(.visible)
+            .presentationBackground(Theme.paper)
             .interactiveDismissDisabled()
         }
     }
@@ -103,15 +122,15 @@ struct ScanView: View {
         } label: {
             ZStack {
                 Circle()
-                    .strokeBorder(.white.opacity(0.9), lineWidth: 4)
-                    .frame(width: 78, height: 78)
+                    .strokeBorder(Theme.paper.opacity(0.9), lineWidth: 4)
+                    .frame(width: ScanGeometry.shutter, height: ScanGeometry.shutter)
                 Circle()
-                    .fill(engine.isArmed ? Theme.unlocated : Theme.accent)
-                    .frame(width: 62, height: 62)
+                    .fill(engine.isArmed ? Theme.orange : Theme.card)
+                    .frame(width: ScanGeometry.shutter - 16, height: ScanGeometry.shutter - 16)
                 if engine.isArmed {
                     Image(systemName: "xmark")
-                        .font(.title3.weight(.bold))
-                        .foregroundStyle(.white)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(Theme.paper)
                 }
             }
         }
@@ -124,68 +143,80 @@ struct ScanView: View {
     // MARK: Top bar
 
     private var topBar: some View {
-        HStack(spacing: 12) {
-            Button {
+        HStack(spacing: 4) {
+            modeChip(
+                title: engine.isPrecisionMode ? "Precision" : "Wide",
+                symbol: engine.isPrecisionMode ? "viewfinder.rectangular" : "viewfinder",
+                on: engine.isPrecisionMode
+            ) {
                 engine.isPrecisionMode.toggle()
                 engine.resetVoting()
-            } label: {
-                Label(
-                    engine.isPrecisionMode ? "Precision" : "Wide",
-                    systemImage: engine.isPrecisionMode ? "viewfinder.rectangular" : "viewfinder"
-                )
-                .font(.footnote.weight(.medium))
-                .padding(.horizontal, 12)
-                .frame(height: 44)
             }
             .accessibilityHint("Precision narrows the scan area to one label at a time, for tightly packed spines.")
 
-            Button {
+            modeChip(
+                title: engine.captureMode == .single ? "Single" : "Sweep",
+                symbol: engine.captureMode == .single ? "camera.metering.spot" : "camera.metering.matrix",
+                on: engine.captureMode == .sweep
+            ) {
                 engine.captureMode = engine.captureMode == .single ? .sweep : .single
                 engine.resetVoting()
-            } label: {
-                Label(
-                    engine.captureMode == .single ? "Single" : "Sweep",
-                    systemImage: engine.captureMode == .single ? "camera.metering.spot" : "camera.metering.matrix"
-                )
-                .font(.footnote.weight(.medium))
-                .padding(.horizontal, 12)
-                .frame(height: 44)
             }
             .accessibilityHint("Single scans one book per button press. Sweep scans continuously along a shelf.")
 
-            Spacer()
+            Spacer(minLength: 0)
 
             if engine.hasTorch {
-                Button {
+                modeChip(
+                    title: nil,
+                    symbol: engine.isTorchOn ? "bolt.fill" : "bolt.slash",
+                    on: engine.isTorchOn
+                ) {
                     engine.isTorchOn.toggle()
-                } label: {
-                    Image(systemName: engine.isTorchOn ? "bolt.fill" : "bolt.slash")
-                        .font(.body.weight(.semibold))
-                        .frame(width: 44, height: 44)
                 }
                 .accessibilityLabel(engine.isTorchOn ? "Turn torch off" : "Turn torch on")
             }
         }
-        .foregroundStyle(.white)
-        .padding(.horizontal, 12)
-        .background(.ultraThinMaterial.opacity(0.85), in: Capsule())
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
+        .padding(4)
+        // Over live video, so a scrim rather than a token colour — the scene behind changes
+        // brightness unpredictably and no flat fill passes contrast against all of it.
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay { Capsule().strokeBorder(Theme.paper.opacity(0.25), lineWidth: 1) }
+        .padding(.horizontal, ScanGeometry.gap)
+        .padding(.top, ScanGeometry.barTopPadding)
+    }
+
+    private func modeChip(title: String?, symbol: String, on: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: symbol).font(.system(size: 13, weight: .semibold))
+                if let title {
+                    Text(title).font(Theme.mono(12, relativeTo: .footnote, weight: .semibold))
+                }
+            }
+            .foregroundStyle(on ? Theme.ink : Theme.paper)
+            .padding(.horizontal, 12)
+            // 44pt tall, and the chip is the tap target — not the glyph inside it.
+            .frame(minWidth: 44, minHeight: ScanGeometry.barHeight - 8)
+            .background(on ? Theme.paper.opacity(0.92) : .clear, in: Capsule())
+        }
     }
 
     private func cameraUnavailable(_ message: String) -> some View {
-        VStack(spacing: 16) {
-            Image(systemName: "camera.fill").font(.largeTitle)
-            Text(message).multilineTextAlignment(.center)
+        VStack(spacing: 12) {
+            Image(systemName: "camera.fill").font(.system(size: 26)).foregroundStyle(Theme.inkSoft)
+            Text(message)
+                .font(Theme.mono(13))
+                .foregroundStyle(Theme.ink)
+                .multilineTextAlignment(.center)
             // Always give a path forward: the scanner is a convenience, the routing is the product.
             Text("You can still add call numbers by hand from the list below.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+                .font(Theme.mono(12, relativeTo: .footnote))
+                .foregroundStyle(Theme.inkSoft)
                 .multilineTextAlignment(.center)
         }
-        .padding(24)
+        .card(padding: 20)
         .frame(maxWidth: 320)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
         .padding()
     }
 
@@ -246,7 +277,7 @@ struct ScanView: View {
     }
 }
 
-/// The ROI frame, plus whatever Vision currently sees.
+/// The scan band, plus whatever Vision currently sees.
 ///
 /// Deliberately *not* a box tracked to the text's bounding rect. Mapping Vision's normalized,
 /// bottom-left, rotated coordinate space onto a `resizeAspectFill` preview layer is fiddly and
@@ -254,7 +285,9 @@ struct ScanView: View {
 /// readable chip communicates the same thing and is easier to read at arm's length.
 struct ViewfinderOverlay: View {
 
-    let roi: CGRect
+    /// Normalized, bottom-left origin — the space Vision reports in and `ScanGeometry` computes
+    /// in. This rect *is* the scanned region; see `ScanGeometry`.
+    let band: CGRect
     let seeing: CallNumberRecognizer.Result?
     let flash: Color?
 
@@ -266,23 +299,27 @@ struct ViewfinderOverlay: View {
                 // Dim everything outside the scan band so the eye goes where the camera looks.
                 Color.black.opacity(0.45)
                     .reverseMask {
-                        RoundedRectangle(cornerRadius: 12).frame(width: rect.width, height: rect.height)
+                        RoundedRectangle(cornerRadius: Theme.radius)
+                            .frame(width: rect.width, height: rect.height)
                             .position(x: rect.midX, y: rect.midY)
                     }
 
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: Theme.radius)
                     .stroke(flash ?? strokeColor, lineWidth: flash != nil ? 4 : 2)
                     .frame(width: rect.width, height: rect.height)
                     .position(x: rect.midX, y: rect.midY)
 
                 if let text = seeingText {
+                    // Inside the band's lower edge, not below it. Drawn below, this chip landed
+                    // on the shutter — the band now stops 16pt short of the button, which is not
+                    // room for a chip and never will be.
                     Text(text)
-                        .font(Theme.callNumber(.callout))
-                        .foregroundStyle(.white)
+                        .font(Theme.callNumber(14))
+                        .foregroundStyle(Theme.paper)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
-                        .background(strokeColor.opacity(0.9), in: Capsule())
-                        .position(x: rect.midX, y: rect.maxY + 28)
+                        .background(strokeColor.opacity(0.92), in: Capsule())
+                        .position(x: rect.midX, y: rect.maxY - 24)
                         .transition(.opacity)
                 }
             }
@@ -303,17 +340,17 @@ struct ViewfinderOverlay: View {
         switch seeing {
         case .located:   return Theme.located
         case .unlocated: return Theme.unlocated
-        case nil:        return .white.opacity(0.6)
+        case nil:        return Theme.paper.opacity(0.65)
         }
     }
 
-    /// Vision ROI is normalized with a bottom-left origin; SwiftUI is top-left. Flip y.
+    /// Vision's band is normalized with a bottom-left origin; SwiftUI is top-left. Flip y.
     private func viewRect(in size: CGSize) -> CGRect {
         CGRect(
-            x: roi.minX * size.width,
-            y: (1 - roi.maxY) * size.height,
-            width: roi.width * size.width,
-            height: roi.height * size.height
+            x: band.minX * size.width,
+            y: (1 - band.maxY) * size.height,
+            width: band.width * size.width,
+            height: band.height * size.height
         )
     }
 }

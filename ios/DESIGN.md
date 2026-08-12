@@ -207,7 +207,37 @@ One narrow whitelist is needed: `A1C7` / `A1C8` / `A1Q2` are real jammed double 
 "letters-digits-letters-digits" rule would readmit `NA3B8`, so the `A1` form is special-cased
 rather than generalized.
 
-### 3.4 Character repair — cut, deliberately
+### 3.3.2 O and 0 — the one repair that survived measurement
+
+`JO` is a cutter block with 49 endpoints in this collection, covering most of a floor. `J0` has
+none. On a laminated spine at arm's length the two glyphs are the same shape, and Vision read the
+letter as the digit essentially every time — at which point `W1 J0506` parsed as cutter `J`,
+`.0506`, passed the grammar, located, and sent the walker to a shelf the book is not on.
+Measured: **49 of 49 `JO` endpoints routed to the wrong shelf**, and all 49 recorded the wrong
+text on the trip list.
+
+The fix is a fact about the notation, not a guess about the glyph: **a cutter's digit run never
+starts with 0** — 0 of 906 range endpoints do. So the grammar tightens from `\d+` to `[1-9]\d*`
+(`W1 J0506` is now rejected outright, like `NA3B8`), and `restoringConfusableO` offers `JO506` as
+the only legal reading of that string. The repaired reading is then gated by the same grammar as
+everything else.
+
+Two guards keep it from becoming §3.4 again, both measured:
+
+* **One** leading letter, so a repair can only ever produce a two-letter cutter block. Every block
+  in the collection is 1 or 2 letters (308 and 355 of 663); none is 3. Allowing two would let
+  `C0756` become `COO756`, which passes the grammar and locates — a wrong shelf invented out of a
+  string that was previously a harmless miss.
+* At least two digits after the restored `O`, which keeps volume trailers (`PT03`, `NO.06`) out.
+
+The mirror rule — "a letter inside a digit run must be a misread 0" — was written, measured and
+cut. It is false here: `A1C7`, `R81R8` and `P3R5D` are real jammed double cutters, so `R81O8`
+would become `R8108`, pass, and locate. `NA3O8` stays a miss, which is the safe failure.
+
+`node ios/Tools/confusable.test.js` proves all of this against the live dataset, including that no
+other endpoint changed where it routes.
+
+### 3.4 Character repair — otherwise cut, deliberately
 
 The first draft substituted confusable glyphs (O↔0, B↔8, S↔5) and accepted a variant if it located.
 Measuring it killed the idea twice:
@@ -216,6 +246,10 @@ Measuring it killed the idea twice:
    "nothing located" is never reached. The wrong shelf is accepted silently, at full confidence.
 2. **It cannot be made safe.** Scoring repairs on containment is a machine for inventing plausible
    wrong shelves, since `ZZZ999` locates too.
+
+§3.3.2 is the one exception, and it is an exception because it inverts both objections: the
+grammar now *rejects* the corrupt read rather than accepting it, and the replacement is scored on
+the notation rather than on where it lands. Everything below still holds for repair in general.
 
 The grammar gate solves the real problem instead: reject the malformed read so the next-ranked
 candidate gets its turn. Anything grammar can't resolve belongs in front of a human, not in a
@@ -350,7 +384,77 @@ for a walking task, but it's polish — ship the loop first.
 
 ---
 
+## 5b. Headcount — the other job on the same shift
+
+The person carrying this phone also walks the building every two hours with a tally counter and
+files the numbers in a Google Form. That is `better_headcount`, a mobile web app with its own
+Cloudflare Worker, and it is now also a screen in here.
+
+**Why in this app rather than left as a website.** Three reasons, in order of weight:
+
+1. **Haptics.** Safari on iOS implements no Vibration API, so the web version reproduces its
+   feedback vocabulary by script-clicking a hidden switch control — one fixed tap, no duration, no
+   intensity, and later pulses in a pattern fall outside Safari's transient activation and are
+   dropped. Apple closed script-triggered toggles in iOS 26.5 and feature detection cannot see it,
+   so on a current phone the web version has no haptics at all. The whole design of that
+   vocabulary is that *the patterns are the signal* — a double never means the same kind of thing
+   as a single — and it has been running on one channel. Core Haptics plays all seven patterns in
+   full.
+2. **One tool.** Scanner and counter are the same shift, the same building, the same hand.
+3. **Wake lock, storage and offline** are all first-class rather than approximated.
+
+**What did not change, deliberately.** The Worker, the pinned schema, the three terminal states,
+the idempotency rule, the walking order, the refusal-answers rule, the 34pt gap above Submit. The
+port is a port. Where the two now differ, `ios/Tools/headcount.parity.test.mjs` fails.
+
+**Where it lives in the navigation.** One tap from the trip sheet's toolbar, not buried in the
+overflow menu. §2 argued against a tab bar because the scanning job is a linear flow and a tab
+would put the camera one tap from cold; that argument still holds, and it is also why headcount is
+a full-screen cover rather than a co-equal destination. But a job on a two-hour clock cannot be
+two taps behind whatever you happen to be doing. Opening it stops the camera.
+
+**The one thing to be careful with** is `HeadcountConfig.swift`. `better_headcount` deliberately
+has *one* copy of the pinned form schema — the client and the Worker import the same `config.js`,
+because "a second copy of the field map is a second thing to forget to update, and the whole point
+of the drift check is that nobody remembers". A native app cannot import a JS module. The copy is
+unavoidable; going unnoticed is not. The parity test diffs every field id, option string and
+minute against the JavaScript, and the Worker rejects a `schemaVersion` mismatch outright.
+
+---
+
 ## 6. Design tokens
+
+### The chrome is no longer native — a reversal
+
+The first draft of this document said "chrome goes native (system backgrounds, `.tint` accent)",
+and carried over only the shelf-group colours and an accent. That was defensible on its own terms:
+system controls are free, always current, and adapt to every accessibility setting without being
+asked.
+
+It was still wrong, for a reason outside its own terms. This app is one of **three tools used by
+the same people in the same building on the same shift** — Shelfmark, Headcount and this — and the
+other two are one visual system: warm paper, a hairline card on `--card`, Fraunces for display,
+Spline Sans Mono for everything else. A native-chrome scanner in that family is not "neutral", it
+is the odd one out, and the cost lands on the person who has all three open.
+
+So `Theme.swift` is now the same token block that appears in `site.css` and
+`better_headcount/styles.css` under `:root`, copied rather than re-derived. If a value changes it
+changes in all three.
+
+Consequences worth stating, because they are the price:
+
+* **One theme.** Shelfmark is light paper and so is this, via `preferredColorScheme(.light)`. The
+  brief for a dark default (stacks lighting) is real and was argued for; cross-tool uniformity
+  won. If dark mode is ever added it gets added to all three at once from one shared token block.
+  Until then, **every surface must paint itself** — nothing may rely on a system background or a
+  `.secondary` foreground, because those are only adaptive if you are adapting.
+  `ios/Tools/swiftcheck.test.js` fails the build-equivalent if one creeps back in.
+* **The fonts are bundled**, as static instances, because a variable Fraunces resolves to Black at
+  9pt optical size by default — which is not the face Shelfmark uses anywhere. They fail silently
+  when missing, so `ios/Tools/fonts.test.js` checks the files, the `UIAppFonts` list and the
+  PostScript names agree.
+* **Neither family contains U+2192.** Shelf ranges are written with an en dash rather than an
+  arrow; an arrow would fall back to the system face mid-line, which reads as a rendering bug.
 
 ### Typography — rejecting the tool's recommendation
 
@@ -372,21 +476,28 @@ dropping the display serif, which never served a purpose in the UI chrome.
 
 ### Color
 
-Chrome goes native (system backgrounds, `.tint` accent). Two things carry over from the web app:
+Superseded above: the palette *is* Shelfmark's, whole. Two things in it are worth calling out
+because they were already here before the reversal and are load-bearing for different reasons:
 
 - **Shelf group colors** — green `#5B7D3A`, orange `#C66A25`, char `#3A3631`, slate `#6A7080`.
   These are *semantic* on the floor map (they identify shelf groups), so keeping them preserves
   continuity for anyone who used the web version.
-- **High-contrast navy/blue** direction (`#0F172A` / `#0369A1`) — the one useful thing the
-  design-system tool returned. Works for a utility app and survives dark mode.
+- **`--accent` `#7A2E1E`** is destructive and blocking, and nothing else. The navy/blue the
+  design-system tool suggested (`#0F172A` / `#0369A1`) is gone with the rest of the native chrome;
+  it was never in the family the other two tools belong to.
 
-Status colors never stand alone — every one pairs with an SF Symbol and text:
+Status colors never stand alone — every one pairs with an SF Symbol and text, and the soft grounds
+carry the same meaning a row has on the website:
 
-| State | Color | Symbol | Text |
-| --- | --- | --- | --- |
-| Located | green | `checkmark.circle.fill` | `L2 · top-5 · right` |
-| Not located | amber | `exclamationmark.triangle.fill` | `Not in mapped ranges` |
-| Corrected | blue | `wand.and.stars` | `Corrected from NA3B8` |
+| State | Ground | Ink | Symbol | Text |
+| --- | --- | --- | --- | --- |
+| Located | `--green-soft` | `--good` | `checkmark.circle.fill` | `L2 · top-5 · right` |
+| Not located | `--orange-soft` | `--accent` | `exclamationmark.triangle.fill` | `Not in mapped ranges` |
+| Queued (headcount) | `--slate-soft` | `--slate` | `clock.fill` | `held on this phone` |
+
+One consequence worth writing down: a green-soft chip on a green-soft row is an invisible chip, so
+`Chip` takes an `onSoftGround` flag that swaps its ground to `--card` and keeps its ink. The colour
+stops carrying the meaning twice; the word still carries it once.
 
 Camera overlays need a scrim (`.ultraThinMaterial` or 40–60% black) — text over live video fails
 contrast unpredictably as the scene changes.
@@ -435,7 +546,15 @@ Ship the loop before the polish. Each step is independently testable:
 ## 9. Honest caveats
 
 - **None of the Swift here has been compiled.** It's written from the API contracts, not verified
-  against a build. Treat the code as a design spec, not a drop-in.
+  against a build. Treat the code as a design spec, not a drop-in. What *is* verified, without a
+  compiler: the recognizer against all 906 range endpoints, the scan band against every shipping
+  iPhone size, the bundled fonts against `UIAppFonts` and the names the Swift asks for, the
+  headcount schema against `better_headcount`'s own, and every file for balanced delimiters and
+  resolvable symbols. See `ios/README.md`. None of that is a type check.
+- **The haptic vocabulary has never been felt on a device.** The patterns are transcribed from
+  `better_headcount`, where they were tuned by hand — but they were tuned as *vibration* durations
+  and are played here as Core Haptics continuous events. The rhythms should carry; the intensities
+  are a first guess.
 - **The Vision accuracy claim is qualitative.** Vision is architecturally much better suited to
   camera photos than Tesseract is, and the constrained-decoding trick in §3.2 is a real multiplier
   — but the actual read rate on *your* labels is an empirical question. Build step 3 against a

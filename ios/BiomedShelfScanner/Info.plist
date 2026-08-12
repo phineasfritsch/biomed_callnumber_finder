@@ -44,10 +44,29 @@
 	<key>NSCameraUsageDescription</key>
 	<string>The camera reads call numbers from book spine labels and request sheets so they can be located in the stacks. Recognition runs entirely on this device.</string>
 
-	<!-- No network code anywhere in the app; only exempt encryption applies. Declaring it here
-	     skips the export-compliance questionnaire on every single TestFlight upload. -->
+	<!-- The only network traffic is HTTPS to the headcount submit proxy, which is exempt
+	     encryption (standard TLS, no proprietary or non-standard cryptography of our own).
+	     Declaring it here skips the export-compliance questionnaire on every TestFlight upload.
+	     Scanning and routing remain entirely on-device and work with the radio off. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+
+	<!-- Bundled so the app looks like itself in a basement with no signal, which is where it is
+	     used. Static instances built by ios/Tools/make-fonts.py — see Theme.FontName for why the
+	     variable originals are not shipped directly (Fraunces' variable default is Black at 9pt
+	     optical size, which is not the face Shelfmark uses anywhere).
+
+	     Every filename here must exist in Resources/Fonts or the font silently falls back to the
+	     system face at runtime; ios/Tools/fonts.test.js asserts the two lists match. -->
+	<key>UIAppFonts</key>
+	<array>
+		<string>Fraunces-Regular.ttf</string>
+		<string>Fraunces-Medium.ttf</string>
+		<string>Fraunces-SemiBold.ttf</string>
+		<string>SplineSansMono-Regular.ttf</string>
+		<string>SplineSansMono-Medium.ttf</string>
+		<string>SplineSansMono-SemiBold.ttf</string>
+	</array>
 
 	<key>UILaunchScreen</key>
 	<dict/>

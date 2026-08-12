@@ -121,7 +121,7 @@ struct WalkMapView: View {
             }
             let outline = shelf.isHalf ? rect(cx, y, w, h) : rect(cx - w, y, w * 2, h)
             ctx.stroke(Path(roundedRect: outline, cornerRadius: 3 * s),
-                       with: .color(.secondary.opacity(0.35)), lineWidth: 0.8 * s)
+                       with: .color(Theme.line), lineWidth: 0.8 * s)
         }
 
         // ── Architecture ──
@@ -153,7 +153,7 @@ struct WalkMapView: View {
         for b in badges {
             let done = completed.contains(b.key)
             let isNow = b.key == current
-            let colour = done ? Color.secondary : Theme.order(b.n - 1, of: stopCount)
+            let colour = done ? Theme.inkFaint : Theme.order(b.n - 1, of: stopCount)
             let c = CGPoint(x: b.at.x * s, y: b.at.y * s)
             if isNow {
                 ctx.stroke(Path(ellipseIn: CGRect(x: c.x - 17 * s, y: c.y - 17 * s,
@@ -162,12 +162,11 @@ struct WalkMapView: View {
             }
             let disc = CGRect(x: c.x - 11.5 * s, y: c.y - 11.5 * s, width: 23 * s, height: 23 * s)
             ctx.fill(Path(ellipseIn: disc), with: .color(colour))
-            ctx.stroke(Path(ellipseIn: disc), with: .color(Color(.systemBackground)),
-                       lineWidth: 2.2 * s)
+            ctx.stroke(Path(ellipseIn: disc), with: .color(Theme.card), lineWidth: 2.2 * s)
             let label = done
                 ? Text(Image(systemName: "checkmark"))
-                : Text("\(b.n)").font(.system(size: 12 * s, weight: .bold, design: .monospaced))
-            ctx.draw(label.foregroundStyle(.white), at: c)
+                : Text("\(b.n)").font(.custom(Theme.FontName.monoSemi, size: 12 * s))
+            ctx.draw(label.foregroundStyle(Theme.paper), at: c)
         }
     }
 
@@ -175,7 +174,7 @@ struct WalkMapView: View {
                        _ colour: Color, _ s: Double)
     {
         ctx.fill(Path(roundedRect: r, cornerRadius: 4 * s), with: .color(colour))
-        ctx.draw(Text(label).font(.system(size: 9 * s, design: .monospaced)).foregroundStyle(.white),
+        ctx.draw(Text(label).font(.custom(Theme.FontName.monoMedium, size: 9 * s)).foregroundStyle(Theme.paper),
                  at: CGPoint(x: r.midX, y: r.midY))
     }
 
@@ -185,10 +184,10 @@ struct WalkMapView: View {
         let colour: Color = door.name.contains("stair") ? Theme.ShelfGroup.orange : Theme.accent
         let c = CGPoint(x: door.x * s, y: door.y * s)
         let disc = CGRect(x: c.x - 7.5 * s, y: c.y - 7.5 * s, width: 15 * s, height: 15 * s)
-        ctx.fill(Path(ellipseIn: disc), with: .color(Color(.systemBackground)))
+        ctx.fill(Path(ellipseIn: disc), with: .color(Theme.card))
         ctx.stroke(Path(ellipseIn: disc), with: .color(colour), lineWidth: 3 * s)
 
-        let text = Text(label).font(.system(size: 9 * s, design: .monospaced)).foregroundStyle(colour)
+        let text = Text(label).font(.custom(Theme.FontName.monoSemi, size: 9 * s)).foregroundStyle(colour)
         switch door.via {
         case .lobby:    ctx.draw(text, at: CGPoint(x: c.x + 12 * s, y: c.y + 14 * s), anchor: .leading)
         case .corridor: ctx.draw(text, at: CGPoint(x: c.x, y: c.y - 15 * s), anchor: .center)
