@@ -38,6 +38,13 @@ Tools/
 # Source, not site
 ios/
 
+# Headcount is its own Pages project (biocount.phineasfritsch.com) with its own Worker and its
+# own origin allowlist. It only lives in this repo so the iOS app can be built from the same
+# pinned schema. Serving a second copy of it from shelfmark.* would be a second origin for the
+# same localStorage/IndexedDB/service-worker state — which looks exactly like a lost round —
+# and the directory also carries .git/ and .wrangler/cache/wrangler-account.json.
+better_headcount/
+
 # Misc downloads that ended up in the repo
 *.exe
 *.zip
