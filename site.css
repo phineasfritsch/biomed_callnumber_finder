@@ -688,3 +688,17 @@ footer a{color:var(--ink-soft)}
   .rows>div:nth-child(even){padding-bottom:8px}
   .prose code{white-space:normal}
 }
+
+/* Keyboard focus in Windows High Contrast.
+ *
+ * Focus is drawn here as `outline:none` plus a soft box-shadow ring, in twenty-six places. Under
+ * forced colours the browser throws box-shadow away and honours the `outline:none`, so a keyboard
+ * user gets no focus indicator at all — on every link, button, select and input on the site.
+ *
+ * Restored in one place rather than by rewriting all twenty-six declarations: the ring is the
+ * house style and it is right in the normal case, so the media query puts the outline back only
+ * where the ring cannot be seen. `currentColor` because forced colours have already replaced the
+ * text colour with one guaranteed to contrast against the forced background. */
+@media (forced-colors: active){
+  :focus-visible, :focus{outline:3px solid currentColor !important; outline-offset:2px}
+}
