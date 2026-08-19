@@ -94,6 +94,26 @@
    "a": "W 2000",
    "b": "W 2001",
    "cmp": -1
+  },
+  {
+   "a": "WK 835 V3315",
+   "b": "WK 835 V44",
+   "cmp": -1
+  },
+  {
+   "a": "WM 13 NO52",
+   "b": "WM 13 NO6",
+   "cmp": -1
+  },
+  {
+   "a": "WA 100 PT9",
+   "b": "WA 100 PT91",
+   "cmp": -1
+  },
+  {
+   "a": "WM 13 D5537 no.5",
+   "b": "WM 13 D5537 no.40",
+   "cmp": -1
   }
  ],
  "sequences": [
@@ -429,6 +449,188 @@
     "W1 NA388 no.9",
     "W1 NA388 no.3",
     "W1 NA388 no.4"
+   ],
+   "verdicts": [
+    "ok",
+    "ok",
+    "volumeBreak",
+    "ok",
+    "ok"
+   ],
+   "edge": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "anchored": [
+    true,
+    true,
+    true,
+    true,
+    true
+   ]
+  },
+  {
+   "name": "a mixed trailer shape in one run is not a misfile",
+   "spines": [
+    "W1 NA388 1982",
+    "W1 NA388 1983",
+    "W1 NA388 no.10 1984",
+    "W1 NA388 1985",
+    "W1 NA388 1986"
+   ],
+   "verdicts": [
+    "ok",
+    "ok",
+    "ok",
+    "ok",
+    "ok"
+   ],
+   "edge": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "anchored": [
+    true,
+    true,
+    true,
+    true,
+    true
+   ]
+  },
+  {
+   "name": "nor is one spine spelled v. among no.",
+   "spines": [
+    "W1 NA388 v.1",
+    "W1 NA388 v.2",
+    "W1 NA388 no.3",
+    "W1 NA388 v.4",
+    "W1 NA388 v.5"
+   ],
+   "verdicts": [
+    "ok",
+    "ok",
+    "ok",
+    "ok",
+    "ok"
+   ],
+   "edge": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "anchored": [
+    true,
+    true,
+    true,
+    true,
+    true
+   ]
+  },
+  {
+   "name": "a different title inside a run is still flagged",
+   "spines": [
+    "W1 NA388 no.1",
+    "W1 NA388 no.2",
+    "W1 ZZ900 A1",
+    "W1 NA388 no.4",
+    "W1 NA388 no.5"
+   ],
+   "verdicts": [
+    "ok",
+    "ok",
+    "outOfOrder",
+    "ok",
+    "ok"
+   ],
+   "edge": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "anchored": [
+    true,
+    true,
+    true,
+    true,
+    true
+   ]
+  },
+  {
+   "name": "a run spelled \"no 66\" is ordered, not written off",
+   "spines": [
+    "W1 NA388 no 5",
+    "W1 NA388 no 6",
+    "W1 NA388 no 7",
+    "W1 NA388 no 8"
+   ],
+   "verdicts": [
+    "ok",
+    "ok",
+    "ok",
+    "ok"
+   ],
+   "edge": [
+    false,
+    false,
+    false,
+    false
+   ],
+   "anchored": [
+    true,
+    true,
+    true,
+    true
+   ]
+  },
+  {
+   "name": "and a break in that spelling is caught",
+   "spines": [
+    "W1 NA388 no 1",
+    "W1 NA388 no 2",
+    "W1 NA388 no 9",
+    "W1 NA388 no 4",
+    "W1 NA388 no 5"
+   ],
+   "verdicts": [
+    "ok",
+    "ok",
+    "volumeBreak",
+    "ok",
+    "ok"
+   ],
+   "edge": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "anchored": [
+    true,
+    true,
+    true,
+    true,
+    true
+   ]
+  },
+  {
+   "name": "a v. run can be judged at all",
+   "spines": [
+    "W1 NA388 v.1",
+    "W1 NA388 v.2",
+    "W1 NA388 v.9",
+    "W1 NA388 v.4",
+    "W1 NA388 v.5"
    ],
    "verdicts": [
     "ok",

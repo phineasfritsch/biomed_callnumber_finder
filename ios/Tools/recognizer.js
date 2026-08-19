@@ -18,7 +18,12 @@
 
 /* ── extraction ─────────────────────────────────────────────────────────── */
 
-const VOL = '(?:\\s+NO\\.?\\s?\\d+[A-Z]?)?(?:\\s+(?:18|19|20)\\d{2}[A-Z]?)?';
+// `V.` and `PT.` were missing here while `TRAIL` and the shelf comparator both accepted them, so
+// `W1 NA388 V.9` extracted as `W1 NA388` and the volume never reached ShelfOrder. Every spine on a
+// v.-numbered run then keyed to the same base, the sequence was trivially in order, and no misfile
+// on that shelf could be flagged. That is one of the three regressions shelforder.js exists to fix,
+// unreachable from the camera.
+const VOL = '(?:\\s+(?:NO|V|PT)\\.?\\s?\\d+[A-Z]?)?(?:\\s+(?:18|19|20)\\d{2}[A-Z]?)?';
 const PATTERNS = [
   new RegExp('\\bW[1-4][A-Z]{0,2}\\s*(?:A1[A-Z]\\d{1,4}|[A-Z]{1,3}\\s?\\d{1,4})[A-Z]{0,2}(?![A-Z0-9])' + VOL, 'g'),
   new RegExp('\\b[A-Z]{1,3}\\s?\\d{1,4}(?:\\.\\d+)?[\\s.]+\\.?[A-Z]{1,3}\\d{1,5}[A-Z]{0,2}(?![A-Z0-9])' + VOL, 'g'),
@@ -105,15 +110,50 @@ const A1FORM = /^A1[A-Z][1-9]\d*[A-Z]{0,2}$/;
 const TRAIL = /^(NO\.?\d+[A-Z]?|(18|19|20)\d{2}[A-Z]?|V\.?\d+|PT\.?\d+)$/;
 const isCut = (t) => CUTTER.test(t) || A1FORM.test(t);
 
+/* Two token-level facts the grammar and the shelf comparator have to agree on exactly. They were
+   written out twice, once here and once in shelforder.js, and the copies disagreed: `NO 66` became
+   a shape `parseKey` normalized and `wellFormed` rejected, so a whole serials face read as
+   unreadable. One definition, both callers. */
+
+/**
+ * Rejoin a volume token OCR handed over split: `["NO", "66"] -> ["NO66"]`.
+ *
+ * Not a hypothetical spelling. `VOL` allows the space, so `matches()` really does emit
+ * `W1 NA388 NO 66`, and every spelling of a volume token has to reach the comparator as one shape.
+ */
+function joinVolumeTokens(toks) {
+  const out = [];
+  for (let i = 0; i < toks.length; i++) {
+    if (/^(NO|V|PT)\.?$/.test(toks[i]) && i + 1 < toks.length && /^\d+[A-Z]?$/.test(toks[i + 1])) {
+      out.push(toks[i].replace(/\.$/, '') + toks[i + 1]);
+      i++;
+    } else out.push(toks[i]);
+  }
+  return out;
+}
+
+/**
+ * How many leading tokens the class number occupies: `W1` -> 1, `WM 13` -> 2, `QL737` -> 1, and
+ * -1 when the head is not a class number at all.
+ *
+ * The three branches are the grammar's own, so one place decides where the class ends and the
+ * cutter begins. `parseKey` needs the same answer: it may strip trailers but never the cutter, and
+ * counting tokens could not tell the two apart.
+ */
+function classTokens(toks) {
+  if (!toks.length) return -1;
+  if (/^W[1-4][A-Z]{0,2}$/.test(toks[0])) return 1;
+  if (/^[A-Z]{1,3}$/.test(toks[0]) && toks[1] && /^\d+(\.\d+)?$/.test(toks[1])) return 2;
+  if (/^[A-Z]{1,3}\d+(\.\d+)?$/.test(toks[0])) return 1;
+  return -1;
+}
+
 function wellFormed(raw) {
   const s = String(raw).toUpperCase().replace(/\.(?=[A-Z])/g, ' ').trim();
-  const toks = s.split(/\s+/).filter(Boolean);
-  if (!toks.length) return false;
-  let rest;
-  if (/^W[1-4][A-Z]{0,2}$/.test(toks[0])) rest = toks.slice(1);
-  else if (/^[A-Z]{1,3}$/.test(toks[0]) && toks[1] && /^\d+(\.\d+)?$/.test(toks[1])) rest = toks.slice(2);
-  else if (/^[A-Z]{1,3}\d+(\.\d+)?$/.test(toks[0])) rest = toks.slice(1);
-  else return false;
+  const toks = joinVolumeTokens(s.split(/\s+/).filter(Boolean));
+  const cls = classTokens(toks);
+  if (cls < 0) return false;
+  const rest = toks.slice(cls);
   if (!rest.length || !isCut(rest[0])) return false;
   return rest.slice(1).every((t) => isCut(t) || TRAIL.test(t));
 }
@@ -222,7 +262,7 @@ function makeResolver(DATA) {
 module.exports = {
   PATTERNS, VOL, MIN_CONFIDENCE,
   normalize, matches, extract, repairConfusable, readings,
-  CUTTER, A1FORM, TRAIL, wellFormed,
+  CUTTER, A1FORM, TRAIL, joinVolumeTokens, classTokens, wellFormed,
   parseCN, cmpSeg, cmpCN, scheme,
   makeLocator, makeResolver,
 };

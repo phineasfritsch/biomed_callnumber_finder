@@ -72,11 +72,15 @@ node ios/Tools/headcountGolden.mjs                        ios/Tests/HeadcountGol
 ```
 
 `shelforder.test.js` is worth singling out. Shelf reading is the one feature whose failures accuse
-a real book of being in the wrong place, so the expensive assertion in it is not a list of examples
-— it is ten thousand rows built from the real dataset, all correctly ordered, asserting that
-nothing is flagged. A missed misfile costs a walk past a shelf; a false one sends a librarian to
-reshelve a book that was already right, and that only has to happen twice before nobody believes a
-red box again.
+a real book of being in the wrong place, so its expensive assertion is not a list of examples. It
+is ten thousand rows built from the real dataset, all correctly ordered, asserting that nothing is
+flagged. A missed misfile costs a walk past a shelf; a false one sends a librarian to reshelve a
+book that was already right, and that only has to happen twice before nobody believes a red box
+again.
+
+The rows are sorted with `cmpCN`, the shipping comparator, and deliberately not with `cmpKey`, the
+one under test. Sorting them with `cmpKey` made every row correct by definition and the assertion
+could not fail however wrong `cmpKey` was.
 
 Then run the test target (⌘U). `CallNumberTests` re-sorts all 651 endpoints and asserts the order
 matches JS exactly; `RouterTests` asserts whole routes match step-for-step; `HeadcountLogicTests`

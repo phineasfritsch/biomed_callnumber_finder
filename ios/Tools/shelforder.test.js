@@ -71,8 +71,46 @@ ok(K('W1 NA388 no.66 1984').trailers.length === 2, 'volume and year are both tra
 ok(K('W1 NA388 no.66 1984').base === 'W1 NA388', 'and neither is left in the base');
 ok(K('WM 13 D5537 1984').base === 'WM 13 D5537', 'an NLM class number survives year stripping');
 ok(K('W 2000').base === 'W 2000', 'a two-token NLM call number keeps its class number',
-  'the >2 floor is what stops "2000" being read as a year');
+  'the class+cutter floor is what stops "2000" being read as a year');
 ok(K('W4C Z89P 2009').base === 'W4C Z89P', 'the one real endpoint with a trailer splits correctly');
+
+/* `TRAIL` cannot tell a volume token from a cutter, because nothing about the token says which it
+   is — `V3315` and `NO52` are legal as either, and only position decides. A floor that counted
+   tokens read that position wrongly for every NLM number, whose class is two tokens: `WK 835
+   V3315`, a real range endpoint, lost its cutter and was compared as the integer 3315. */
+ok(K('WK 835 V3315').base === 'WK 835 V3315' && K('WK 835 V3315').trailers.length === 0,
+  'an NLM cutter that looks like a volume token is not stripped',
+  JSON.stringify(K('WK 835 V3315')));
+ok(K('WM 13 NO52').trailers.length === 0, 'nor one that looks like a number token');
+ok(K('WA 100 PT9').trailers.length === 0, 'nor one that looks like a part token');
+ok(K('WM 13 D5537 no.5').base === 'WM 13 D5537' && K('WM 13 D5537 no.5').trailers.length === 1,
+  'while a genuine volume after an NLM cutter is still stripped');
+ok(cmp('WK 835 V3315', 'WK 835 V44') === -1,
+  'and .3315 still sorts before .44, the way the shelf has them');
+
+/* The whole point of `cmpKey` is to order what `cmpCN` cannot; where there is nothing extra to
+   order, the two must agree. A standing invariant rather than a regression test — it does not
+   catch the `V3315` case above (nothing else in the range data sits between `WK 835` and `WK 835
+   V3315`, so the two comparators disagree about no real pair), and the named cases above are what
+   pin that. What it does catch is the next endpoint of that shape to enter the dataset, which the
+   ten-thousand-row floor below still cannot: that section builds its rows by sorting, so a
+   comparator that disagrees with the shelf generates rows wrong in the same direction. */
+{
+  // Membership decided on the raw string, not on `parseKey` — asking the code under test which
+  // endpoints have trailers is how `WK 835 V3315` would excuse itself from its own assertion. A
+  // trailing four-digit year is the only genuine trailer in the range data (`W4C Z89P 2009`).
+  const eps = [...new Set(Object.values(DATA).flatMap(d => [d.start, d.end]).filter(Boolean))]
+    .filter(cn => R.wellFormed(cn) && !/[\s.](18|19|20)\d{2}[A-Z]?$/.test(cn.toUpperCase()));
+  const bad = [];
+  for (let i = 0; i < eps.length && bad.length < 3; i++) {
+    for (let j = i + 1; j < eps.length && bad.length < 3; j++) {
+      if (R.scheme(eps[i]) !== R.scheme(eps[j])) continue;
+      if (cmp(eps[i], eps[j]) !== R.cmpCN(eps[i], eps[j])) bad.push(`${eps[i]} vs ${eps[j]}`);
+    }
+  }
+  ok(bad.length === 0,
+    `cmpKey agrees with cmpCN on all ${eps.length} trailerless endpoints`, bad.join('; '));
+}
 
 /* ── 2. which book moved ────────────────────────────────────────────────── */
 
@@ -126,6 +164,48 @@ ok(verdicts([spine(A), spine('NOT A CALL NUMBER'), spine(B), spine(C)])
 ok(verdicts(row(A, B, 'WM 13 D5537', C, D)).join() === 'ok,ok,unknown,ok,ok',
   'a lone NLM book on a W1 shelf is excluded, not accused',
   'cross-scheme comparison is meaningless — Router gates on it too');
+
+/* Trailer *kinds* are ranked only to keep the order total. Read as an ordering claim they say
+   every `no.3` precedes every `1984`, and inside one serial run the spelling varies spine by spine
+   for reasons that have nothing to do with position: OCR resolves the volume line on one label and
+   only the year on its neighbour. That put a correctly shelved book outside the subsequence and
+   then flagged it `outOfOrder` — carry it away — because `sameTrailerShape` failed and the softer
+   branch was never reached. */
+const yr = (n) => `W1 NA388 ${n}`;
+ok(verdicts(row(yr(1982), yr(1983), 'W1 NA388 no.10 1984', yr(1985), yr(1986)))
+  .join() === 'ok,ok,ok,ok,ok',
+  'a volume line read on one spine and not its neighbours is not a misfile',
+  JSON.stringify(verdicts(row(yr(1982), yr(1983), 'W1 NA388 no.10 1984', yr(1985), yr(1986)))));
+ok(verdicts(row('W1 NA388 v.1', 'W1 NA388 v.2', 'W1 NA388 no.3', 'W1 NA388 v.4', 'W1 NA388 v.5'))
+  .join() === 'ok,ok,ok,ok,ok',
+  'nor is one spine of a run whose volume token is spelled differently');
+// The guard is scoped to one run on purpose: a book from another title really has moved.
+ok(verdicts(row('W1 NA388 no.1', 'W1 NA388 no.2', 'W1 ZZ900 A1', 'W1 NA388 no.4', 'W1 NA388 no.5'))
+  .join() === 'ok,ok,outOfOrder,ok,ok',
+  'a book from a different title in the middle of a run is still flagged');
+
+/* The grammar has to accept everything the extractor emits. `VOL` allows the space, so `NO 66`
+   really does arrive, and rejecting it made `judge` call an entire serials face unreadable — the
+   rejoin written to normalize all three spellings was unreachable behind the gate. */
+ok(R.wellFormed('W1 NA388 no 66'), 'the split spelling passes the grammar');
+ok(R.extract('W1 NA388 NO 66').includes('W1 NA388 NO 66'),
+  'and it is a shape the extractor really produces');
+ok(verdicts(row('W1 NA388 no 5', 'W1 NA388 no 6', 'W1 NA388 no 7', 'W1 NA388 no 8'))
+  .every(v => v === 'ok'),
+  'a serials face spelled that way is ordered, not written off as unreadable',
+  JSON.stringify(verdicts(row('W1 NA388 no 5', 'W1 NA388 no 6', 'W1 NA388 no 7', 'W1 NA388 no 8'))));
+ok(verdicts(row('W1 NA388 no 1', 'W1 NA388 no 2', 'W1 NA388 no 9', 'W1 NA388 no 4', 'W1 NA388 no 5'))
+  .join() === 'ok,ok,volumeBreak,ok,ok',
+  'and a real break in it is still caught');
+
+/* `V.` and `PT.` were absent from the extraction pattern while the comparator accepted them, so
+   the volume was dropped before ShelfOrder ever saw it: every spine on a v.-numbered run keyed to
+   the same base, the sequence was trivially in order, and no misfile there could be flagged. */
+ok(R.extract('W1 NA388 V.9').includes('W1 NA388 V.9'), 'a v. volume survives extraction');
+ok(R.extract('W1 NA388 PT.2').includes('W1 NA388 PT.2'), 'so does a pt. volume');
+ok(verdicts(row('W1 NA388 v.1', 'W1 NA388 v.2', 'W1 NA388 v.9', 'W1 NA388 v.4', 'W1 NA388 v.5'))
+  .join() === 'ok,ok,volumeBreak,ok,ok',
+  'so a v. run can be judged at all');
 
 /* ── 3. volume breaks say something different ───────────────────────────── */
 
@@ -229,10 +309,17 @@ const endpoints = [...new Set(
 
 // Endpoints have to be grouped by scheme before sorting: a mixed row is excluded by the judge
 // anyway, and building one here would be testing the exclusion rather than the ordering.
+//
+// Sorted with `cmpCN`, the shipping comparator, and deliberately NOT with `cmpKey`. Sorting the
+// corpus with the function under test made every generated row correct *by definition of cmpKey*,
+// so the assertion could not fail however wrong cmpKey was — and it was: `WK 835 V3315` had its
+// cutter stripped and compared as an integer, which put it after `WK 835 V44` where the shelf puts
+// it before. Ten thousand rows passed anyway. These endpoints carry no trailers, so `cmpCN` orders
+// them exactly as the stacks do, and the two comparators now have to agree.
 const byScheme = { w1: [], nlm: [] };
 for (const cn of endpoints) byScheme[R.scheme(cn)].push(cn);
-byScheme.w1.sort((a, b) => S.cmpKey(K(a), K(b)));
-byScheme.nlm.sort((a, b) => S.cmpKey(K(a), K(b)));
+byScheme.w1.sort(R.cmpCN);
+byScheme.nlm.sort(R.cmpCN);
 
 const SPELLINGS = [
   (n) => `no.${n}`, (n) => `no. ${n}`, (n) => `NO${n}`, (n) => `no ${n}`,

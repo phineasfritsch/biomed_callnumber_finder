@@ -40,6 +40,13 @@ const trailerPairs = [
   ['W1 NA388', 'W1 NA835'],
   ['WM 13 D5537', 'WM 13 D5537 1984'],
   ['W 2000', 'W 2001'],
+  // An NLM cutter that reads as a volume token. `WK 835 V3315` is a real range endpoint, and the
+  // shelf puts .3315 before .44 — a port that strips it as a volume and compares 3315 as an
+  // integer answers this pair backwards.
+  ['WK 835 V3315', 'WK 835 V44'],
+  ['WM 13 NO52', 'WM 13 NO6'],
+  ['WA 100 PT9', 'WA 100 PT91'],
+  ['WM 13 D5537 no.5', 'WM 13 D5537 no.40'],
 ].map(([a, b]) => ({ a, b, cmp: S.cmpKey(K(a), K(b)) }));
 
 /* 2. Whole rows. Each one is a named guard rather than a random shelf, because a failure should
@@ -61,6 +68,22 @@ const rows = [
   ['an intact serial run flags nothing', [v(1), v(2), v(3), v(4), v(5)]],
   ['no.10 after no.2 is correct', [v(1), v(2), v(10), v(11), v(12)]],
   ['one volume out of place is a volumeBreak', [v(1), v(2), v(9), v(3), v(4)]],
+  // A trailer-kind mismatch inside one run is OCR variance, not a misfile: the volume line
+  // resolved on one spine and only the year on its neighbours.
+  ['a mixed trailer shape in one run is not a misfile',
+    ['W1 NA388 1982', 'W1 NA388 1983', 'W1 NA388 no.10 1984', 'W1 NA388 1985', 'W1 NA388 1986']],
+  ['nor is one spine spelled v. among no.',
+    ['W1 NA388 v.1', 'W1 NA388 v.2', 'W1 NA388 no.3', 'W1 NA388 v.4', 'W1 NA388 v.5']],
+  // …but the guard is scoped to one run, so another title really is still flagged.
+  ['a different title inside a run is still flagged',
+    [v(1), v(2), 'W1 ZZ900 A1', v(4), v(5)]],
+  // The split spelling has to pass the grammar, or the whole face reads as unreadable.
+  ['a run spelled "no 66" is ordered, not written off',
+    ['W1 NA388 no 5', 'W1 NA388 no 6', 'W1 NA388 no 7', 'W1 NA388 no 8']],
+  ['and a break in that spelling is caught',
+    ['W1 NA388 no 1', 'W1 NA388 no 2', 'W1 NA388 no 9', 'W1 NA388 no 4', 'W1 NA388 no 5']],
+  ['a v. run can be judged at all',
+    ['W1 NA388 v.1', 'W1 NA388 v.2', 'W1 NA388 v.9', 'W1 NA388 v.4', 'W1 NA388 v.5']],
 ].map(([name, cns]) => ({
   name,
   spines: cns,

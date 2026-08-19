@@ -34,7 +34,7 @@
 
 'use strict';
 
-const { TRAIL, wellFormed, cmpCN, scheme } = require('./recognizer');
+const { TRAIL, joinVolumeTokens, classTokens, wellFormed, cmpCN, scheme } = require('./recognizer');
 
 /* ── trailers ───────────────────────────────────────────────────────────── */
 
@@ -61,25 +61,28 @@ function parseTrailer(t) {
  */
 function parseKey(raw) {
   const s = String(raw || '').toUpperCase().replace(/\*/g, '').replace(/\.(?=[A-Z])/g, ' ').trim();
-  let toks = s.split(/\s+/).filter(Boolean);
+  // "NO 66" is the third spelling OCR produces and it arrives as two tokens. Rejoin it before
+  // anything else looks at the list, using the grammar's own helper so the two cannot disagree.
+  const toks = joinVolumeTokens(s.split(/\s+/).filter(Boolean));
   if (!toks.length) return { base: '', trailers: [], raw: String(raw || '') };
 
-  // "NO 66" is the third spelling OCR produces, and it arrives as two tokens. Rejoin it before
-  // anything else looks at the list, so all three spellings normalize to one shape.
-  const joined = [];
-  for (let i = 0; i < toks.length; i++) {
-    if (/^(NO|V|PT)\.?$/.test(toks[i]) && i + 1 < toks.length && /^\d+[A-Z]?$/.test(toks[i + 1])) {
-      joined.push(toks[i].replace(/\.$/, '') + toks[i + 1]);
-      i++;
-    } else joined.push(toks[i]);
-  }
-  toks = joined;
+  /* Trailers are a suffix run, never the whole call number, and — the part a token count cannot
+     express — never the *cutter*. `TRAIL` cannot tell a volume from a cutter, because it has no
+     way to: `V3315` and `NO52` are both legal cutter blocks and both legal volume tokens, and
+     which one they are depends only on the position they sit in.
 
-  // Trailers are a suffix run, never the whole call number. The `> 2` floor keeps the base at a
-  // minimum of class + cutter: "W1 NA388" has no trailer to strip, and an NLM "W 2000" must not
-  // lose its class number to the year pattern.
+     The old floor of 2 read that position by counting, which is right for `W1 NA388` (a one-token
+     class) and wrong for every NLM number, whose class is two tokens. `WK 835 V3315` is a real
+     range endpoint; its cutter was stripped and re-compared as the integer 3315, which sorts after
+     `V44` where the shelf puts .3315 before .44. A correctly shelved row of them was reported as a
+     volume break — the exact failure this file's header says must never happen.
+
+     Asking the grammar where the class ends gives the cutter its own token, and only what follows
+     the cutter can be a trailer. */
+  const cls = classTokens(toks);
+  const floor = cls < 0 ? 2 : cls + 1;          // class + cutter, kept out of reach
   const trailers = [];
-  while (toks.length > 2 && TRAIL.test(toks[toks.length - 1])) {
+  while (toks.length > floor && TRAIL.test(toks[toks.length - 1])) {
     trailers.unshift(parseTrailer(toks.pop()));
   }
   return { base: toks.join(' '), trailers, raw: String(raw || '') };
@@ -235,6 +238,20 @@ function judge(spines, opts) {
       if (l < 0 || r >= readable.length) continue;
       const L = seq[l], R = seq[r], me = seq[j];
       if (cmpKey(me, L) >= 0 && cmpKey(me, R) <= 0) continue;
+
+      /* A trailer *kind* mismatch inside one run is not evidence of anything. `KIND` exists to
+         keep the order total, not to claim that every `no.3` precedes every `1984`, and within a
+         run the spelling varies spine by spine for reasons that have nothing to do with where the
+         book sits: OCR resolves the volume line on one label and only the year on its neighbour.
+         Ranking those against each other put a correctly shelved book outside the subsequence and
+         then accused it — as `outOfOrder`, the verdict that says carry it away, because
+         `sameTrailerShape` failed and the softer `volumeBreak` branch was never reached. The guard
+         written to soften the message was escalating it.
+
+         Scoped to one run on purpose. When the base differs the book really is from another title
+         and the misfile is real, so that case still gets flagged below. */
+      if (sameRun(me, L) && sameRun(me, R) &&
+          !(sameTrailerShape(me, L) && sameTrailerShape(me, R))) continue;
 
       // (c) rather than (a) when the whole neighbourhood is one serial run and only the volume
       // sequence broke. Same detection, different message and different action: a volume break

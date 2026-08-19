@@ -61,8 +61,6 @@ enum ShelfOrder {
 
     private static let trailForm = try! NSRegularExpression(
         pattern: "^(NO\\.?\\d+[A-Z]?|(18|19|20)\\d{2}[A-Z]?|V\\.?\\d+|PT\\.?\\d+)$")
-    private static let volumePrefix = try! NSRegularExpression(pattern: "^(NO|V|PT)\\.?$")
-    private static let volumeDigits = try! NSRegularExpression(pattern: "^\\d+[A-Z]?$")
     private static let cutterDot = try! NSRegularExpression(pattern: "\\.(?=[A-Z])")
     private static let noForm = try! NSRegularExpression(pattern: "^NO\\.?(\\d+)([A-Z]?)$")
     private static let vForm = try! NSRegularExpression(pattern: "^V\\.?(\\d+)$")
@@ -95,31 +93,30 @@ enum ShelfOrder {
     static func key(_ input: String) -> ShelfKey? {
         var s = input.uppercased().replacingOccurrences(of: "*", with: "")
         s = cutterDot.stringByReplacingMatches(in: s, range: s.nsRange, withTemplate: " ")
-        var toks = s.split(whereSeparator: \.isWhitespace).map(String.init)
+        // "NO 66" is the third spelling OCR produces and it arrives as two tokens. Rejoin it
+        // before anything else looks at the list, using the grammar's own helper so the two
+        // cannot disagree about what a token is.
+        var toks = CallNumber.joinVolumeTokens(s.split(whereSeparator: \.isWhitespace).map(String.init))
         guard !toks.isEmpty else { return nil }
 
-        // "NO 66" is the third spelling OCR produces and it arrives as two tokens. Rejoin it
-        // before anything else looks at the list, so all three spellings normalize to one shape.
-        var joined: [String] = []
-        var i = 0
-        while i < toks.count {
-            if volumePrefix.firstMatch(in: toks[i], range: toks[i].nsRange) != nil,
-               i + 1 < toks.count,
-               volumeDigits.firstMatch(in: toks[i + 1], range: toks[i + 1].nsRange) != nil {
-                joined.append(toks[i].replacingOccurrences(of: ".", with: "") + toks[i + 1])
-                i += 2
-            } else {
-                joined.append(toks[i])
-                i += 1
-            }
-        }
-        toks = joined
-
-        // Trailers are a suffix run, never the whole call number. The `> 2` floor keeps the base
-        // at a minimum of class + cutter: "W1 NA388" has no trailer to strip, and an NLM "W 2000"
-        // must not lose its class number to the year pattern.
+        // Trailers are a suffix run, never the whole call number, and — the part a token count
+        // cannot express — never the *cutter*. `trailForm` cannot tell a volume from a cutter,
+        // because nothing about the token says which it is: `V3315` and `NO52` are legal as
+        // either, and only the position they sit in decides.
+        //
+        // The old floor of 2 read that position by counting, which is right for `W1 NA388` (a
+        // one-token class) and wrong for every NLM number, whose class is two tokens. `WK 835
+        // V3315` is a real range endpoint; its cutter was stripped and re-compared as the integer
+        // 3315, which sorts after `V44` where the shelf puts .3315 before .44. A correctly shelved
+        // row of them was reported as a volume break — the failure this type's header calls the
+        // one that must never happen.
+        //
+        // Asking the grammar where the class ends gives the cutter its own token, and only what
+        // follows the cutter can be a trailer.
+        let cls = CallNumber.classTokenCount(toks)
+        let floor = cls < 0 ? 2 : cls + 1                  // class + cutter, kept out of reach
         var trailers: [Trailer] = []
-        while toks.count > 2, let last = toks.last,
+        while toks.count > floor, let last = toks.last,
               trailForm.firstMatch(in: last, range: last.nsRange) != nil {
             trailers.insert(parseTrailer(last), at: 0)
             toks.removeLast()
@@ -332,6 +329,21 @@ enum ShelfOrder {
             guard l >= 0, r < seq.count else { continue }
             let left = seq[l], right = seq[r], me = seq[j]
             if compare(me, left) >= 0 && compare(me, right) <= 0 { continue }
+
+            // A trailer *kind* mismatch inside one run is not evidence of anything. `Kind` is
+            // ranked to keep the order total, not to claim that every `no.3` precedes every
+            // `1984`, and within a run the spelling varies spine by spine for reasons that have
+            // nothing to do with where the book sits: OCR resolves the volume line on one label
+            // and only the year on its neighbour. Ranking those against each other put a
+            // correctly shelved book outside the subsequence and then accused it — as
+            // `.outOfOrder`, the verdict that says carry it away, because `sameTrailerShape`
+            // failed and the softer `.volumeBreak` branch below was never reached. The guard
+            // written to soften the message was escalating it.
+            //
+            // Scoped to one run on purpose: when the base differs the book really is from another
+            // title, and that misfile is still flagged.
+            if sameRun(me, left), sameRun(me, right),
+               !(sameTrailerShape(me, left) && sameTrailerShape(me, right)) { continue }
 
             // (c) rather than (a) when the whole neighbourhood is one serial run and only the
             // volume sequence broke. Same detection, different message and different action: a
