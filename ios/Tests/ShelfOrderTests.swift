@@ -142,7 +142,15 @@ final class ShelfOrderTests: XCTestCase {
         let router = try Router(bundledRanges: "biomed-shelf-ranges")
         let search: (CallNumber) -> [ShelfOrder.Face] = { router.search($0).map(ShelfOrder.Face.init) }
 
-        let c = try XCTUnwrap(golden.faces.first { !$0.faces.isEmpty })
+        // Well-formed as well as locatable. The fixture is built from `Object.values(DATA)`, so its
+        // order is the range file's key order, and five of its rows are call numbers `isWellFormed`
+        // deliberately rejects while `Router.search` still places them (`Q 41 R81R8`,
+        // `WC 160 G7.78T`, `WX 27 GF7 P3R5D`, …). Index 0 was a usable row only by luck; a
+        // re-export that reordered the ranges file would have made `judge` return `.unknown` here
+        // and failed this test for a reason that has nothing to do with the code.
+        let c = try XCTUnwrap(golden.faces.first {
+            !$0.faces.isEmpty && CallNumber.parse($0.cn)?.isWellFormed == true
+        })
         let home = c.faces[0]
         let elsewhere = ShelfOrder.Face(level: home.lvl == 11 ? 1 : 11, shelfID: "no-such-shelf", side: "a")
 
@@ -164,13 +172,67 @@ final class ShelfOrderTests: XCTestCase {
         XCTAssertFalse(got[0].isMisfile)
     }
 
+    /// `judge` and `inferFace` have to ask the face lookup about the same key, and it has to be the
+    /// base. Searched raw, `W1 DE244 no.1` is contained by one face and `W1 DE244` by two — the two
+    /// keys disagree for 1224 of the 1600 volume numbers the range data can build, so a serial run
+    /// judged on raw numbers can straddle a boundary and report half of itself as misfiled.
+    ///
+    /// Asserted by spying on the closure rather than through the golden fixture, which cannot see
+    /// it: every `sequences` entry is generated with no `expected`, so the wrong-shelf branch is
+    /// never compared across the two implementations.
+    func testTheFaceLookupIsAskedAboutTheBase() {
+        var asked: [String] = []
+        let spy: (CallNumber) -> [ShelfOrder.Face] = { asked.append($0.raw); return [] }
+
+        _ = ShelfOrder.judge([ShelfOrder.Spine(callNumber: "W1 NA388 no.66 1984")],
+                             expected: ShelfOrder.Face(level: 11, shelfID: "bot-1", side: "a"),
+                             search: spy)
+        XCTAssertEqual(asked, ["W1 NA388"], "judge should search the base, not the volume")
+
+        asked = []
+        _ = ShelfOrder.inferFace(["W1 NA388 no.1", "W1 NA388 no.2", "W1 NA388 no.3"], search: spy)
+        XCTAssertEqual(asked, ["W1 NA388", "W1 NA388", "W1 NA388"],
+                       "inferFace should search the same key judge does")
+    }
+
+    /// Both twins have to break an exact scheme tie the same way, or a face straddling the
+    /// W1-serials / NLM-monograph boundary excludes opposite halves on device and in the offline
+    /// tools. Ranked, and w1 wins.
+    func testAnEvenSchemeSplitKeepsTheW1Books() {
+        let spines = ["W1 AA100", "W1 BB100", "WM 13 D5537", "WM 14 D5537"]
+            .map { ShelfOrder.Spine(callNumber: $0) }
+        XCTAssertEqual(ShelfOrder.judge(spines, expected: nil).map(Self.name),
+                       ["ok", "ok", "unknown", "unknown"])
+    }
+
+    /// `minSpines: 0` means no floor. The JS twin wrote this as `opts.minSpines || 3`, which
+    /// rewrote a caller's 0 to 3 while these real default arguments honoured it.
+    func testACallerAskingForNoFloorGetsNoFloor() throws {
+        let router = try Router(bundledRanges: "biomed-shelf-ranges")
+        let search: (CallNumber) -> [ShelfOrder.Face] = { router.search($0).map(ShelfOrder.Face.init) }
+        let c = try XCTUnwrap(golden.faces.first {
+            !$0.faces.isEmpty && CallNumber.parse($0.cn)?.isWellFormed == true
+        })
+        XCTAssertNotNil(ShelfOrder.inferFace([c.cn, c.cn], search: search, minSpines: 0))
+        XCTAssertNotNil(ShelfOrder.inferFace([c.cn, c.cn], search: search,
+                                             minSpines: 2, minAgreement: 0))
+    }
+
     // MARK: - Inferring the face
 
     func testFaceIsInferredFromAMajorityAndNotFromTwoBooks() throws {
         let router = try Router(bundledRanges: "biomed-shelf-ranges")
         let search: (CallNumber) -> [ShelfOrder.Face] = { router.search($0).map(ShelfOrder.Face.init) }
 
-        let c = try XCTUnwrap(golden.faces.first { !$0.faces.isEmpty })
+        // Well-formed as well as locatable. The fixture is built from `Object.values(DATA)`, so its
+        // order is the range file's key order, and five of its rows are call numbers `isWellFormed`
+        // deliberately rejects while `Router.search` still places them (`Q 41 R81R8`,
+        // `WC 160 G7.78T`, `WX 27 GF7 P3R5D`, …). Index 0 was a usable row only by luck; a
+        // re-export that reordered the ranges file would have made `judge` return `.unknown` here
+        // and failed this test for a reason that has nothing to do with the code.
+        let c = try XCTUnwrap(golden.faces.first {
+            !$0.faces.isEmpty && CallNumber.parse($0.cn)?.isWellFormed == true
+        })
         let three = [c.cn, c.cn, c.cn]
         let guess = ShelfOrder.inferFace(three, search: search)
         XCTAssertNotNil(guess, "three books off one face should infer a face")

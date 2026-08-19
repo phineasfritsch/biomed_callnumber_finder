@@ -44,6 +44,7 @@ if (/^\s*import\s/m.test(head)) throw new Error('src/worker.js grew an import â€
 const H = {};
 new Function('exports', head + `
   Object.assign(exports, { first, list, names, slim, dedupe, repair, year, parseAZ, json,
+    primoPermalink,
     FIELDS, TYPES, SORTS, LANGS, MAX_LIMIT, TTL, SUGGEST_TTL, AZ_TTL, YEAR_FLOOR });
 `)(H);
 

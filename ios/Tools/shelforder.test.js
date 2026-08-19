@@ -278,6 +278,34 @@ ok(S.judge(row(A, B, F, D, E), { expected: elsewhere, search: searchAll })
   .map(x => x.verdict).every(x => x === 'wrongShelf' || x === 'unknown' || x === 'ok'),
   'wrong shelf takes precedence over out of order', 'carry it away beats move it a slot');
 
+/* The face lookup is done on the base, never on the raw call number, and `inferFace` has to agree
+   — its guess is what these verdicts are measured against. Searched raw, `W1 DE244 no.1` is
+   contained by one face and `W1 DE244` by two, so a run can straddle a boundary and report half of
+   itself as misfiled. Measured across the range data before this was fixed: the two keys disagree
+   for 1224 of 1600 volume numbers built from real endpoints. */
+{
+  const asked = [];
+  const spy = (cn) => { asked.push(cn); return searchAll(cn); };
+  S.judge([spine('W1 NA388 no.66 1984')], { expected: elsewhere, search: spy });
+  ok(asked.length === 1 && asked[0] === 'W1 NA388',
+    'judge asks the face lookup about the base, not the volume', JSON.stringify(asked));
+
+  const asked2 = [];
+  const spy2 = (cn) => { asked2.push(cn); return searchAll(cn); };
+  S.inferFace(['W1 NA388 no.1', 'W1 NA388 no.2', 'W1 NA388 no.3'], spy2);
+  ok(asked2.every(cn => cn === 'W1 NA388'),
+    'and inferFace asks about the same key judge does', JSON.stringify(asked2));
+}
+
+/* Both twins have to break an exact scheme tie the same way, or a face straddling the W1/NLM
+   boundary excludes opposite halves on device and in this tool. Ranked, w1 first. */
+{
+  const mixed = ['W1 AA100', 'W1 BB100', 'WM 13 D5537', 'WM 14 D5537'];
+  ok(S.judge(mixed.map(cn => spine(cn)), {}).map(x => x.verdict).join() === 'ok,ok,unknown,unknown',
+    'an even scheme split keeps the W1 books and excludes the NLM ones',
+    JSON.stringify(S.judge(mixed.map(cn => spine(cn)), {}).map(x => x.verdict)));
+}
+
 section('inferring the face instead of demanding it');
 
 const shelfmates = Object.entries(DATA)
@@ -289,6 +317,12 @@ if (shelfmates) {
   ok(guess !== null, 'three books off one face infer a face', key);
   ok(S.inferFace([d.start, d.start], searchAll) === null,
     'two books do not', 'below the floor, no guess is offered');
+  // `||` rewrote a caller's 0 to 3 and 0 to 0.6, so "no floor at all" silently got the default —
+  // and the Swift twin, which takes real default arguments, honoured it.
+  ok(S.inferFace([d.start, d.start], searchAll, { minSpines: 0 }) !== null,
+    'a caller asking for no floor gets no floor');
+  ok(S.inferFace([d.start, d.start], searchAll, { minSpines: 2, minAgreement: 0 }) !== null,
+    'and minAgreement 0 means accept any plurality');
   ok(guess && searchAll(d.start).some(f => f.lvl === guess.lvl && f.id === guess.id && f.side === guess.side),
     'and the guess is a face those books are actually on',
     JSON.stringify(guess) + ' vs ' + JSON.stringify({ lvl: +lvl, id, side }));

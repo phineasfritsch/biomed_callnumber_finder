@@ -281,6 +281,10 @@ enum ShelfOrder {
         if !readable.isEmpty {
             var tally: [Int: Int] = [:]
             for i in readable { tally[schemeRank(keys[i]!), default: 0] += 1 }
+            // Ties broken toward the lower rank, i.e. w1 — mirrored by `SCHEME_RANK` in the JS,
+            // which used to sort the tally by the *names* 'w1'/'nlm' and so resolved a tie the
+            // other way. On a face straddling the W1-serials / NLM-monograph boundary the two
+            // twins excluded opposite halves.
             let modal = tally.max { a, b in a.value != b.value ? a.value < b.value : a.key > b.key }!.key
             for i in readable.reversed() where schemeRank(keys[i]!) != modal {
                 out[i] = .unknown
@@ -382,9 +386,14 @@ enum ShelfOrder {
                           search: (CallNumber) -> [Face],
                           minSpines: Int = 3,
                           minAgreement: Double = 0.6) -> FaceGuess? {
+        // Bases, for the reason `judge` searches on them: this guess is what a wrong-shelf verdict
+        // is then measured against, and searching the full call number here while `judge` searches
+        // the base made the two answer different questions. A face could be inferred from a run of
+        // volumes and then that same run reported as not belonging to it.
         let readable = callNumbers.compactMap { text -> CallNumber? in
-            guard let text, let cn = CallNumber.parse(text), cn.isWellFormed else { return nil }
-            return cn
+            guard let text, let cn = CallNumber.parse(text), cn.isWellFormed,
+                  let k = key(text) else { return nil }
+            return k.base
         }
         guard readable.count >= minSpines else { return nil }
 

@@ -21,8 +21,24 @@
  */
 
 const PNX = 'https://search.library.ucla.edu/primaws/rest/pub/pnxs';
+const PRIMO_VIEW = 'https://search.library.ucla.edu/discovery/fulldisplay';
 const VID = '01UCS_LAL:UCLA';
 const INST = '01UCS_LAL';
+
+/* The reader's way out to the catalog: subject headings, requesting, citation export, and a login
+   that knows whether they already have it out. Primo addresses a record by its Primo id — `cdi_…`
+   for a Central Discovery Index article, which lives in the `PC` context, and `alma…` for anything
+   this institution holds, which lives in `L`.
+ *
+ * `index.html` builds the same URL for bib records, from an MMS number it validates as digits. The
+ * two are documented together in ENDPOINTS.md, and Tools/catalog.test.js asserts they still agree
+ * on a bib id, so a change made to one of them cannot quietly stay made to only one. */
+function primoPermalink(recordid) {
+  if (!recordid) return '';
+  const context = /^cdi_/.test(recordid) ? 'PC' : 'L';
+  return PRIMO_VIEW + '?docid=' + encodeURIComponent(recordid) +
+    '&context=' + context + '&vid=' + VID;
+}
 const TTL = 600;                       // seconds; article metadata does not move
 const MAX_LIMIT = 20;
 /* Deep paging is a way to spend an upstream's time for nothing: the page shows ten rows at a
@@ -100,12 +116,7 @@ function slim(doc) {
     : cats.some(x => /alma-p/.test(x)) || avail.some(x => /available_in_library|physical/.test(x)) ? 'print'
     : avail.some(x => /no_fulltext/.test(x)) ? 'none'
     : '';
-  const recordid = first(c.recordid);
-  const context = /^cdi_/.test(recordid) ? 'PC' : 'L';
-  const permalink = recordid
-    ? 'https://search.library.ucla.edu/discovery/fulldisplay?docid=' + encodeURIComponent(recordid) +
-      '&context=' + context + '&vid=' + VID
-    : '';
+  const permalink = primoPermalink(first(c.recordid));
   /* Primo joins a record's title variants with a slash, and for the JAMA reply above that
      printed the same sentence three times before the part that differed. Exact repeats are
      dropped; anything that actually differs is kept, because a slash in a title is ordinary.

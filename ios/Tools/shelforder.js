@@ -158,6 +158,13 @@ const UNANCHORED = 'unanchored';    // read, but not attributable to one physica
 
 const MIN_SPINES = 3;               // two books cannot tell you which of them is wrong
 
+/* Mirrors `ShelfOrder.schemeRank` in the Swift. The tally below has to break an exact tie the same
+   way in both twins, and keying it by the strings 'w1'/'nlm' did not: ascending by name puts
+   'nlm' first, ascending by rank puts w1 first, and the two implementations excluded opposite
+   halves of a face that straddles the W1-serials / NLM-monograph boundary. Ranked, and w1 wins the
+   tie in both — Biomed's stacks are mostly W1 serials, which is the shelf this app is for. */
+const SCHEME_RANK = { w1: 0, nlm: 1 };
+
 /**
  * Per-spine verdicts for one frame. Pure: no camera, no Vision, no temporal state — stability is
  * the tracker's job, not this function's.
@@ -191,7 +198,8 @@ function judge(spines, opts) {
   if (readable.length) {
     const tally = {};
     readable.forEach(i => { const s = scheme(spines[i].cn); tally[s] = (tally[s] || 0) + 1; });
-    const modal = Object.keys(tally).sort((a, b) => tally[b] - tally[a] || (a < b ? -1 : 1))[0];
+    const modal = Object.keys(tally)
+      .sort((a, b) => tally[b] - tally[a] || SCHEME_RANK[a] - SCHEME_RANK[b])[0];
     for (let j = readable.length - 1; j >= 0; j--) {
       const i = readable[j];
       if (scheme(spines[i].cn) !== modal) { out[i].verdict = UNKNOWN; keys[i] = null; readable.splice(j, 1); }
@@ -206,7 +214,12 @@ function judge(spines, opts) {
   //    exist and this app does not know about them.
   if (expected && search) {
     for (const i of readable) {
-      const faces = search(spines[i].cn) || [];
+      // Searched on the base, never the raw call number, and `inferFace` below does the same.
+      // The two disagree about 1224 of the 1600 volume call numbers the range data can build:
+      // `W1 DE244 no.1` is contained by one face and `W1 DE244` by two, so a run judged on raw
+      // numbers can straddle a face boundary and report half of itself as misfiled. The run's
+      // shelf position is the base's, and every volume of it has to get the same answer.
+      const faces = search(keys[i].base) || [];
       if (!faces.length) continue;
       if (!faces.some(f => sameFace(f, expected))) {
         out[i] = { verdict: WRONG_SHELF, faces, belongs: faces[0] };
@@ -279,10 +292,16 @@ const sameFace = (a, b) => a && b && +a.lvl === +b.lvl && a.id === b.id && a.sid
  */
 function inferFace(callNumbers, search, opts) {
   opts = opts || {};
-  const minSpines = opts.minSpines || 3;
-  const minAgreement = opts.minAgreement || 0.6;
+  // `??`, not `||`: a caller asking for no floor at all means it, and `|| 3` silently rewrote 0
+  // to 3. The Swift twin takes these as real default arguments, so `||` also made the two
+  // disagree for any caller that passed one.
+  const minSpines = opts.minSpines ?? 3;
+  const minAgreement = opts.minAgreement ?? 0.6;
 
-  const readable = callNumbers.filter(cn => cn && wellFormed(cn));
+  // Bases, for the reason `judge` searches on them: a face inferred from raw volume numbers and a
+  // wrong-shelf verdict computed from bases are answers to two different questions, and this
+  // function's guess is what that verdict is then measured against.
+  const readable = callNumbers.filter(cn => cn && wellFormed(cn)).map(cn => parseKey(cn).base);
   if (readable.length < minSpines) return null;
 
   const tally = new Map();
