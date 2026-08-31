@@ -19,7 +19,9 @@ Arrival is one code path, and every deep link takes it: ?q=, ?lvl=&id=&side=, an
 
 ### MAP-2
 
-The arrival mark is a persistent non-animated outline that stays until the reader asks a different question; the 1600 ms flash-then-clear is deleted, and no setTimeout ever removes a mark.
+The arrival mark is a persistent non-animated outline; the 1600 ms flash-then-clear is deleted, and no setTimeout ever removes a mark. A mark is replaced only by another mark, and only in response to something the reader did: tapping a different shelf moves it, an arrow-key walk moves it, a new query replaces it. Nothing else clears it, and nothing clears it on a timer.
+
+*Amended (Stage 02b, after re-audit).* The ruling said the mark "stays until the reader asks a different question", which left the two commonest cases on this surface — tapping another shelf, walking with the arrow keys — undefined, and the brief flagged that silence and then ruled over it anyway. The frozen direction does not specify a state machine, so this ruling should not have invented one. What it may legitimately hold is the property it was grafted for, stated above: no timer removes a mark, and every change of mark is something the reader caused.
 
 *Because.* The /map paragraph says "persistent non-animated outline", and refusal 5 forbids animated camera work. G1: a mark that expires means a reader who looked up mid-walk comes back to an unmarked plan and has to re-query. The three existing `setTimeout(()=>{flashId=null;renderPlan();},1600)` calls in map.html (locate, the deep-link IIFE, routeShow) are the thing this ruling removes.
 
@@ -83,7 +85,15 @@ One word per thing, across the plan, the banner, the itinerary and the level bar
 
 *Because.* G5. Today one page says "Level 8", "Floor 4 · Reference", "FLOOR 10" in the special-floor card, "floor 4" in the Reference sentence and the OCR miss line, and walkList prints "to aisle 7" for a thing the plan labels index 7. A reader crossing from home's "index 10" to a step that says "aisle 7" is being asked to translate mid-walk. Which noun the building itself prints on its shelf ends is out of remit (see below); that a single one is used is not.
 
-*Caught by.* A vocabulary test over the rendered strings: the set of words used for floor/index/face is a singleton each, and matches the set used by index.html's answer line.
+*Caught by.* A vocabulary test over the rendered strings: a stacks level is called "level" and
+never "floor"; a shelf position is called "index" and never "aisle"; the face words match
+index.html's answer line exactly. "Floor" is permitted only in a sentence naming a building
+service, per SHARED-6, and "bay" and "aisle" are permitted as names for the things they actually
+name.
+
+*Corrected after re-audit.* This test demanded that "the set of words used for floor/index/face
+is a singleton each", which the amendment above makes untrue the moment "floor" is restored for
+building floors. The rule changed and its test did not.
 
 ### MAP-10
 

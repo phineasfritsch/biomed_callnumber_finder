@@ -425,7 +425,15 @@ function w1RejoinCutter(term){
  * The guard lives in findFaces rather than at each call site, because a guard at each call site is
  * a guard somebody forgets at the fourth one, and that is exactly how this happened. Everything
  * that resolves a shelf goes through here: the home box, the map box, the route builder, and the
- * catalog holdings. The last of those was already documented as refusing a call number that did
+ * catalog holdings.
+ *
+ * That sentence was written before it was true. map.html had a second, independent copy of
+ * findFaces called routeLocate, so the pull-list walk never saw this guard: a pasted list
+ * containing "asthma" came back as a stop on Level 11 with the word printed on the shelf face,
+ * and "W1 AM 4990" routed to index 4 while the box six inches above it answered index 9. A ship
+ * round found it by pasting a list, which is what the round is for. routeLocate now delegates
+ * here and the claim holds. The lesson is not "add the guard again"; it is that a comment
+ * asserting coverage is worth nothing until something has counted the call sites. The last of those was already documented as refusing a call number that did
  * not fully parse, so this makes the stated behaviour true everywhere rather than in one place.
  *
  * Checked against every endpoint in the survey: all 906 pass except the bare "A" that opens the

@@ -23,10 +23,29 @@ that the port needs and no page brief could legitimately claim.
 
 Home's crop and `/map`'s level plan are emitted by a single module that takes the geometry and
 a frame, and by nothing else. Neither surface may construct SVG for a level, a row, a face or a
-mark by any other path. The frame argument is the *only* permitted difference between the two
-zooms: line weights, row-number strings, side labels, fill and hollow treatments, the
-"not recorded" dash pattern and every word rendered inside the drawing come from the module and
-are not passed in.
+mark by any other path. Line weights, row-number strings, side labels, fill and hollow
+treatments, the "not recorded" dash pattern and every word rendered inside the drawing come from
+the module and are not passed in.
+
+Two arguments, and only two, may differ between the zooms:
+
+1. **the frame** — which part of the level is in view, and at what scale;
+2. **the interaction layer** — whether shelves are focus targets. At the near zoom the crop is
+   one `role="img"` with one accessible name and no per-shelf labels (HOME-9); at the far zoom
+   `#plan` is a `role="group"` whose shelves are `role=button`, `tabindex=0` and individually
+   named (MAP-7). The module takes this as a flag; neither surface hand-builds it.
+
+*Corrected after re-audit.* This ruling first said the frame was "the *only* permitted
+difference", with a test asserting the two serialised subtrees were identical except for
+coordinates. **That was false as written and its own test could never have passed**: HOME-9
+requires one label and no per-shelf labels, MAP-7 requires a label on every shelf, and those
+subtrees differ in roles, tabindex and labels rather than in coordinates. Writing an invariant
+that the briefs it governs already violate is a worse failure than the gap it was closing,
+because a false invariant is discovered by the implementer rather than by the author. The
+interaction layer is a real and legitimate second axis: a crop the expert never touches and a
+plan the reader walks with arrow keys genuinely differ in what is focusable. Naming it as an
+enumerated argument keeps the ruling true and still forbids the thing it exists to forbid,
+which is two hand-built drawings.
 
 *Because.* DIRECTION: "There is one floor drawing in the product… The two differ in frame and
 in nothing else — same line weights, same row numbers, same side labels, same words." The audit
@@ -34,9 +53,11 @@ found seven briefs regulating what may be drawn and none owning the renderer, wh
 drawings that agree on data and disagree on everything visual — the one thing the direction is
 named after not doing. Closes gap 1.
 
-*Caught by.* Render the same level at both frames; strip the outer `<svg>` element's own
-attributes and assert the remaining serialised subtree is identical except for coordinates. Grep
-both surfaces for SVG element construction outside the module and fail on any hit.
+*Caught by.* Render the same level at both frames and compare the **geometry layer** only —
+element order, shape types, class names, row-number text, side-label text, stroke widths and fill
+classes — asserting equality except for coordinates. Roles, `tabindex` and accessible names are
+excluded from the comparison and asserted separately against HOME-9 and MAP-7. Grep both surfaces
+for SVG element construction outside the module and fail on any hit.
 
 ### SHARED-2 · Continuity and centring are made the same property, not chosen between
 
@@ -47,10 +68,26 @@ one behaviour rather than two. Neighbouring rows, adjacent bays and the aisle ar
 the centred target, which is what "a place among places" means and is not in tension with
 centring it.
 
-Measured: the marked face's bounding box occupies the same position in the viewport on `/map`
-that it occupied in home's crop at the moment the reader left, to within 24 px on each axis.
+Measured, and measured only on the axis anything actually delivers: **the marked face's
+horizontal position in the viewport is preserved across the crossing, to within 24 px.** Vertical
+continuity is *not* claimed. Binding rule 1 puts home's crop below the answer line, the status
+line and the receipt, so the mark is nowhere near the vertical centre of the viewport at the near
+zoom, and no ruling in any brief moves it there. A reader's eye travels down the page on the
+crossing; it does not travel sideways, which is why the horizontal axis is the one that carries
+the continuity.
 
-*Because.* The audit reported this as MAP-1 quietly substituting an easier property for the bet.
+*Corrected after re-audit.* This ruling first demanded 24 px "on each axis" while the requirement
+it added to HOME-3 centres the crop **horizontally** only. That is an acceptance test no ruling
+could satisfy, which is the same defect SHARED-1 had: an invariant written past what the briefs
+beneath it deliver. A test that cannot pass does not protect the property, it just fails until
+somebody weakens it in a hurry, and the version written in a hurry is the one that ships.
+
+*Because.* A third frozen line settles it independently, and neither the audit nor the first
+draft of this ruling had found it: DIRECTION line 44 fixes the crop's accessible name as "Level 10
+floor plan, **centred on row 10**". The frozen text therefore already requires the near zoom to
+centre the mark. Centring was never the far zoom's invention.
+
+The audit reported this as MAP-1 quietly substituting an easier property for the bet.
 That is not what happened, and the correction matters more than the finding: **the frozen text
 contradicts itself.** DIRECTION line 58 says "the mark held under the same point on screen";
 line 141 says "programmatic focus moves to the target shelf, scrolled to the centre". MAP-1 was
@@ -60,12 +97,14 @@ yields, and the escalation the contradiction would otherwise have forced does no
 
 Continuity remains the reason this direction won its bracket, and centring is now the mechanism
 that delivers it rather than a cheaper stand-in for it. **This ruling adds a requirement to
-HOME-3; it does not overturn MAP-1.**
+HOME-3; it does not overturn MAP-1, whose own centring clause it now agrees with on the axis it measures.**
 
 *Caught by.* A browser journey: read the marked face's `getBoundingClientRect()` on home,
-follow the link, read it again on `/map` after first paint, assert both deltas ≤ 24 px. Plus a
-standalone assertion that the marked face's centre is within the middle third of the crop. Both
-must run at two viewport sizes, because the failure this fixes is a phone failure.
+follow the link, read it again on `/map` after first paint, assert the horizontal delta ≤ 24 px.
+Plus a standalone assertion that the marked face's centre is within the middle third of the
+crop, and — because centring inside a 180 px crop is centring in the viewport only if the crop is
+full-bleed — an assertion that the crop spans the viewport's full width at phone size. All of it
+runs at two viewport sizes, because the failure this fixes is a phone failure.
 
 ### SHARED-3 · One grammar of failure, four invariant parts and two conditional ones
 
@@ -106,7 +145,9 @@ under the arrow walk — announces position on focus in one string:
 
     <noun> <n> of <shown> shown, <total> found
 
-with the noun being `stop`, `record` or `row`. Where nothing was truncated, `<shown>` and
+with the noun being `stop`, `record`, `row` or `item` — `item` for a list whose members are
+neither shelves nor catalog records, which today means the databases A-Z, and which is the noun
+DB-3 had already written. Where nothing was truncated, `<shown>` and
 `<total>` are the same number and the string still prints both, because a reader learning the
 grammar on a truncated list must not have to learn a second shape for a complete one.
 
@@ -241,6 +282,6 @@ default in `ops/ESCALATIONS.md`. Two of them block rulings above:
 | `/map` | MAP-7 | Per-shelf string now generated from SHARED-5; the walk appends a range clause. |
 | home | HOME-9 | Cites SHARED-5 rather than fixing its own sentence. |
 | home | HOME-11 | Gains the position announcement from SHARED-4. |
-| `/databases` | DB-3 | Cites SHARED-4 for the string and the noun. |
+| `/databases` | DB-3 | Cites SHARED-4 for the string; keeps its noun `item`, which SHARED-4 now admits. |
 | `/methodology` | METH-9 | Scoped to this page; the site-wide asset rule moves to SHARED-9. |
 | all | G5 citations | Resolve to SHARED-3 rather than to five separate readings. |

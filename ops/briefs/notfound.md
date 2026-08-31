@@ -67,7 +67,9 @@ The skip link stays, keeps class="skip", and keeps its surface-specific text "Sk
 
 ### 404-8
 
-The three claims currently in the body — the site's shape, what the search field accepts, and "nothing has been taken away; it has only moved" — may each be reworded but none may be dropped to satisfy the direction's density note of "two sentences and a link".
+The three claims currently in the body — the site's shape, what the search field accepts, and "nothing has been taken away; it has only moved" — may each be reworded, and whether any may be dropped to satisfy the direction's density note of "two sentences and a link" is escalation E-10.
+
+*Amended (Stage 02b, after re-audit).* The ruling originally settled the collision by inventing a precedence rule the direction does not state: "where the density note and G4 collide, G4 wins". G4 is a ruling and the density note is frozen text, and nothing ranks them — so a brief cannot resolve the collision by declaring which of the two it prefers, however well it flagged that it was doing so. The claims and the density note both stand until the owner ranks them.
 
 *Because.* G4: a refusal may be reworded, never removed. The direction's density line describes a target, not a licence to delete a stale-link caveat that exists because people arrive here from old links. Where the density note and G4 collide, G4 wins.
 

@@ -1,5 +1,8 @@
 # Escalations: the questions we may not answer for you
 
+Ten items, E-1 to E-10. Eight came from the cross-brief audit's list of owner questions; E-8, where
+intake lives, was one of its ownership gaps and turned out to need the owner too.
+
 Every item here was raised by the cross-brief audit (`ops/briefs/AUDIT.md`) as a decision the
 owner has to take. Two kinds appear: places where the **frozen direction contradicts itself**, which
 no brief may reconcile because a brief may cite the direction and not reinterpret it; and places
@@ -36,16 +39,29 @@ ends", which the direction lists as something `/map` adds — requires a plan th
 before asking anything. Under the absolute reading `/map` cannot draw until it has been queried,
 and the reference index the direction asks for does not exist.
 
-**Recommendation.** Rule 2 governs *assertion*, not pixels. Its stated reason is that "a plan with
-nothing filled asserts a place nobody looked up" — an unqueried browse plan asserts nothing about
-any particular book, and a refusal that keeps the plan while voiding the mark is honest as long as
-the refusal is the thing in the answer position. Draw the distinction in DIRECTION between the
-drawing and the mark, then have one brief own the resulting rule for all seven surfaces rather than
-six briefs each re-deriving it.
+**Corrected after re-audit: this is two questions, and the frozen text answers one of them.**
+The first draft of this escalation merged them and then put MAP-4's whole reading in force, which
+handed a port a licence to build against an explicit sentence. Rule 2, at DIRECTION line 17, spells
+out the refusal case in its own words: a refusal renders as a positive object with the named
+refusal, the voided staff-code slot, the evidence line, "**and no drawing at all**". Refusal 3 adds
+"the canvas is cleared". That is not silence, and MAP-4 loses on it.
 
-**Default in force.** MAP-4's reading, on `/map` only. Every other surface keeps the absolute
-reading. **This default is expensive to reverse** — it is the one item here where building on the
-wrong answer wastes real work, because `/map`'s browse mode either exists or does not.
+**The refusal case is settled, not escalated.** Under a refusal, `/map` clears the drawing like
+every other surface. MAP-4 is wrong here and must be amended before `/map` is ported.
+
+**What is genuinely open** is the *unqueried* plan: whether `/map` may draw a level nobody has
+asked about, as the reference index the direction lists among the things `/map` adds ("what is on
+level 8, where the K run ends"). Rule 2's stated reason is that "a plan with nothing filled asserts
+a place nobody looked up" — and a browse plan asserts nothing about any particular book, because
+no book was named. That reading is available and the frozen text does not foreclose it.
+
+**Recommendation.** Permit the unqueried browse plan; forbid the unmarked plan under a refusal.
+Then add one sentence to DIRECTION distinguishing the drawing from the mark on it, and have one
+brief own the resulting rule for all seven surfaces.
+
+**Default in force.** None for the browse question. **No default is offered deliberately**, because
+the previous default was a green light pointed at a sentence in the frozen text, and `/map`'s browse
+mode is expensive enough that building it on a default nobody ratified is the costly mistake.
 
 ## E-2 · Where does the session stack go? (frozen text contradicts itself)
 
@@ -110,12 +126,20 @@ A new factual assertion about physical buildings, on a page that lists roughly t
 **This is not a design question and no amount of reviewing will answer it.** Somebody has to know,
 or the claim has to be narrowed to the buildings somebody does know about.
 
-**Recommendation.** Narrow it to Biomed, which is the building this product surveyed, or drop the
-clause. Asserting a fact about twenty-nine buildings nobody checked is the same failure as an
-unmarked plan, on the one surface where a reader would never think to doubt it.
+**Recommendation.** Narrow it to Biomed, which is the building this product surveyed. Asserting a
+fact about twenty-nine buildings nobody checked is the same failure as an unmarked plan, on the one
+surface where a reader would never think to doubt it.
 
-**Default in force.** Clause omitted until confirmed. This is the only item here whose default is
-"say less", and deliberately so.
+**Default in force.** Narrowed to Biomed, not omitted.
+
+*Corrected after re-audit.* The default first written here was "clause omitted until confirmed",
+and it was labelled low cost. It was neither. HOURS-2 *requires* the door clause in the failure
+sentence and has a test asserting it, so omitting it silently breaks a ruling nobody had amended.
+Worse, the door clause is `/hours`' only **named onward move**, which is part 3 of SHARED-3's four
+invariants — so the default would have broken the new shared grammar of failure on the first
+surface that used it, by way of an escalation nobody would think to read while implementing
+HOURS-2. Narrowing keeps a true clause and a working refusal; omitting bought honesty with a
+regression.
 
 ## E-7 · Nav membership, and nav position
 
@@ -129,13 +153,22 @@ Position: HOME-1 puts the nav below the crop; ABOUT-11 puts it below the h1; `/d
 nav" is settled; "where" is not — and as it stands home would become the only surface whose nav is
 not in the header, which is a cohesion break introduced by a ruling meant to protect the fold.
 
-**Recommendation.** Keep membership at four and keep the nav in the header everywhere. HOME-1's
-concern is satisfied without moving it: the header nav sits above the *search field*, not between
-the viewport top and the *answer line*, and the answer line's offset is measured from the field.
-A nav that moves between surfaces is a nav the reader has to find twice.
+**Recommendation.** Keep membership at four and keep the nav in the header everywhere. A nav that
+moves between surfaces is a nav the reader has to find twice, and home would otherwise be the only
+surface whose nav is not where the other six put it.
 
-**Default in force.** Four entries, header position, all seven surfaces — which is what ships today,
-so the pin and the cohesion assertion both stand unchanged.
+**But be honest about what that costs.** The first draft of this item reconciled a header nav with
+rule 1 by asserting that "the header nav sits above the *search field*, not between the viewport
+top and the *answer line*". That is a reinterpretation of the one rule DIRECTION adopted **verbatim
+as its acceptance test**, and that rule names "header" in its own list of forbidden things. A brief
+may not reinterpret frozen text and neither may this document. Either the nav moves below the crop
+on home, as HOME-1 says, and cohesion pays for it; or rule 1 is amended by the owner to say what it
+actually means by "header"; but it is not settled by us reading it generously.
+
+**Default in force.** Four entries, header position — which is what ships today, so the pin and the
+cohesion assertion stand unchanged and nothing regresses while the question is open. **Cost to
+reverse: medium, not low.** Moving the nav on one surface is cheap; discovering at port time that
+rule 1 meant what it said is not.
 
 ## E-8 · Which surface takes twelve call numbers and a photographed pull list?
 
@@ -165,18 +198,36 @@ planner becomes the walk *view* of a route home built, and the question dissolve
 
 **Default in force.** Collapsed disclosure, as today.
 
+## E-10 · Does the /404 density note outrank the claims on the page, or the other way round?
+
+The direction's `/404` density note asks for "two sentences and a link". The page today carries
+three claims — the site's shape, what the search field accepts, and "nothing has been taken away;
+it has only moved" — and G4 says a claim may be reworded but not dropped. **Nothing ranks a
+frozen density note against a ruling.** 404-8 originally settled it by declaring "where the density
+note and G4 collide, G4 wins", which is a precedence rule the direction does not state and a brief
+may not invent.
+
+**Recommendation.** The claims win, but by the owner's word rather than a brief's. "Two sentences
+and a link" reads as a density target rather than a word count, and the third claim is the one that
+tells a reader arriving from a dead link that they have not lost anything — which is the whole job
+of the page.
+
+**Default in force.** All three claims kept, density note read as a target. Cheap to reverse:
+it is three sentences on one page.
+
 ---
 
 ## What is waiting on which
 
 | Escalation | Blocks | Cost of building on the default |
 |---|---|---|
-| E-1 rule 2 | `/map`'s browse mode; five briefs' refusal states | **High** — the mode exists or does not |
+| E-1 browse plan | `/map`'s browse mode | **High** — no default offered; the refusal half is settled, not open |
 | E-8 intake | Home's field, `/map`'s box, the OCR pins | **High** — no default offered |
 | E-9 planner | `/map` layout | Low, and follows E-8 |
-| E-7 nav | 404-8's pinned count, `cohesion.test.js` | Low — default is what ships today |
+| E-10 /404 density | 404-8, one page | Low |
+| E-7 nav | 404-8's pinned count, `cohesion.test.js`, rule 1's wording | **Medium** — turns on what rule 1 means by "header" |
 | E-3 boundary | ABOUT-2, METH-1 | Low — one constant, one line |
 | E-2 session stack | HOME-1, HOME-12 | Low |
 | E-4 walking deltas | `walkList` strings | Low |
 | E-5 /hours strings | one pin signature | Low |
-| E-6 door clause | one clause | Low — default is to omit |
+| E-6 door clause | HOURS-2, SHARED-3's part 3 | Low — default is to narrow, not omit |

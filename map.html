@@ -624,15 +624,17 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
      `shelfHits` in the catalog module and `search` in the iOS port had always excluded level
      9; only the trip planner did not. It does now. Special Collections is reachable through
      its own section pill, which is the only place it should ever be reached from. */
-  function routeLocate(cn){
-    const qs=scheme(cn), hits=[];
-    for(const key in DATA){ const d=DATA[key]; if(!d.start||!d.end) continue;
-      if(key.charAt(0)==='9' && key.charAt(1)==='|') continue;
-      if(scheme(d.start)!==qs) continue;
-      if(cmpCN(cn,d.start)>=0 && cmpCN(cn,d.end)<=0){ const [lvl,id,side]=key.split('|'); hits.push({lvl:+lvl,id,side,d}); } }
-    hits.sort((a,b)=>a.lvl-b.lvl);
-    return hits;
-  }
+  /* This was a second, independent copy of findFaces, and that is exactly why the guard did not
+     reach it. shelf-core.js says in a comment that everything resolving a shelf goes through
+     findFaces, naming the route builder among them. That was not true when it was written: this
+     function walked DATA itself and handed raw input to the comparator, so a pasted pull list
+     containing "asthma" came back as a stop on Level 11 with the word printed on the shelf face,
+     and "W1 AM 4990" routed to index 4 while the box six inches above it answered index 9.
+
+     A guard at one call site is only a guard if every call site is the same call site. The
+     level-9 skip this used to do by hand is what findFaces already does for the stacks
+     collection, so there is nothing left here worth its own implementation. */
+  function routeLocate(cn){ return findFaces(cn,'stacks'); }
   // 1-D sweep: cover span [L,R] starting at s, ending at e; return cheaper direction.
   function sweep(L,R,s,e){
     const a=Math.abs(s-L)+(R-L)+Math.abs(R-e), b=Math.abs(s-R)+(R-L)+Math.abs(L-e);
@@ -649,9 +651,20 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
   function buildRoute(){
     const want=[...new Set(lines())];
     if(!want.length){ itin.innerHTML='<div class="itin-miss">Add call numbers first: upload an image or type them above.</div>'; return; }
-    const located=[], missing=[];
-    want.forEach(cn=>{ const h=routeLocate(cn); if(h.length) located.push({cn,hit:h[0]}); else missing.push(cn); });
-    if(!located.length){ itin.innerHTML=miss(missing); return; }
+    /* Three outcomes per line, not two. A line that is not a call number is a different fact
+       from a call number this survey does not cover, and the reader can act on the first
+       (retype it) but not the second. OCR of a handwritten slip is the likeliest source of
+       both, which is why the walk is where this matters most. */
+    const located=[], missing=[], unread=[], repaired=[];
+    want.forEach(raw=>{
+      let cn=raw;
+      const fixed=w1RejoinCutter(cn);          /* before the lookup, and said out loud */
+      if(fixed){ repaired.push([raw,fixed]); cn=fixed; }
+      if(!readsAsCallNumber(cn)){ unread.push(raw); return; }
+      const h=routeLocate(cn);
+      if(h.length) located.push({cn,hit:h[0]}); else missing.push(cn);
+    });
+    if(!located.length){ itin.innerHTML=readNote(repaired)+unreadNote(unread)+miss(missing); return; }
     const byLvl={};
     located.forEach(it=>{ (byLvl[it.hit.lvl]=byLvl[it.hit.lvl]||[]).push(it); });
     const levels=Object.keys(byLvl).map(Number).sort((a,b)=>b-a);   // top floor first
@@ -710,6 +723,8 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     else { plan=`Elevator to Level ${levels[0]}, then ${stairs} stair descent${stairs===1?'':'s'}`+(lifts?` and ${lifts} elevator move${lifts===1?'':'s'}.`:'.'); }
     const sum=`${books} book${books===1?'':'s'} across ${fl} floor${fl===1?'':'s'}. ${plan}`;
     html=`<div class="itin-summary">${sum}</div>`+html;
+    html=readNote(repaired)+html;
+    if(unread.length) html+=unreadNote(unread);
     if(missing.length) html+=miss(missing);
     itin.innerHTML=html;
   }
@@ -876,7 +891,12 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
   }
   /* These are lines out of the textarea. What OCR puts there is filtered down to [A-Z0-9. ],
      but what a reader types or pastes is whatever they typed or pasted. */
-  function miss(arr){ return `<div class="itin-miss">Not located (${arr.length}): ${arr.map(escHtml).join(' · ')}<br>Mis-read by OCR, shelved in Reference on floor 4, or outside the mapped ranges. Fix the spelling above and rebuild.</div>`; }
+  function miss(arr){ if(!arr.length) return ''; return `<div class="itin-miss">Not located (${arr.length}): ${arr.map(escHtml).join(' · ')}<br>Mis-read by OCR, shelved in Reference on floor 4, or outside the mapped ranges. Fix the spelling above and rebuild.</div>`; }
+  /* Named, not silently dropped. A line the walk skipped without saying so is a book the reader
+     believes is in the bag. */
+  function unreadNote(arr){ if(!arr.length) return ''; return `<div class="itin-miss">Not read as call numbers (${arr.length}): ${arr.map(escHtml).join(' · ')}<br>These are not on the walk. Retype them as they are printed on the slip and rebuild.</div>`; }
+  /* The same repair and the same sentence as the home box and the map box. */
+  function readNote(pairs){ if(!pairs.length) return ''; return `<div class="itin-miss">Read as ${pairs.map(([a,b])=>`<code>${escHtml(b)}</code> (typed <code>${escHtml(a)}</code>)`).join(' · ')}. In a W1 number the cutter is one word, so the letters and their number are not separated.</div>`; }
 
   window.routeShow=function(lvl,id){ level=lvl; selected=id; flashId=id; marked=null; if(typeof syncCollectionToLevel==='function') syncCollectionToLevel(); renderLevels(); renderPlan(); renderDetail(); setTimeout(()=>{ flashId=null; renderPlan(); },1600); const st=document.querySelector('.stage'); if(st) st.scrollIntoView({behavior:'smooth',block:'center'}); };
 })();

@@ -83,7 +83,15 @@ No new **fetched** asset — script, font, image or stylesheet — may be added 
 
 *Because.* G1 and the hard constraints — home is 198 KB and the stylesheet 53 KB, and web fonts once cost 803 ms of a 3.5 s first paint. This page is off the path to a shelf; a term-paragraph style that ships in the stylesheet is paid for on every home load by every reader who never opens it.
 
-*Caught by.* Tools/assets.test.js: methodology.html references site.css and no page-specific JS; the stylesheet's byte count does not grow in the commit that adds the anchors.
+*Caught by.* Tools/assets.test.js: methodology.html references site.css and no page-specific JS,
+and adds no new fetched asset. The stylesheet may grow by the budgeted bytes METH-10 needs; what
+is asserted is that no *fetched* asset appears, not that the byte count is frozen.
+
+*Corrected after re-audit.* The amendment above budgeted METH-10's bytes and this test still
+asserted "the stylesheet's byte count does not grow in the commit that adds the anchors", so the
+contradiction the amendment claimed to fix had simply moved from the prose into the test. A
+ruling and its own test disagreeing is worse than a ruling that is merely wrong, because the test
+is the half that gets run.
 
 ### METH-10
 

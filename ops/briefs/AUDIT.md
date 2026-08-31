@@ -27,11 +27,22 @@ grammar of failure (SHARED-3), the list grammar (SHARED-4), the shelf's spoken s
 (SHARED-5), the partial-knowledge caption (SHARED-7), the transition (SHARED-8), and the guards
 (SHARED-10). Two are escalations: intake (E-8) and nav (E-7).
 
-**The ten escalations.** Eight stand, in `ops/ESCALATIONS.md`, each with a recommendation and a
-default in force so that nothing is blocked on an answer. Two were resolved rather than deferred:
+**The ten escalations.** Eight stand, joined by one of the ownership gaps (E-8, intake) that turned
+out to need the owner too, and by one drift finding (E-10, the /404 density note) that 404-8 had settled with a precedence
+rule the direction does not state, so `ops/ESCALATIONS.md` holds ten: E-1 to E-10. Each carries a
+recommendation, and all but two carry a default in force so that nothing is blocked on an answer. Two were resolved rather than deferred:
 the vocabulary question, because the frozen direction speaks the words `/map` had banned; and the
 no-build-step question, because both rulings that said "fails the build" already had suite
 assertions in their own *Caught by* clauses and never needed a build at all.
+
+**The drift section, which the first pass through this work did not mention and therefore did not
+cover.** Of the nine drifts listed below, five were worked as part of the contradictions (MAP-1,
+MAP-9, METH-1, METH-9, ABOUT-5) and three more have since been amended in their own right: ABOUT-1,
+which relaxed a binding rule from inside one surface's brief and wrote a permission that could not
+be violated; MAP-2, which invented a state machine the direction does not specify after flagging
+the silence itself; and 404-8, which invented a precedence rule ranking a ruling above frozen text,
+now escalation E-10. The ninth, HOME-12's reading of the one-click-reversal graft, is folded into
+E-2, since both turn on the same three lines about what may sit above the answer.
 
 **Where this audit was wrong, and it matters more than where it was right.** The audit's headline
 drift finding — that MAP-1 "quietly substituted an easier property" for the continuity bet by

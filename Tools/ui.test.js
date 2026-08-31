@@ -510,6 +510,47 @@ journey('map · the Reference view refuses what it cannot look up', 'librarian',
     mapped.slice(0, 160));
 });
 
+journey('map · a pull list does not walk you to a word', 'desk worker', async (page, base) => {
+  /* Round 1 of the ship review failed on this, after round 0 had been declared fixed. The guard
+     went into findFaces and shelf-core said in a comment that everything resolving a shelf went
+     through it, naming the route builder. map.html had a second copy, routeLocate, so the walk
+     never saw the guard: "asthma" came back as a stop on Level 11 with the word printed on the
+     shelf face, and the counter read "5 books across 3 floors". The desk worker found it by
+     pasting a list, which is the one input where junk lines are guaranteed because they come out
+     of OCR. Two readers had shipped round 0 believing this surface was covered. */
+  await page.goto(base + '/map', { waitUntil: 'domcontentloaded' });
+  await page.click('#routeToggle');                 // the planner is a collapsed disclosure
+  await page.waitForSelector('#cnList', { state: 'visible' });
+
+  await page.fill('#cnList', ['W1 AM4990', 'asthma', 'banana bread', 'ZZ 999 Q999'].join('\n'));
+  await page.click('#buildRoute');
+  await page.waitForTimeout(300);
+  const walk = await settled(page, '#itinerary');
+
+  ok('a word that is not a call number is not printed on a shelf face',
+    !/asthma/i.test(walk) || /Not read as call numbers/i.test(walk),
+    walk.slice(0, 300));
+  ok('and it is named as unread rather than silently dropped',
+    /Not read as call numbers/i.test(walk) && /banana bread/i.test(walk),
+    walk.slice(0, 300));
+  /* The counter is the claim the reader acts on: it is what tells them the bag is full. */
+  const n = walk.match(/(\d+)\s+books? across/);
+  ok('the book count counts only the lines that resolved',
+    n ? Number(n[1]) === 1 : /Not located|Not read/.test(walk),
+    `counter said ${n ? n[1] : 'nothing'} for one real call number: ${walk.slice(0, 200)}`);
+
+  /* The same string, the same page, two boxes. The walk used to answer index 4 while the box
+     above answered index 9 -- five bays apart, from one input, with nothing said. */
+  await page.fill('#cnList', 'W1 AM 4990');
+  await page.click('#buildRoute');
+  await page.waitForTimeout(300);
+  const spaced = await settled(page, '#itinerary');
+  ok('a cutter split by a space is repaired in the walk too, and said out loud',
+    /Read as/i.test(spaced), spaced.slice(0, 200));
+  ok('and the walk does not land on the bare-cutter face',
+    !/AL157/.test(spaced), spaced.slice(0, 200));
+});
+
 journey('404 · a wrong URL is a real 404, not the app', 'librarian', async (page, base) => {
   const res = await page.goto(base + '/aboutt', { waitUntil: 'domcontentloaded' });
   ok('the status really is 404', res.status() === 404, `got ${res.status()} — a soft 404 hides every broken link`);

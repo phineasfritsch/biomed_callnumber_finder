@@ -33,7 +33,15 @@ Every row is a single focusable stop that announces name, position and total in 
 
 *Because.* DIRECTION line 70 ("walkable, each item focusable, position announced"), line 135 ("one grammar for rows, records and stops"), and G6. Line 137 records that the list grammar exists specifically to answer "27 records, no way to reach record 2"; today reaching item 400 requires clicking "Show 60 more" six times with a mouse.
 
-*Caught by.* Keyboard-walk the rendered list and assert each stop's accessible name matches /item \d+ of \d+ shown, [\d,]+ found/ and that tags contribute no separate stop.
+*Amended (Stage 02b).* The string and its noun are cited from SHARED-4, not owned here. This
+brief had flagged that it borrowed the noun without authority and it was right to; home's
+twelve-stop list is the canonical instance and owns the grammar. The noun `item` is unchanged:
+SHARED-4 admits it for a list whose members are neither shelves nor catalog records, which is
+what a databases row is. What this ruling keeps is the part that is genuinely this surface's —
+one announcement per row, never one per tag.
+
+*Caught by.* Keyboard-walk the rendered list and assert each stop's accessible name matches the
+SHARED-4 regex with the noun `item`, and that tags contribute no separate stop.
 
 ### DB-4
 

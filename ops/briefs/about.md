@@ -11,7 +11,17 @@ comment can cite one six weeks from now by somebody arguing with it.
 
 ### ABOUT-1
 
-This surface renders no floor drawing unless the drawing is produced by the same code path and the same recorded geometry as a live lookup and carries a mark; if that path cannot be invoked here, the page carries no drawing at all and the worked example is prose.
+This surface renders no floor drawing. The worked example is prose.
+
+*Amended (Stage 02b, after re-audit).* The ruling previously granted conditional permission —
+"unless the drawing is produced by the same code path and the same recorded geometry as a live
+lookup and carries a mark" — where the other five non-answer surfaces refuse outright. Two things
+are wrong with it. It relaxes a binding rule from inside one surface's brief, which is the move
+ABOUT-11 correctly refused to make on a smaller question. And it makes the drawing's presence
+contingent on an engineering fact no brief establishes, so `/about` could carry a drawing or not
+and neither outcome would violate the ruling: a rule that cannot be broken is not a rule. A worked
+example on an explainer is not a lookup, and the direction says the drawing is generated from the
+geometry the lookup already used.
 
 *Because.* Binding rules 1, 2 and 4 (the drawing never appears without a mark, never draws what it did not look up) and G2. A hand-drawn illustrative plan on the explainer is a second drawing style and a picture of a place nobody looked up — refusals 4 and 5 of the direction.
 
@@ -25,7 +35,16 @@ Every term the home answer line makes pressable has exactly one anchored section
 
 *Because.* G5 (one vocabulary for the same thing) and layer 6/7 of the seven layers: the pressable expansion is the in-place version and this page is 'the permanently reachable version' of it. Two wordings of 'index' is two products.
 
-*Caught by.* Extract each expansion string from index.html and assert it appears as a literal prefix of the matching id'd section in about.html. Divergence fails.
+*Caught by.* Assert home's expansion, this page's section opening and /methodology's paragraph
+all resolve to the same per-term constant, by identity rather than by string comparison between
+hand-written pages. A term whose three renderings do not share a source fails, and so does a term
+with no constant.
+
+*Corrected after re-audit.* The amendment declared /methodology the owner while this test still
+asserted the expansion appears "in about.html", and the ruling body still read "exactly one
+anchored section **here**". An implementer reading top-down would have built the rule the
+amendment overturned. The ruling body above now says where the string comes from; this test now
+checks the mechanism rather than a literal prefix in one file.
 
 ### ABOUT-3
 
