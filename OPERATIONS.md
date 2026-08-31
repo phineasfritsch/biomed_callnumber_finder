@@ -21,7 +21,20 @@ believed, stop and read the section on adjudication.
     ops/prod        one read only way to look at production. GET only.
     ops/shoot       render every page to ops/shots/ as a person sees it.
     ops/deploy      the gate, then push, then deploy, then read the version back.
-    ops/QUEUE.md    the work queue. Not a session, not your head. This file.
+    ops/QUEUE.md    the work queue. Not a session, not your head. That file.
+
+Two suites are worth knowing about by name, because they check things the others structurally
+cannot.
+
+`Tools/pins.test.js` holds the sentences this tool would be worse without: the refusals, the
+statements of scope, the errors that name their upstream, the two accessibility properties that
+are invisible on screen. Nothing else asserts them, so a rewrite deletes them while the suite
+stays green. Read the header of that file before changing any of them; it explains why a pin is
+a fragment rather than a sentence, why the search is app wide rather than per file, and why the
+comment stripper is not a regular expression.
+
+`Tools/ui.test.js` is the only suite that opens a browser, and therefore the only one that can
+catch a control wired to nothing. Everything else here reads the shipped files as text.
 
 `ops/test` and `ops/health` both take `--json`, which is what a routine should read. Neither ever
 reports success for a check that did not run.
@@ -55,6 +68,7 @@ discovered later.
    Either restore it or bless the drop deliberately with `ops/test --bless`.
 3. `node Tools/ui.test.js` passes. **52 assertions across 18 journeys.** This is the only suite
    that opens a browser, and therefore the only one that can catch a button wired to nothing.
+   It is included in `ops/test`, and it is worth running alone while iterating.
 4. `ops/health --local` does not exit 1. Exit 3 is expected while production is unreachable.
 5. `ops/deploy` runs 1 through 4 itself and refuses to ship past any of them. It is the only
    thing that should ever deploy.
@@ -137,6 +151,10 @@ Rules for it:
   counts rows, which cannot pass on a blank list.
 - When you change a check, leave a comment saying what the new form is and why the property is
   intact.
+- A failing pin in `Tools/pins.test.js` is this decision in its sharpest form. If the sentence was
+  deliberately reworded, move the signature to the smallest fragment of the NEW wording that
+  carries the same meaning, and say so. If it was deleted, put it back. Never delete the pin: a
+  pin removed to make a run green is the deletion, with the evidence tidied away after it.
 - Count the changes and report the count. If it is large, the work is drifting, not the checks.
 
 ## When you cannot finish

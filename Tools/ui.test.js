@@ -108,12 +108,24 @@ function sruResponse(url) {
   return '<?xml version="1.0"?><searchRetrieveResponse xmlns="http://www.loc.gov/zing/srw/"><version>1.2</version><numberOfRecords>0</numberOfRecords><records/></searchRetrieveResponse>';
 }
 const LIBCAL_WEEK = (() => {
-  /* A Sunday-anchored week with one open location and one closed, which is enough shape for the
-     page to summarise, list and render a day. Dates are fixed rather than computed, so this
-     fixture cannot drift with the clock. */
+  /* A Sunday-anchored week with two open locations and one closed: enough shape for the page to
+     summarise, list, and render a day.
+     The dates are computed from the current week rather than hard-coded, and the first version of
+     this did hard-code them, as `30 + i` on a fixed August Sunday. That produced "Tue 32" and
+     "Wed 33" and the page rendered them without complaint, because a day number is somebody
+     else's field and the page is not in the business of second-guessing LibCal's calendar.
+     A frozen week is worse than a computed one here for a second reason: the page marks TODAY by
+     matching a date, so a fixture that does not contain today renders a week with no today in it,
+     which is not the state any reader ever sees. */
   const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const now = new Date();
+  const sunday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+  const iso = i => {
+    const d = new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + i);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
   const mk = (name, open) => ({ lid: name.length, name, weeks: [Object.fromEntries(days.map((d, i) => [d, {
-    date: `2026-08-30`.replace(/30$/, String(30 + i).padStart(2, '0')).slice(0, 10),
+    date: iso(i),
     times: open ? { status: 'open', currently_open: true, hours: [{ from: '8am', to: '10pm' }] } : { status: 'closed', currently_open: false },
   }]))] });
   return { locations: [mk('Biomedical Library', true), mk('Powell Library', true), mk('Law Library', false)] };

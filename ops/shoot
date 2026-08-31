@@ -72,9 +72,16 @@ const { startServer, installStubs } = (() => {
         return route.fulfill({ status: 200, contentType: 'application/xml', body: fs.readFileSync(path.join(FIXD, f), 'utf8') });
       }
       if (/api2\.libcal\.com/.test(url)) {
+        /* Computed from the current week, not hard-coded. Hard-coding `30 + i` produced "Tue 32"
+           and "Wed 33", which the page rendered faithfully because a day number is LibCal's field
+           and not the page's to audit. See the same note in Tools/ui.test.js. */
         const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+        const now = new Date();
+        const sun = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+        const iso = i => { const d = new Date(sun.getFullYear(), sun.getMonth(), sun.getDate() + i);
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
         const mk = (name, open) => ({ lid: name.length, name, weeks: [Object.fromEntries(days.map((d, i) => [d, {
-          date: `2026-08-${String(30 + i).padStart(2, '0')}`,
+          date: iso(i),
           times: open ? { status: 'open', currently_open: true, hours: [{ from: '8am', to: '10pm' }] } : { status: 'closed', currently_open: false } }]))] });
         return route.fulfill({ status: 200, contentType: 'application/json',
           body: JSON.stringify({ locations: [mk('Biomedical Library', true), mk('Powell Library', true), mk('Law Library', false)] }) });
