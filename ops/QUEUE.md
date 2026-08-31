@@ -11,6 +11,46 @@ An item that is `BLOCKED` names what would unblock it and who can do that.
 
 ---
 
+## OPEN · Two surfaces answer without looking anything up
+
+**What.** A six-person review panel drove the site and raised 45 findings; 24 survived adversarial
+verification. The full report is `ops/PANEL.md`. Two findings are one defect wearing two coats,
+and both were reproduced by hand before being written here.
+
+**The home box appends the next query to the last one and answers for the previous book.**
+Locate `W1 AM4990`, then click the box and type `WA 900.1 M300`. The field becomes
+`W1 AM4990WA 900.1 M300`, and the page returns a normal green panel reading
+`Level 7 · top row · index 9 · Left side`. That is the first book's shelf. Nothing says the rest
+of the input was discarded. This is the most repeated gesture at a service desk, and it produces
+a wrong aisle that looks exactly like a right one.
+
+*Fix.* Two changes, and shipping only the first is worse than shipping neither, because it makes
+the common case safe and leaves pasted input silently wrong while looking fixed.
+
+1. `shelfPreview()` refuses, or flags, any input `parseCN` did not fully consume, and echoes the
+   number it actually matched.
+2. `#q.select()` on focus, so a fresh slip overwrites rather than concatenating.
+
+**The Reference view of the map cannot refuse anything.** In `map.html`, the `collection==='ref'`
+branch does no lookup at all: it upper-cases whatever was typed and asserts it is on floor 4.
+Verified directly: `NOT A CALL NUMBER AT ALL is on floor 4, shelved by call number.` And
+`W1 AM4990 is on floor 4` for the tool's own worked example, which its own dataset puts on
+Level 7.
+
+*Fix.* Run the string through `findFaces` before answering. Refuse anything that is not
+call-number shaped, using the same miss sentence the stacks branch already uses, and when a
+string matches a mapped stacks range say so and offer the switch instead of asserting floor 4.
+
+**Why these two are first.** The product's entire trust case is that it refuses to guess, and
+four of the six reviewers named that refusal, unprompted, as the thing that bought their trust.
+These are the two places it does not.
+
+**Done when.** Neither surface asserts a location it did not look up, and `Tools/ui.test.js` has a
+journey for each: one typing a second call number into a used box, one asking the Reference view
+for something that is not a call number.
+
+---
+
 ## OPEN · The live site is ahead of this repository, and nobody has the difference
 
 **What.** Two of the eleven published files on `https://shelfmark.phineasfritsch.com` contain code
