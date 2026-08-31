@@ -424,6 +424,63 @@ journey('privacy · the page talks to who it says it talks to', 'patron who disl
   ok('the page does not claim to be an AI or a chatbot', !/\b(ai-powered|chatbot|ask our ai|powered by ai)\b/.test(body));
 });
 
+/* The two findings a review panel ranked first and second, both reproduced by hand before being
+   written here. Both are the same defect: a surface that returns a confident answer without
+   checking that it answered the question asked, on a tool whose entire argument is that it
+   refuses to guess. These are regression tests, not pins: they were RED when written, which is
+   the correct order for a test that proves a fix, and the opposite of the rule for a pin. */
+
+journey('locate · a second call number does not answer for the first', 'desk worker', async (page, base) => {
+  await page.goto(base + '/', { waitUntil: 'domcontentloaded' });
+  await page.fill('#q', CN_HIT);                       // W1 AM4990, level 7
+  await page.press('#q', 'Enter');
+  const first = await settled(page, '#result');
+  ok('the first slip resolves', /\b7\b/.test(first), first.slice(0, 120));
+
+  /* The commonest gesture at a service desk: click into the box and type the next slip. Not
+     fill(), which replaces the value and would test nothing. */
+  await page.click('#q');
+  await page.keyboard.type(CN_NLM);                    // WA 900.1 M300, level 10
+  await page.press('#q', 'Enter');
+  const second = await settled(page, '#result');
+
+  const box = await page.inputValue('#q');
+  const answeredFirstAgain = /\bAM4986\b|\bAM511\b/.test(second);
+  /* Either the box took only the new number, or the page refused a string it could not fully
+     read. What it must never do is return the PREVIOUS book's shelf in a panel shaped exactly
+     like a correct answer: that is a wrong aisle, and the reader has no way to see it. */
+  ok('the second slip does not return the first book\'s shelf',
+    !answeredFirstAgain,
+    `box held ${JSON.stringify(box)} and the answer was ${JSON.stringify(second.slice(0, 100))}`);
+});
+
+journey('map · the Reference view refuses what it cannot look up', 'librarian', async (page, base) => {
+  await page.goto(base + '/map', { waitUntil: 'domcontentloaded' });
+  await page.click('[data-coll="ref"]');
+  await page.waitForTimeout(200);
+
+  await page.fill('#q', 'NOT A CALL NUMBER AT ALL');
+  await page.press('#q', 'Enter');
+  const nonsense = await settled(page, '#result');
+  /* The branch used to echo whatever was typed and assert floor 4, so it could not be wrong in
+     any way it was able to detect. A surface with no lookup behind its sentence is the one thing
+     this product says it does not do. */
+  /* Asserted on the claim, not on the presence of hedging words. The first version of this line
+     allowed "floor 4" if the text also matched /not|cannot|no /, which the echoed query
+     "NOT A CALL NUMBER AT ALL" satisfies by itself: the assertion passed on the exact output it
+     existed to catch, because the reader's own input supplied the word that excused it. */
+  ok('a string that is not a call number is not placed on a floor',
+    !/is on floor 4/i.test(nonsense),
+    nonsense.slice(0, 160));
+
+  await page.fill('#q', CN_HIT);                       // mapped on level 7, not Reference
+  await page.press('#q', 'Enter');
+  const mapped = await settled(page, '#result');
+  ok('a number the map places elsewhere is not asserted onto floor 4',
+    !/is on floor 4/i.test(mapped),
+    mapped.slice(0, 160));
+});
+
 journey('404 · a wrong URL is a real 404, not the app', 'librarian', async (page, base) => {
   const res = await page.goto(base + '/aboutt', { waitUntil: 'domcontentloaded' });
   ok('the status really is 404', res.status() === 404, `got ${res.status()} — a soft 404 hides every broken link`);

@@ -89,6 +89,28 @@ const skipTexts = PAGES.map(p => (/<a class="skip"[^>]*>([^<]+)</.exec(src[p]) |
 ok('every page names a different destination', new Set(skipTexts).size === PAGES.length,
   JSON.stringify(skipTexts));
 
+/* A page that counts the site has to agree with the bar that renders it. The 404 said the site
+   was three pages, twice, directly above a nav showing four, and /about said four. That is the
+   page a lost reader meets, its whole job is to state the shape of the site, and the reader can
+   disprove it by counting the pills an inch above. Three of six reviewers raised it independently.
+   Asserted rather than merely corrected, because the number will drift again the next time a
+   section is added, and the correction is worthless if nothing holds it. */
+{
+  const words = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7 };
+  const navCount = reference.length;
+  for (const p of PAGES) {
+    const text = visible(p).replace(/<[^>]+>/g, ' ');
+    for (const m of text.matchAll(/Shelfmark (?:is|has) (one|two|three|four|five|six|seven) (?:of them|pages)/gi)) {
+      ok(`${p} counts the site correctly`, words[m[1].toLowerCase()] === navCount,
+        `says "${m[0]}" but the nav it renders has ${navCount} items`);
+    }
+    for (const m of text.matchAll(/(?:one of the|all) (one|two|three|four|five|six|seven) pages/gi)) {
+      ok(`${p} counts the site correctly in passing`, words[m[1].toLowerCase()] === navCount,
+        `says "${m[0]}" but the nav it renders has ${navCount} items`);
+    }
+  }
+}
+
 /* ---- one voice ---- */
 
 section('one voice, one set of promises');
