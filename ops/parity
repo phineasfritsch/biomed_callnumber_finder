@@ -101,15 +101,33 @@ for (const [file, url] of PUBLISHED) {
     for (const w of a) if (b.has(w)) shared++;
     return shared / Math.max(a.size, b.size);
   };
-  const lost = onlyLive.filter(l => {
+  const nearMiss = onlyLive.filter(l => {
     const t = tok(l);
     return !treeToks.some(u => similar(t, u) >= 0.6);
   });
 
+  /* One more question, and it is the one that separates a decision from an accident.
+     A live-only line that HAS EVER BEEN IN THE REPOSITORY is a line somebody here rewrote, and
+     deploying replaces it on purpose. A live-only line that appears nowhere in this file's history
+     was never committed at all: it exists on the web and on whichever machine ran wrangler, and
+     deploying destroys it.
+     Without this the check reported five files as live-ahead, three of them only because this
+     session had deliberately rewritten those very lines. Both counts are shown, because "the
+     deploy will replace this" is worth seeing and is not the same alarm as "the deploy will
+     erase the only copy". */
+  let history = '';
+  for (const ref of ['origin/main', 'HEAD']) {
+    const h = spawnSync('git', ['show', `${ref}:${file}`], { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+    if (h.status === 0) history += '\n' + h.stdout;
+  }
+  const known = new Set(history.split('\n').map(l => l.trim()).filter(Boolean));
+  const lost = nearMiss.filter(l => !known.has(l));
+  const rewritten = nearMiss.length - lost.length;
+
   rows.push({
     file, url,
     verdict: lost.length ? 'LIVE-AHEAD' : 'tree-ahead',
-    onlyLive: onlyLive.length, onlyTree: onlyTree.length, lost: lost.length,
+    onlyLive: onlyLive.length, onlyTree: onlyTree.length, lost: lost.length, rewritten,
     sample: lost.slice(0, 3),
   });
 }
@@ -142,7 +160,7 @@ for (const r of rows) {
   const mark = { same: '  ok  ', 'tree-ahead': ' tree ', 'LIVE-AHEAD': ' LIVE ', unreachable: ' ???  ' }[r.verdict];
   const extra = r.verdict === 'same' ? (r.note ? `  (${r.note}: ${r.detail})` : '')
     : r.verdict === 'unreachable' ? `  ${r.detail}`
-    : `  ${r.lost} line(s) live-only with no counterpart here (${r.onlyLive} differ, ${r.onlyTree} the other way)`;
+    : `  ${r.lost} line(s) exist ONLY on the web` + (r.rewritten ? `, ${r.rewritten} more rewritten here on purpose` : '') + ` (${r.onlyLive}/${r.onlyTree} differ)`;
   console.log(`${mark} ${r.url.padEnd(16)} ${r.file.padEnd(18)}${extra}`);
 }
 
