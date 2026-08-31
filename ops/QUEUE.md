@@ -282,7 +282,21 @@ and `ops/health` says the deployed build is this commit.
 
 ---
 
+## DONE · README documented a build step that is not in the repository
+
+Rewritten to describe how `index.html` is actually maintained: no build step, `shelf-data.js` then
+`shelf-core.js` loaded as ordinary scripts. Also corrected a second stale line claiming
+`Tools/walk.test.js` reads geometry out of the built HTML; it reads `shelf-core.js`.
+
+The fixer routine completed this same item and could not push it. Redone here rather than left in
+an ephemeral container. The note about the retired script is kept deliberately, because a reader
+who remembers it should find out where it went.
+
+---
+
 ## OPEN · README documents a build step that is not in the repository
+
+<!-- superseded -->
 
 **What.** `README.md` says `index.html` is generated, that `.build_locator.py` is the source of
 truth for the HTML, and that the two must stay in sync. There is no `.build_locator.py` in the

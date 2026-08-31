@@ -141,6 +141,13 @@ const PINS = [
     signature: 'never uploaded',
     why: 'the flat statement that the photos do not leave the device.' },
 
+  /* The repair announces itself. A tool that silently corrects a typo and answers from the
+     correction is a tool that answered a question nobody asked; the correction has to be visible
+     or the reader cannot tell a repair from a wrong shelf. */
+  { id: 'cutter-space-repair-is-stated', kind: 'honesty', home: 'index.html',
+    signature: 'the cutter is one word',
+    why: 'a stray space inside a W1 cutter is repaired rather than silently landing on the wrong face, and the page says so.' },
+
   /* The one box guesses where a query belongs. A silent guess would be worse than not guessing. */
   { id: 'routing-guess-is-stated', kind: 'honesty', home: 'index.html',
     signature: 'Read as a call number',

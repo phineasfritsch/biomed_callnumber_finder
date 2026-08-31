@@ -275,12 +275,10 @@ function renderDetail(){
    Deliberately narrow, and knowingly a second copy of the home page's `looksLikeCallNumber`: this
    page does not load that script, and the alternative was going on answering "floor 4" to any
    string at all. If a third caller wants it, it belongs in shelf-core.js with the comparator. */
-function cnShaped(t){
-  const s=(t||'').trim();
-  if(!s || s.length>48) return false;
-  if(/^W[1-4][A-Z]{0,2}\s*[A-Z]/i.test(s)) return true;      // W1 AM477
-  return /^[A-Z]{1,3}\s*\d{1,4}(?:\.\d+)?\b/i.test(s);      // WM 100, QL737.C22
-}
+/* Delegates to shelf-core.js. This was a second copy of index.html's predicate, and the main
+   stacks path below did not consult it at all. */
+function cnShaped(t){ return meansACallNumber(t); }
+
 
 /* ===== lookup =====
    The map page's own box, and the only question it asks: which face holds this call number.
@@ -330,6 +328,12 @@ function locate(){
     if(collection==='spec'){ level=9; renderLevels(); renderPlan(); renderDetail(); }
     return;
   }
+  /* Same repair and the same sentence as the home box. A reader who types a stray space here and
+     a stray space there must not get a shelf on one surface and a refusal on the other. */
+  let note='';
+  const fixed=w1RejoinCutter(q);
+  if(fixed){ note=`<div class="miss">Read as <code>${escHtml(fixed)}</code>. In a W1 number the cutter is one word, `
+    +`so the letters and their number are not separated.</div>`; q=fixed; inp.value=fixed; }
   const hits=findFaces(q, collection);
   if(!hits.length){
     out.innerHTML = collection==='spec'

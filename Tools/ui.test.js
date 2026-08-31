@@ -454,6 +454,35 @@ journey('locate · a second call number does not answer for the first', 'desk wo
     `box held ${JSON.stringify(box)} and the answer was ${JSON.stringify(second.slice(0, 100))}`);
 });
 
+journey('locate · a space inside the cutter does not silently move the shelf', 'desk worker', async (page, base) => {
+  await page.goto(base + '/', { waitUntil: 'domcontentloaded' });
+  await page.fill('#q', CN_HIT);                       // W1 AM4990 -> level 7, index 9
+  await page.press('#q', 'Enter');
+  const clean = await settled(page, '#result');
+  ok('the well-formed number resolves', /AM4986/.test(clean), clean.slice(0, 120));
+
+  /* The same number with a stray space inside the cutter. It used to PARSE, not miss: "AM" became
+     a cutter with no number and "4990" a second cutter, landing confidently on the face that holds
+     bare "W1 AM" — index 4 rather than 9, five bays from the book, with no note. A wrong hit is
+     worse than a miss, and the repair for the missing-space case only ever ran on a miss. */
+  await page.fill('#q', 'W1 AM 4990');
+  await page.press('#q', 'Enter');
+  const spaced = await settled(page, '#result');
+
+  ok('it does not answer with the shelf for a bare cutter',
+    !/AL157/.test(spaced),
+    `answered with the "W1 AM" face instead: ${spaced.slice(0, 140)}`);
+  ok('it says what it read, or says it does not know',
+    /Read as/i.test(spaced) || /No mapped shelf contains/i.test(spaced),
+    spaced.slice(0, 160));
+  /* If it repaired, it must land on the SAME shelf the clean form does. Announcing a repair and
+     then answering with a different shelf would be the original bug wearing a receipt. */
+  if (/Read as/i.test(spaced)) {
+    ok('and the repaired lookup lands where the clean one did', /AM4986/.test(spaced),
+      spaced.slice(0, 160));
+  }
+});
+
 journey('map · the Reference view refuses what it cannot look up', 'librarian', async (page, base) => {
   await page.goto(base + '/map', { waitUntil: 'domcontentloaded' });
   await page.click('[data-coll="ref"]');

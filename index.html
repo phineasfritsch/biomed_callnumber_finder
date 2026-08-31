@@ -397,17 +397,10 @@
    "Shaped like a call number" is deliberately narrow: class letters followed by a number, or the
    W1-series form. A title is almost never either. A `field:value` filter token and a bare ISBN are
    sent to the catalog outright. */
-function looksLikeCallNumber(t){
-  const s=(t||'').trim();
-  if(!s || s.length>48) return false;
-  if(/\s/.test(s)===false && s.length<3) return false;
-  if(/[A-Za-z]{2,}:/.test(s)) return false;                       // mesh:, title:, at: …
-  const digits=s.replace(/[^0-9Xx]/g,'');
-  if(/^[0-9][0-9Xx-]{8,}$/.test(s) && (digits.length===10||digits.length===13)) return false;
-  if(/^W[1-4][A-Z]{0,2}\s*[A-Z]/i.test(s)) return true;           // W1 AM477
-  if(/^[A-Z]{1,3}\s*\d{1,4}(?:\.\d+)?\b/i.test(s)) return true;   // WM 100, QL737.C22, BF 400
-  return false;
-}
+/* Delegates. The predicate lives in shelf-core.js so the map, the route builder and the catalog
+   cannot each carry their own version and drift; two of them already had. */
+function looksLikeCallNumber(t){ return meansACallNumber(t); }
+
 /* A DOI, a PubMed ID or an ISSN identifies an *article or a journal run*, which the catalog
    answers badly and the link resolver answers exactly.
 
@@ -503,6 +496,13 @@ function shelfPreview(q){
     }
   }
   let term=typed;
+  /* Before the lookup, not after it. See w1RejoinCutter. */
+  const rejoined=w1RejoinCutter(term);
+  if(rejoined){
+    said.push(`Read as <code>${escHtml(rejoined)}</code>. In a W1 number the cutter is one word, `
+      +`so the letters and their number are not separated.`);
+    term=rejoined;
+  }
   let hits=findFaces(term, coll);
   if(!hits.length){
     /* A split counts only if the face it lands on is labelled with the prefix it claims. Landing
@@ -583,7 +583,15 @@ function unifiedSearch(){
   const t=document.getElementById('q').value.trim();
   if(!t){ showRouted(''); document.getElementById('result').innerHTML=''; return; }
   if(looksLikeCallNumber(t) || /^hist\.?\s*div\.?\s/i.test(t)){ showRouted('shelf'); shelfPreview(t); return; }
-  if(looksLikeArticle(t) && window.articleLookup){ showRouted('article'); window.articleLookup(t); return; }
+  /* Clear the shelf region on the way past it. A reader who looks up a call number, gets a shelf,
+     then searches a title used to leave the old shelf sitting on screen under the new answer:
+     a confident location for a book nobody asked about, which is the same failure as answering
+     prose with a shelf, arrived at from the other direction. */
+  if(looksLikeArticle(t) && window.articleLookup){
+    document.getElementById('result').innerHTML='';
+    showRouted('article'); window.articleLookup(t); return;
+  }
+  document.getElementById('result').innerHTML='';
   showRouted('catalog');
   if(window.catalogSearch) window.catalogSearch();
 }

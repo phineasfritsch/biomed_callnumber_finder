@@ -385,7 +385,87 @@ function planFeatures(){
  * W plus a number are different namespaces that share a letter, and a range in one must never
  * appear to contain a number from the other.
  */
+/* A space INSIDE the cutter, which is the other half of the same typo and the more dangerous half.
+   "W1 AM 4990" parses: W1, then a cutter "AM" with no number, then a stray "4990" the comparator
+   reads as a second cutter. It does not miss. It lands, confidently, on the face that holds bare
+   "W1 AM" — index 4 rather than index 9, five bays from the book, with no note that anything was
+   reinterpreted. A desk worker hit it on the fourth thing they typed.
+
+   The repair for the missing space already existed but only ran on a MISS, which is exactly
+   backwards: a wrong hit needs it more than a miss does, because a miss is honest and a wrong hit
+   is not. So this one runs BEFORE the lookup and always says what it read.
+
+   Only the W1 scheme, where the cutter is one word. NLM keeps letters and numbers apart on purpose
+   ("WM 100 D299a" is class, number, cutter), and joining those would break every NLM number in the
+   building. Checked against all 906 endpoints in the survey: no real W1 call number has a bare
+   letters token followed by a digits token, and the three with a third token ("W2 AW4 P6P",
+   "W4C Z89P 2009") keep their digits attached and are untouched. */
+function w1RejoinCutter(term){
+  const t=String(term||'').trim().toUpperCase().replace(/\s+/g,' ');
+  if(scheme(t)!=='w1') return '';
+  const k=t.split(' ');
+  if(k.length<3) return '';
+  const out=[k[0]];
+  for(let i=1;i<k.length;i++){
+    if(/^[A-Z]+$/.test(k[i]) && i+1<k.length && /^\d/.test(k[i+1])){ out.push(k[i]+k[i+1]); i++; }
+    else out.push(k[i]);
+  }
+  const j=out.join(' ');
+  return j===t ? '' : j;
+}
+
+/* Does this string read as a call number at all?
+ *
+ * One owner, because there were two and they disagreed. index.html had looksLikeCallNumber for
+ * routing and map.html had cnShaped for its Reference branch, and map's main stacks path had
+ * neither: it handed raw input straight to the comparator, which happily sorted it. "asthma"
+ * came back as Level 11, index 1. "the book about hearts" came back as Level 10, index 4. A
+ * confident shelf face for a sentence, on the one tool whose argument is that it refuses to guess.
+ *
+ * The guard lives in findFaces rather than at each call site, because a guard at each call site is
+ * a guard somebody forgets at the fourth one, and that is exactly how this happened. Everything
+ * that resolves a shelf goes through here: the home box, the map box, the route builder, and the
+ * catalog holdings. The last of those was already documented as refusing a call number that did
+ * not fully parse, so this makes the stated behaviour true everywhere rather than in one place.
+ *
+ * Checked against every endpoint in the survey: all 906 pass except the bare "A" that opens the
+ * Special Collections sequence, and range endpoints are data rather than queries, so they are
+ * never asked. */
+function meansACallNumber(t){
+  const s=(t||'').trim();
+  if(!s || s.length>48) return false;
+  if(/\s/.test(s)===false && s.length<3) return false;
+  if(/[A-Za-z]{2,}:/.test(s)) return false;                       // mesh:, title:, at: …
+  const digits=s.replace(/[^0-9Xx]/g,'');
+  if(/^[0-9][0-9Xx-]{8,}$/.test(s) && (digits.length===10||digits.length===13)) return false;  // ISBN
+  if(/^W[1-4][A-Z]{0,2}\s*[A-Z]/i.test(s)) return true;           // W1 AM477
+  if(/^[A-Z]{1,3}\s*\d{1,4}(?:\.\d+)?\b/i.test(s)) return true;   // WM 100, QL737.C22, BF 400
+  return false;
+}
+
+/* Two different questions, and the difference is the whole of the fix above.
+ *
+ *   meansACallNumber  - loose. Did the reader MEAN a call number? Used for routing, so a typo
+ *                       still reaches the shelf path where something can repair it and say so.
+ *   readsAsCallNumber - strict. Is this WELL FORMED enough to place on a shelf? Used by findFaces.
+ *
+ * Collapsing them into one predicate is a mistake I made and the rendered page caught: with the
+ * strict test doing the routing, "W1 AM 4990" stopped being a typo the shelf path could repair and
+ * became a catalog search for a book called W1 AM 4990. The loose test keeps it on the path that
+ * knows what to do with it; the strict test stops the comparator answering it.
+ *
+ * A split cutter is the one case where they disagree: the reader plainly meant a call number, and
+ * it is plainly not one yet. */
+function readsAsCallNumber(t){
+  const s=(t||'').trim();
+  if(!meansACallNumber(s)) return false;
+  if(w1RejoinCutter(s)) return false;   // a cutter split by a space is a typo, not a location
+  return true;
+}
+
 function findFaces(q, coll){
+  /* Nothing is placed on a shelf unless the whole string read as a call number. */
+  if(!readsAsCallNumber(q)) return [];
   const qs=scheme(q), hits=[];
   for(const key in DATA){
     const d=DATA[key];

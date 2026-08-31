@@ -106,3 +106,43 @@ the more useful record: it says what the bar caught.
 discover whether it ships (it does not) but to convert "24 upheld findings" into six named lists:
 what each reader personally needs before they would say SHIP. That is the work queue for the
 rewrite, in the words of the people it is for. Recorded below when it returns.
+
+---
+
+### Round 0 — 31 August, 21 days out, commit c466de8
+
+    reference librarian   SHIP
+    distrusting patron    SHIP
+    first-year on a phone SHIP
+    screen-reader user    SHIP
+    desk worker           NOT YET
+    cohesion reviewer     NOT YET
+    ----
+    verdict: NOT YET (4 of 6)
+
+NOT YET, two dissents of six. Four readers — the reference librarian, the privacy-skeptical patron, the first-year on a phone, and the screen-reader user — would hand Shelfmark over today, and each said in their own words that nothing must be fixed before week one. The two NOT YETs are the same defect seen from two seats: an input that is not a call number, or not entirely a call number, gets answered with a confident, specific shelf face instead of a refusal. One guard, applied at parse time and consumed by the home box, the map box and the route builder, clears both dissents; neither dissenter asked for anything else before the quarter starts.
+
+**Must land before 21 September**, from the readers own answers:
+
+- Item 1 — the input-validation guard (silent token-drop in the cutter; prose answered with a shelf face on /map). Both dissenters named this, in different words, as the single thing that flips their vote.
+- Item 2 — unparseable lines land in 'Not located' in the pickup walk instead of becoming a stop. Named explicitly by the cross-surface reader as must-fix; it is the same guard at a second call site and will not land by itself.
+- Nothing else. Every SHIP vote answered the ship-anyway question with 'nothing must be fixed before week one', and both NOT YETs said they would ship with no other change. Items 3–10 are the week-two queue; holding the quarter for any of them would be overriding the readers' own stated bar.
+
+**The queue this round produced**, ordered by what flips the most votes soonest:
+
+- **1.** One input-validation guard: no input may be answered with a shelf face unless the whole string parsed as a call number. Either normalise and say what was read ("Read as W1 AM4990"), or refuse ("No mapped shelf contains X"). Never silently drop a token, never answer prose.  *(unblocks: Desk worker AND cross-surface reader — MERGED, see 'merged')*
+- **2.** Make the pickup-walk route builder consume the same verdict: an unparseable line becomes a 'Not located' entry, not a stop.  *(unblocks: Cross-surface reader (second blocking finding))*
+- **3.** One plain sentence glossing 'index' at the point of the answer — e.g. 'index 10 = the 10th shelving unit along the row.'  *(unblocks: First-year on a phone)*
+- **4.** Rank or group the 2025 twenty-second edition with the 2018 record badged '17 EDITIONS · NEWEST SHOWN' so the newest Harrison's is not read off the older row.  *(unblocks: Reference librarian)*
+- **5.** Reword '27 records in Biomed Library' to '27 records in this search · 25 shown'.  *(unblocks: Reference librarian)*
+- **6.** Have /hours speak the actual hours, not only open/closed state.  *(unblocks: Screen-reader and keyboard user)*
+- **7.** Interim 'Searching UCLA's catalog…' announcement in the live region on Enter.  *(unblocks: Screen-reader and keyboard user)*
+- **8.** Half-sentence on /about pointing at /methodology's fuller accounting (Google Fonts on every page load, Open Library covers).  *(unblocks: Privacy-skeptical patron)*
+- **9.** Surface /about (the explainer) in the top nav, not only the footer.  *(unblocks: First-year on a phone)*
+- **10.** Consistency sweep: the three different counts of UCLA libraries (21 on the home pills, 'all 27 UCLA locations', 'nine libraries'), the 404's 'Shelfmark is four of them' when there are more surfaces, and 'Could not reach LibCal: Failed to fetch.' leaking browser jargon where other surfaces name an HTTP status.  *(unblocks: Cross-surface reader (non-blocking notes))*
+
+**The caution that mattered most**, and it was right:
+
+> Neither dissent is weak, and the round should not have passed. Both were driven live, both produced a specific wrong shelf face for input a real desk sees, and both sit exactly on the standard the tool sets for itself in its own code — 'a wrong aisle is worse than none'. The desk worker hit theirs on the fourth thing they typed, without hunting. Marking either as a preference would be dishonest.
+> What is worth noting is the discipline in both dissents: each separated the blocker from the wish list and shipped everything else. The cross-surface reader could have blocked on the three inconsistent library counts, the 404's arithmetic and the LibCal error jargon — all real, all filed as notes. Had the NOT YET rested on those, it would have been a preference dressed as a blocker and the round should have passed. It did not.
+> One caution for the next round: item 1 and item 2 are one defect with two call sites. A fix that lands only in the home box will read as 'the blocker is fixed' and will not move the cross-surface vote. Both dissenters should re-drive their own reported strings — 'W1 AM 4990', 'asthma', 'banana bread', and the four-line paste — before the round is called.

@@ -231,14 +231,14 @@ and every way the shelf lookup refuses — is written up in [`CATALOG.md`](CATAL
 
 | Path | What it is |
 | --- | --- |
-| [`index.html`](index.html) | The deployed app (data baked in). **Generated** — see below. |
+| [`index.html`](index.html) | The deployed app. Hand-maintained; it loads `shelf-data.js` and `shelf-core.js` as ordinary scripts. |
 | [`biomed-shelf-ranges.json`](biomed-shelf-ranges.json) | The master dataset: one entry per shelf *face*. |
-| [`.build_locator.py`](.build_locator.py) | Source of truth for the HTML; bakes the JSON in. |
+| [`shelf-data.js`](shelf-data.js) | The dataset as the pages load it. Its own header is the source of truth for the format. |
 | [`Instructions.txt`](Instructions.txt) | The mapping handbook: dataset format, comparator, shelf physics. |
 | [`CATALOG.md`](CATALOG.md) | What the Alma SRU endpoint actually does, and how the catalog→shelf join refuses. |
 | `fixtures/` | Saved live SRU responses used as the offline test corpus (not deployed). |
 | [`Tools/catalog.test.js`](Tools/catalog.test.js) | `node Tools/catalog.test.js` — 396 assertions against those fixtures. |
-| [`Tools/walk.test.js`](Tools/walk.test.js) | `node Tools/walk.test.js` — 52 assertions on the walking geometry, pulled out of the built `index.html`. |
+| [`Tools/walk.test.js`](Tools/walk.test.js) | `node Tools/walk.test.js` — assertions on the walking geometry, read out of `shelf-core.js`. |
 | `Floors/` | Raw shelf-end photos, grouped by level (not deployed). |
 | [`wrangler.jsonc`](wrangler.jsonc) | Cloudflare Workers config (static-assets / SPA mode). |
 | [`.assetsignore`](.assetsignore) | What Cloudflare must *not* upload (raw photos, JSON, tooling). |
@@ -272,18 +272,20 @@ dataset**. The cardinal rule: *never guess a label or fill a gap from memory.*
 
 ---
 
-## Building / regenerating
+## Editing the dataset
 
-The app is generated, not hand-edited. After changing the dataset (or the template inside the
-build script), regenerate so the new data is baked into the served HTML:
+The dataset is not baked into the HTML and there is no build step. `index.html` and `map.html`
+load [`shelf-data.js`](shelf-data.js) and then [`shelf-core.js`](shelf-core.js) as ordinary
+scripts, in that order, because the second reads the first on the way up.
 
-```bash
-python .build_locator.py
-# writes index.html
-```
+There was a `.build_locator.py` that generated `index.html` from the JSON, and this README
+described it for some time after it was retired. That is the most expensive kind of stale
+documentation, because it tells the next person their hand edits will be overwritten: they either
+go looking for a file that does not exist, or they do not make an edit they should have made.
 
-`index.html` and the HTML template inside `.build_locator.py` must stay in sync — the build script
-treats its embedded template (with the `__DATA__` placeholder) as the source of truth.
+`biomed-shelf-ranges.json` remains the master survey. `ops/health` asserts that `shelf-data.js` is
+byte-identical to it, so the two cannot drift.
+
 
 ## Deploying
 
