@@ -1,0 +1,158 @@
+#!/usr/bin/env node
+/* One boring, read-only way to look at production.
+ *
+ *   ops/prod                    every route, one line each: status, bytes, time
+ *   ops/prod /about             one route, with its response headers
+ *   ops/prod --body /about      the same, plus the first 60 lines of the body
+ *   ops/prod --api              only the three worker routes
+ *   ops/prod --json             machine-readable, for a routine
+ *   ops/prod --origin https://…  point it somewhere else (a preview deploy, localhost)
+ *
+ * GET only. There is no flag that writes anything, and adding one would be the wrong shape for
+ * this file: an operator reaches for it dozens of times a day and it must never be the thing
+ * that changed production.
+ *
+ * It shells out to curl on purpose rather than using fetch, because curl is what already reads
+ * this container's proxy configuration and CA bundle. A hand-rolled client that quietly ignored
+ * HTTPS_PROXY would report every host as unreachable and look like an outage.
+ *
+ * THREE OUTCOMES, and the third is the one that must never be mistaken for either other:
+ *
+ *   ok        the route answered, with the status this expects.
+ *   wrong     the route answered with something else. This is a real finding.
+ *   BLOCKED   nothing was learned. The egress proxy refused the connection, so production
+ *             might be perfect or might be on fire. A check that cannot see is not a check
+ *             that passed, and this prints it as its own outcome and exits non-zero, because
+ *             a silent skip here is how a monitor spends a week reporting on nothing.
+ */
+
+'use strict';
+const { spawnSync } = require('child_process');
+
+const argv = process.argv.slice(2);
+const has = f => argv.includes(f);
+const val = (f, d) => { const i = argv.indexOf(f); return i >= 0 && argv[i + 1] ? argv[i + 1] : d; };
+const ORIGIN = (val('--origin', process.env.SHELFMARK_ORIGIN || 'https://shelfmark.phineasfritsch.com')).replace(/\/$/, '');
+const JSON_OUT = has('--json');
+const BODY = has('--body');
+const one = argv.find(a => a.startsWith('/'));
+
+/* The routes, with what each is FOR, so a failing line says something an operator can act on
+   rather than just naming a path. `expect` is the status a healthy deployment returns. */
+const ROUTES = [
+  { path: '/',            expect: 200, is: 'the app: one search box, shelf map + catalog' },
+  { path: '/about',       expect: 200, is: 'how to use it' },
+  { path: '/methodology', expect: 200, is: 'how the data was made, and what it is not' },
+  { path: '/hours',       expect: 200, is: 'library hours from LibCal' },
+  { path: '/map',         expect: 200, is: 'the full floor plan browser' },
+  { path: '/databases',   expect: 200, is: 'the A-Z list' },
+  { path: '/site.css',    expect: 200, is: 'the one stylesheet every page links' },
+  { path: '/shelf-data.js', expect: 200, is: 'the dataset' },
+  { path: '/shelf-core.js', expect: 200, is: 'the comparator and the layout' },
+  { path: '/robots.txt',  expect: 200, is: 'the one directive file' },
+  { path: '/og-card.png', expect: 200, is: 'the share card' },
+  /* A wrong URL must be a real 404. This was once a 200 serving 330 KB of tool, which made
+     every link checker report the site as perfect. It is pinned here and in wrangler.jsonc. */
+  { path: '/definitely-not-a-page', expect: 404, is: 'a wrong URL gets a real 404, not the app' },
+  /* Things that must NOT be on the web. A 200 here is the serious finding on this whole page. */
+  { path: '/wrangler.jsonc',           expect: 404, is: 'the deployment config stays private', mustNotExist: true },
+  { path: '/biomed-shelf-ranges.json', expect: 404, is: 'the raw dataset stays private',       mustNotExist: true },
+  { path: '/Instructions.txt',         expect: 404, is: 'the mapping handbook stays private',  mustNotExist: true },
+  { path: '/README.md',                expect: 404, is: 'the docs stay private',               mustNotExist: true },
+  { path: '/src/worker.js',            expect: 404, is: 'the worker source stays private',     mustNotExist: true },
+  { path: '/ops/test',                 expect: 404, is: 'the operator machinery stays private', mustNotExist: true },
+];
+const API = [
+  { path: '/api/databases',                    expect: 200, is: 'the A-Z list, parsed from LibGuides', api: true },
+  { path: '/api/articles?q=asthma&limit=2',    expect: 200, is: 'the article index via Primo', api: true },
+  { path: '/api/suggest?q=asthmaa',            expect: 200, is: "Primo's spelling correction", api: true },
+  /* The worker is not an open proxy, and the way you prove that is to ask it to be one. */
+  { path: '/api/articles',                     expect: 400, is: 'a query-less search is refused, not passed upstream', api: true },
+  { path: '/api/nope',                         expect: 404, is: 'an unknown api route is not the app', api: true },
+];
+
+function get(path, wantHeaders) {
+  const url = ORIGIN + path;
+  const args = ['-sS', '-m', '25', '-o', '/dev/stdout',
+    '-w', '\n__META__ %{http_code} %{size_download} %{time_total} %{content_type}\n', url];
+  if (wantHeaders) args.unshift('-D', '/dev/stderr');
+  const r = spawnSync('curl', args, { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+  const out = r.stdout || '';
+  const m = /__META__ (\d+) (\d+) ([\d.]+) (\S*)/.exec(out);
+  const stderr = r.stderr || '';
+  /* curl hides the body of a refused CONNECT, so the proxy's own 403 is all there is to go on.
+     The status endpoint records the reason; see /root/.ccr/README.md. */
+  const blocked = /CONNECT tunnel failed|403|407/.test(stderr) && (!m || m[1] === '000');
+  return {
+    status: m ? +m[1] : 0,
+    bytes: m ? +m[2] : 0,
+    ms: m ? Math.round(parseFloat(m[3]) * 1000) : 0,
+    type: m ? m[4] : '',
+    body: m ? out.slice(0, out.lastIndexOf('__META__')) : out,
+    headers: stderr.split('\n').filter(l => /^[\w-]+:|^HTTP\//.test(l)).join('\n'),
+    blocked,
+    err: stderr.split('\n').find(l => /curl:/.test(l)) || '',
+  };
+}
+
+const targets = one ? [{ path: one, expect: null, is: 'asked for directly' }]
+  : has('--api') ? API : [...ROUTES, ...API];
+
+const rows = targets.map(t => {
+  const r = get(t.path, one !== undefined);
+  const verdict = r.blocked ? 'BLOCKED'
+    : t.expect === null ? (r.status >= 200 && r.status < 400 ? 'ok' : 'wrong')
+    : r.status === t.expect ? 'ok' : 'wrong';
+  return { ...t, ...r, verdict };
+});
+
+const blocked = rows.filter(r => r.verdict === 'BLOCKED');
+const wrong = rows.filter(r => r.verdict === 'wrong');
+
+if (JSON_OUT) {
+  console.log(JSON.stringify({
+    origin: ORIGIN,
+    /* `ok` is deliberately false when nothing could be read. A monitor that treats "I could not
+       look" as "all clear" is worse than no monitor. */
+    ok: wrong.length === 0 && blocked.length === 0,
+    reachable: blocked.length === 0,
+    checked: rows.length, wrong: wrong.length, blocked: blocked.length,
+    rows: rows.map(({ body, headers, ...r }) => r),
+  }, null, 2));
+  process.exit(wrong.length || blocked.length ? 1 : 0);
+}
+
+console.log(`${ORIGIN}  (GET only)\n`);
+for (const r of rows) {
+  const mark = { ok: '  ok  ', wrong: ' WRONG', BLOCKED: 'BLOCK ' }[r.verdict];
+  const got = r.verdict === 'BLOCKED' ? '  ---' : String(r.status).padStart(5);
+  const want = r.expect === null ? '' : r.status === r.expect ? '' : `  expected ${r.expect}`;
+  console.log(`${mark} ${got}  ${String(r.bytes).padStart(8)}b ${String(r.ms + 'ms').padStart(7)}  ${r.path.padEnd(34)} ${r.is}${want}`);
+}
+
+if (one) {
+  const r = rows[0];
+  if (r.headers) console.log('\n' + r.headers);
+  if (BODY) console.log('\n' + r.body.split('\n').slice(0, 60).join('\n'));
+}
+
+if (blocked.length) {
+  console.log(`\nBLOCKED: ${blocked.length}/${rows.length} routes could not be reached at all.`);
+  console.log(`  ${rows[0].err || 'the egress proxy refused the connection'}`);
+  console.log(`  This says NOTHING about production. ${ORIGIN.replace(/^https?:\/\//, '')} is not on this`);
+  console.log('  environment\'s network allowlist, so no check here has an opinion yet.');
+  console.log('  Fix: add the host to the environment\'s network policy (claude.ai -> the environment');
+  console.log('  that runs this session), or run ops/prod from a machine that can reach the site.');
+  console.log('  Diagnose with: curl -sS "$HTTPS_PROXY/__agentproxy/status"');
+}
+if (wrong.length) {
+  console.log(`\n${wrong.length} route(s) answered with something other than what this expects:`);
+  for (const r of wrong) console.log(`  ${r.path}: got ${r.status}, expected ${r.expect} — ${r.is}`);
+  const leaked = wrong.filter(r => r.mustNotExist && r.status === 200);
+  if (leaked.length) {
+    console.log('\n  PUBLISHED WHAT SHOULD BE PRIVATE:');
+    for (const r of leaked) console.log(`    ${ORIGIN}${r.path} is on the public web`);
+    console.log('  .assetsignore is the only thing between a repo file and the web. Check it, redeploy.');
+  }
+}
+process.exit(wrong.length || blocked.length ? 1 : 0);

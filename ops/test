@@ -1,0 +1,166 @@
+#!/usr/bin/env node
+/* The whole suite, one command, one number.
+ *
+ *   ops/test              every suite, a line each, then the total
+ *   ops/test --json       the same verdict, machine-readable, for a routine to read
+ *   ops/test catalog      only suites whose path contains "catalog"
+ *   ops/test --bless      write the current counts back to ops/baseline.json
+ *
+ * Green and red are not enough. A suite that quietly stops asserting something is green, and a
+ * refactor that deletes forty assertions along with the code they covered is green twice over.
+ * So this reads the count out of every suite and compares it to ops/baseline.json: a count that
+ * FALLS is a failure even when every remaining assertion passes. A count that rises is fine and
+ * prints a nudge to bless the new number.
+ *
+ * Three outcomes per suite, and the third is the one that usually gets lost:
+ *
+ *   passed   exit 0, and a "N passed, 0 failed" line this can find.
+ *   failed   exit non-zero, or a count line saying so.
+ *   skipped  exit 2, which this repo already uses to mean "I could not run, and here is why".
+ *            Reported on its own line and counted separately, never folded into the total.
+ *
+ * A suite that exits 0 while printing no count at all is a FAILURE here, not a pass. A harness
+ * that crashed after its last console.log looks exactly like one that had nothing to say, and
+ * treating that as success is how a wave ships unverified.
+ */
+
+'use strict';
+const { execFileSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+
+const ROOT = path.join(__dirname, '..');
+const BASELINE = path.join(__dirname, 'baseline.json');
+const argv = process.argv.slice(2);
+const JSON_OUT = argv.includes('--json');
+const BLESS = argv.includes('--bless');
+const filter = argv.find(a => !a.startsWith('-'));
+
+/* Every suite in the repo, discovered rather than listed, so a new Tools/*.test.js is picked up
+   by writing it. The two directories are separate because the iOS ones are a port's tests: they
+   count, but a web-side operator wants to see them apart from the web-side ones. */
+function suitesIn(dir, label) {
+  const abs = path.join(ROOT, dir);
+  if (!fs.existsSync(abs)) return [];
+  return fs.readdirSync(abs)
+    .filter(f => /\.test\.(js|mjs)$/.test(f))
+    .sort()
+    .map(f => ({ label, rel: `${dir}/${f}` }));
+}
+let suites = [...suitesIn('Tools', 'web'), ...suitesIn('ios/Tools', 'ios')];
+if (filter) suites = suites.filter(s => s.rel.includes(filter));
+
+const baseline = fs.existsSync(BASELINE) ? JSON.parse(fs.readFileSync(BASELINE, 'utf8')) : { suites: {} };
+
+/* "396 passed, 0 failed" is the shape every harness here already prints. Taking the LAST match
+   matters: several suites print a per-section tally before the final one. */
+function readCount(out) {
+  const all = [...out.matchAll(/(\d+)\s+passed,\s+(\d+)\s+failed/g)];
+  if (!all.length) return null;
+  const m = all[all.length - 1];
+  return { passed: +m[1], failed: +m[2] };
+}
+
+const results = [];
+for (const s of suites) {
+  const started = process.hrtime.bigint();
+  let out = '', code = 0;
+  try {
+    out = execFileSync(process.execPath, [path.join(ROOT, s.rel)], {
+      cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+      maxBuffer: 64 * 1024 * 1024, timeout: 10 * 60 * 1000,
+    });
+  } catch (e) {
+    out = (e.stdout || '') + (e.stderr || '');
+    code = e.status === undefined || e.status === null ? 1 : e.status;
+    if (e.killed) { out += '\nTIMED OUT after 10 minutes'; code = 1; }
+  }
+  const ms = Number(process.hrtime.bigint() - started) / 1e6;
+  const count = readCount(out);
+
+  let status;
+  if (code === 2) status = 'skipped';
+  else if (code !== 0) status = 'failed';
+  else if (!count) status = 'failed';                 // exit 0 with nothing to show for it
+  else if (count.failed > 0) status = 'failed';       // green exit, red count: believe the count
+  else status = 'passed';
+
+  results.push({
+    suite: s.rel, kind: s.label, status, ms: Math.round(ms),
+    passed: count ? count.passed : 0,
+    failed: count ? count.failed : 0,
+    base: baseline.suites[s.rel] === undefined ? null : baseline.suites[s.rel],
+    /* The tail is what an operator reads. Whole outputs belong in a file, not a context window:
+       one failure in this repo's history dumped 745 KB into one. */
+    tail: status === 'passed' ? '' : out.split('\n').filter(Boolean).slice(-25).join('\n'),
+  });
+}
+
+/* ---- the count is the point ---- */
+const ran = results.filter(r => r.status !== 'skipped');
+const total = ran.reduce((a, r) => a + r.passed, 0);
+const broken = results.filter(r => r.status === 'failed');
+const skipped = results.filter(r => r.status === 'skipped');
+
+/* A suite whose count fell is a regression even if it is green: something stopped being asked. */
+const shrunk = results.filter(r => r.status === 'passed' && r.base !== null && r.passed < r.base);
+const grown = results.filter(r => r.status === 'passed' && r.base !== null && r.passed > r.base);
+const unblessed = results.filter(r => r.status !== 'skipped' && r.base === null);
+
+const verdict = {
+  ok: broken.length === 0 && shrunk.length === 0,
+  total, suites: results.length,
+  failed: broken.length, skipped: skipped.length,
+  baselineTotal: baseline.total === undefined ? null : baseline.total,
+  shrunk: shrunk.map(r => ({ suite: r.suite, was: r.base, now: r.passed })),
+  results: results.map(({ tail, ...r }) => r),
+  failures: broken.map(r => ({ suite: r.suite, tail: r.tail })),
+};
+
+if (BLESS) {
+  const next = { total, suites: {} };
+  for (const r of results) if (r.status !== 'skipped') next.suites[r.suite] = r.passed;
+  fs.writeFileSync(BASELINE, JSON.stringify(next, null, 2) + '\n');
+  console.log(`blessed ${Object.keys(next.suites).length} suites at ${total} assertions -> ops/baseline.json`);
+  process.exit(0);
+}
+
+if (JSON_OUT) {
+  console.log(JSON.stringify(verdict, null, 2));
+  process.exit(verdict.ok ? 0 : 1);
+}
+
+const mark = { passed: '  ok  ', failed: ' FAIL ', skipped: ' skip ' };
+for (const r of results) {
+  const drift = r.base === null ? '  (unblessed)'
+    : r.passed < r.base ? `  ${r.base} -> ${r.passed}  FELL`
+    : r.passed > r.base ? `  ${r.base} -> ${r.passed}` : '';
+  const n = r.status === 'skipped' ? '' : String(r.passed).padStart(5);
+  console.log(`${mark[r.status]}${n.padEnd(6)} ${r.suite.padEnd(34)} ${String(r.ms + 'ms').padStart(7)}${drift}`);
+}
+
+for (const r of skipped) {
+  console.log(`\n  skipped: ${r.suite}\n${r.tail.split('\n').map(l => '    ' + l).join('\n')}`);
+}
+for (const r of broken) {
+  console.log(`\n  FAILED: ${r.suite}\n${r.tail.split('\n').map(l => '    ' + l).join('\n')}`);
+}
+
+console.log(`\n${total} assertions across ${ran.length} suites` +
+  (baseline.total !== undefined ? `, baseline ${baseline.total}` : '') +
+  (skipped.length ? `, ${skipped.length} skipped` : '') +
+  (broken.length ? `, ${broken.length} SUITES FAILING` : ''));
+
+if (shrunk.length) {
+  console.log('\nassertion counts FELL — something stopped being asked:');
+  for (const r of shrunk) console.log(`  ${r.suite}: ${r.base} -> ${r.passed}`);
+  console.log('  Fix the deletion, or bless it on purpose with: ops/test --bless');
+}
+if (grown.length && !broken.length) {
+  console.log(`\n${grown.length} suite(s) grew. Bless the new counts: ops/test --bless`);
+}
+if (unblessed.length) {
+  console.log(`\n${unblessed.length} suite(s) have no baseline. Record one: ops/test --bless`);
+}
+
+process.exit(verdict.ok ? 0 : 1);

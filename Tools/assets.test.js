@@ -85,8 +85,20 @@ ok('nothing is published that was not meant to be', extra.length === 0,
   '\n      → add it to .assetsignore, or to EXPECTED in this file if it belongs on the site');
 ok('everything the pages need is published', gone.length === 0,
   'missing: ' + gone.join(', '));
-ok('the published set is exactly sixteen files', published.length === 16,
+/* version.txt is the exception, and it is named rather than tolerated by a loosened count.
+   ops/deploy writes it at deploy time and ops/health reads it back off the live site to prove
+   parity; a file recording the sha of the commit that contains it could not exist, so it is
+   generated and never committed. Present or absent, its SHAPE is still asserted — a version
+   stamp that is not a commit sha would make every parity check agree with itself about
+   nothing. */
+const stamped = published.includes('version.txt');
+ok('the published set is exactly sixteen files' + (stamped ? ', plus the deploy stamp' : ''),
+  published.length === (stamped ? 17 : 16),
   published.length + ': ' + published.join(', '));
+if (stamped) {
+  const v = fs.readFileSync(path.join(ROOT, 'version.txt'), 'utf8').trim();
+  ok('version.txt holds a commit sha', /^[0-9a-f]{40}$/.test(v), JSON.stringify(v.slice(0, 60)));
+}
 // The other PDF in this directory is a scan that has never been served and must stay that way.
 ok('the scan stays off the site', ignored('BookScanCenter.pdf'));
 
@@ -114,14 +126,17 @@ section('the things that must never ship');
 // Named individually, because each of these is a specific thing that would be bad to serve and
 // a pattern in .assetsignore is easy to weaken without noticing.
 const FORBIDDEN = [
-  '.wrangler', '.git', '.claude', 'src', 'Tools', 'fixtures', 'ios', 'Floors',
+  '.wrangler', '.git', '.claude', 'src', 'Tools', 'ops', 'fixtures', 'ios', 'Floors',
   'biomed-shelf-ranges.json', 'Instructions.txt', 'wrangler.jsonc', '.assetsignore', '.gitignore',
+  // Ignored by git as well, which is exactly why it needs naming here: a file this test cannot
+  // see in `git status` still reaches the upload, because the upload reads the working tree.
+  'node_modules', 'package.json', 'package-lock.json',
 ];
 for (const f of FORBIDDEN) {
   ok(f + ' stays off the site', ignored(f), 'not matched by any .assetsignore pattern');
 }
 // And by extension, anything inside them.
-for (const f of ['src/worker.js', 'Tools/worker.test.js', 'ios/App.swift', '.wrangler/cache/wrangler-account.json']) {
+for (const f of ['src/worker.js', 'Tools/worker.test.js', 'ops/test', 'ops/health', 'ios/App.swift', '.wrangler/cache/wrangler-account.json']) {
   ok(f + ' stays off the site', ignored(f));
 }
 for (const f of ['BookScanCenter.pdf', 'README.md', 'CATALOG.md', 'notes.py']) {

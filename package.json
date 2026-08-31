@@ -1,0 +1,14 @@
+{
+  "name": "shelfmark-ops",
+  "private": true,
+  "description": "Tooling for the Shelfmark site. Not published: .assetsignore keeps this file, the lockfile and node_modules off the web, and Tools/assets.test.js asserts that.",
+  "scripts": {
+    "test": "ops/test",
+    "health": "ops/health",
+    "prod": "ops/prod",
+    "ui": "node Tools/ui.test.js"
+  },
+  "devDependencies": {
+    "playwright": "1.56.1"
+  }
+}

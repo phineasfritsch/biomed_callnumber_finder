@@ -22,6 +22,14 @@ Instructions.txt
 fixtures/
 Tools/
 
+# Node tooling. This directory was NOT listed until the browser harness needed Playwright, and
+# that is the whole trap in one line: .gitignore already had node_modules, so it was invisible
+# in `git status` and would still have been uploaded, because Cloudflare uploads the working
+# tree and not the index. One `npm i` would have published a few thousand files.
+node_modules/
+package.json
+package-lock.json
+
 # Git internals (CF was choking on the 991 MB pack file)
 .git/
 
@@ -37,6 +45,12 @@ Tools/
 
 # Source, not site
 ios/
+
+# The operator machinery: the aggregate test command, the health check, the production reader,
+# the deploy wrapper and the work queue. It runs the site; it is not part of it. Same reasoning
+# as Tools/ above, and the same trap — the assets directory is the repo root, so `ops/test`
+# was on the public web the moment it was written. Tools/assets.test.js caught it.
+ops/
 
 # Headcount is its own Pages project (biocount.phineasfritsch.com) with its own Worker and its
 # own origin allowlist. It only lives in this repo so the iOS app can be built from the same

@@ -3,3 +3,5 @@
 # this keeps it out of the repo.
 .wrangler/
 node_modules/
+version.txt
+ops/shots/

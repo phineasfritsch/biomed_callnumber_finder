@@ -1,0 +1,236 @@
+#!/usr/bin/env node
+/* Is the state sane? Distinct from the tests, and the distinction is the point.
+ *
+ *   ops/health           every check, human-readable
+ *   ops/health --json    one machine-readable verdict, for a routine to branch on
+ *   ops/health --local   skip everything that needs the network
+ *
+ * Tools/*.test.js checks the CODE. This checks the WORLD: the dataset the app is only as good
+ * as, whether what is committed is what is deployed, and whether the four services the site
+ * leans on are answering. A repair loop needs a verdict it can branch on, not a log to read, so
+ * every check returns one of exactly three states and the third is load-bearing:
+ *
+ *   ok        the check looked and was satisfied.
+ *   BAD       the check looked and was not. Someone has to do something.
+ *   BLOCKED   the check could not look. It has NO OPINION. This is not a pass, it is not a
+ *             failure, and collapsing it into either is the single easiest way to build a
+ *             monitor that reports green for a week about a site that is down.
+ *
+ * Exit codes: 0 all ok · 1 something is BAD · 3 nothing is BAD but something is BLOCKED.
+ *
+ * On thresholds: every number below was measured against the real dataset before it was written
+ * here, not guessed and then confirmed by a fixture. Where reality turned out to be messier than
+ * a clean rule would like, the check was dropped rather than tuned to fire — see the note about
+ * range overlap in ops/QUEUE.md. A check that cries wolf gets muted, and a muted check protects
+ * nothing.
+ */
+
+'use strict';
+const { execFileSync, spawnSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+
+const ROOT = path.join(__dirname, '..');
+const argv = process.argv.slice(2);
+const JSON_OUT = argv.includes('--json');
+const LOCAL_ONLY = argv.includes('--local');
+const ORIGIN = (process.env.SHELFMARK_ORIGIN || 'https://shelfmark.phineasfritsch.com').replace(/\/$/, '');
+
+const checks = [];
+const add = (name, group, state, detail, evidence) => checks.push({ name, group, state, detail, evidence });
+const ok = (n, g, d, e) => add(n, g, 'ok', d, e);
+const bad = (n, g, d, e) => add(n, g, 'BAD', d, e);
+const blocked = (n, g, d) => add(n, g, 'BLOCKED', d);
+const sh = (cmd, args) => { try { return execFileSync(cmd, args, { cwd: ROOT, encoding: 'utf8' }).trim(); } catch { return null; } };
+
+/* ================= the dataset the whole tool rests on ================= */
+
+const DATA_EXPECT = {
+  /* Measured 2026-08-31 against biomed-shelf-ranges.json at be399f5. These are not round numbers
+     chosen to look tidy; they are what is actually on the shelves as surveyed. */
+  faces: 453,
+  perLevel: { 1: 48, 2: 49, 3: 50, 5: 43, 6: 49, 7: 50, 8: 49, 9: 17, 10: 49, 11: 49 },
+  sides: { left: 221, right: 218, single: 14 },
+  serialRuns: 7,
+};
+
+try {
+  const coreSrc = fs.readFileSync(path.join(ROOT, 'shelf-core.js'), 'utf8');
+  const shipped = JSON.parse(fs.readFileSync(path.join(ROOT, 'shelf-data.js'), 'utf8').match(/\{[\s\S]*\}/)[0]);
+  const master = JSON.parse(fs.readFileSync(path.join(ROOT, 'biomed-shelf-ranges.json'), 'utf8'));
+  const box = {};
+  new Function('e', coreSrc.slice(coreSrc.indexOf('function parseCN(raw)'), coreSrc.indexOf('/* ===== layout =====')) +
+    ';Object.assign(e,{parseCN,cmpCN})')(box);
+  const { parseCN, cmpCN } = box;
+  const keys = Object.keys(shipped);
+
+  /* The master JSON is the source of truth and shelf-data.js is the copy that ships. Two copies
+     of one dataset is a drift waiting to happen, and the drift would be invisible: the app would
+     be right about a shelf the survey no longer says exists. */
+  const drift = [...new Set([...keys, ...Object.keys(master)])]
+    .filter(k => JSON.stringify(shipped[k]) !== JSON.stringify(master[k]));
+  drift.length
+    ? bad('the shipped dataset matches the survey', 'dataset', `${drift.length} face(s) differ between shelf-data.js and biomed-shelf-ranges.json`, drift.slice(0, 5).join(', '))
+    : ok('the shipped dataset matches the survey', 'dataset', `${keys.length} faces, byte-identical to the master JSON`);
+
+  keys.length === DATA_EXPECT.faces
+    ? ok('every surveyed shelf face is still there', 'dataset', `${keys.length} faces`)
+    : bad('every surveyed shelf face is still there', 'dataset',
+        `${keys.length} faces, expected ${DATA_EXPECT.faces}`,
+        keys.length < DATA_EXPECT.faces ? 'faces have been DELETED — a shelf that vanishes from the map sends someone to the wrong floor' : 'faces were added; if that was the survey, update DATA_EXPECT here');
+
+  const unparsed = keys.filter(k => !parseCN(shipped[k].start) || !parseCN(shipped[k].end));
+  unparsed.length
+    ? bad('every range endpoint parses', 'dataset', `${unparsed.length} endpoint(s) the comparator cannot read`, unparsed.slice(0, 5).join(', '))
+    : ok('every range endpoint parses', 'dataset', 'all 906 endpoints');
+
+  const reversed = keys.filter(k => cmpCN(shipped[k].start, shipped[k].end) > 0);
+  reversed.length
+    ? bad('no range runs backwards', 'dataset', `${reversed.length} face(s) whose start sorts after its end`, reversed.slice(0, 5).join(', '))
+    : ok('no range runs backwards', 'dataset', 'all 453 faces ascend');
+
+  const serial = keys.filter(k => cmpCN(shipped[k].start, shipped[k].end) === 0).length;
+  serial === DATA_EXPECT.serialRuns
+    ? ok('the serial runs are the known ones', 'dataset', `${serial} faces where start equals end`)
+    : bad('the serial runs are the known ones', 'dataset', `${serial} serial runs, expected ${DATA_EXPECT.serialRuns}`,
+        'a range collapsing to a point is either a new serial run or a transcription that lost its end label');
+
+  const perLevel = {}; const sides = {};
+  for (const k of keys) { const [l, , s] = k.split('|'); perLevel[l] = (perLevel[l] || 0) + 1; sides[s] = (sides[s] || 0) + 1; }
+  const levelDiff = Object.keys({ ...perLevel, ...DATA_EXPECT.perLevel })
+    .filter(l => perLevel[l] !== DATA_EXPECT.perLevel[l])
+    .map(l => `level ${l}: ${perLevel[l] || 0} not ${DATA_EXPECT.perLevel[l] || 0}`);
+  levelDiff.length
+    ? bad('each level has the faces it was surveyed with', 'dataset', levelDiff.join('; '))
+    : ok('each level has the faces it was surveyed with', 'dataset', `10 levels, no level 4 (Reference is shelved straight by call number)`);
+  const sideDiff = Object.keys({ ...sides, ...DATA_EXPECT.sides }).filter(s => sides[s] !== DATA_EXPECT.sides[s]);
+  sideDiff.length
+    ? bad('the side vocabulary is unchanged', 'dataset', sideDiff.map(s => `${s}: ${sides[s] || 0} not ${DATA_EXPECT.sides[s] || 0}`).join('; '))
+    : ok('the side vocabulary is unchanged', 'dataset', 'left/right/single only');
+} catch (e) {
+  bad('the dataset can be read at all', 'dataset', e.message);
+}
+
+/* ================= is what is committed what is deployed ================= */
+
+const branch = sh('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
+const head = sh('git', ['rev-parse', 'HEAD']);
+const dirty = sh('git', ['status', '--porcelain']);
+dirty
+  ? bad('the working tree is clean', 'git', `${dirty.split('\n').length} uncommitted path(s)`, dirty.split('\n').slice(0, 6).join('\n      '))
+  : ok('the working tree is clean', 'git', `on ${branch}`);
+
+const upstream = sh('git', ['rev-parse', '--abbrev-ref', '@{u}']);
+if (!upstream) {
+  bad('this branch is pushed', 'git', `${branch} has no upstream — nothing off this machine has the work`);
+} else {
+  const ahead = sh('git', ['rev-list', '--count', `${upstream}..HEAD`]);
+  ahead === '0'
+    ? ok('this branch is pushed', 'git', `${branch} matches ${upstream} at ${head.slice(0, 7)}`)
+    : bad('this branch is pushed', 'git', `${ahead} commit(s) not on ${upstream}`,
+        'Push BEFORE deploying. Deploying first leaves a window where anything reading the repo sees older code and calls it live.');
+}
+
+/* ================= the world ================= */
+
+function fetchStatus(url, ms = 20000) {
+  const r = spawnSync('curl', ['-sS', '-m', String(Math.ceil(ms / 1000)), '-o', '/dev/null',
+    '-w', '%{http_code}', url], { encoding: 'utf8' });
+  const code = parseInt((r.stdout || '0').trim(), 10) || 0;
+  const stderr = r.stderr || '';
+  return { code, blockedByProxy: /CONNECT tunnel failed|403|407/.test(stderr) && code === 0, err: stderr.trim().split('\n')[0] || '' };
+}
+
+if (LOCAL_ONLY) {
+  blocked('the site is up', 'world', '--local: not asked');
+} else {
+  const root = fetchStatus(ORIGIN + '/');
+  if (root.blockedByProxy) {
+    blocked('the site is up', 'world', `${ORIGIN} is not on this environment's network allowlist`);
+    blocked('a wrong URL is a real 404', 'world', 'same');
+    blocked('what must stay private is not published', 'world', 'same');
+    blocked('the worker answers', 'world', 'same');
+    blocked('the deployed build is this commit', 'world', 'same');
+    for (const u of ['UCLA Alma SRU', 'LibCal', 'Primo', 'LibGuides']) blocked(`${u} is answering`, 'upstream', 'same');
+  } else if (root.code !== 200) {
+    bad('the site is up', 'world', `${ORIGIN}/ returned ${root.code || 'nothing'}`, root.err);
+  } else {
+    ok('the site is up', 'world', `${ORIGIN}/ returns 200`);
+
+    const nf = fetchStatus(ORIGIN + '/definitely-not-a-page');
+    nf.code === 404
+      ? ok('a wrong URL is a real 404', 'world', '404-page handling is live')
+      : bad('a wrong URL is a real 404', 'world', `got ${nf.code}`,
+          'a 200 here means every wrong URL serves the app and every link checker reports the site as perfect');
+
+    const leaks = ['/wrangler.jsonc', '/biomed-shelf-ranges.json', '/Instructions.txt', '/README.md', '/src/worker.js', '/ops/test', '/package.json']
+      .map(p => ({ p, ...fetchStatus(ORIGIN + p) })).filter(r => r.code === 200);
+    leaks.length
+      ? bad('what must stay private is not published', 'world', `${leaks.length} private path(s) are on the public web`, leaks.map(l => ORIGIN + l.p).join('\n      '))
+      : ok('what must stay private is not published', 'world', '7 paths checked, all refused');
+
+    const api = ['/api/databases', '/api/articles?q=asthma&limit=1', '/api/suggest?q=asthmaa']
+      .map(p => ({ p, ...fetchStatus(ORIGIN + p, 25000) }));
+    const apiBad = api.filter(r => r.code !== 200);
+    apiBad.length
+      ? bad('the worker answers', 'world', apiBad.map(r => `${r.p} -> ${r.code}`).join('; '))
+      : ok('the worker answers', 'world', 'all three routes return 200');
+
+    /* Parity is a fact or it is a hope. /version.txt carries the commit the running deployment
+       was built from; ops/deploy writes it. Absent, this cannot claim parity and says so. */
+    const v = spawnSync('curl', ['-sS', '-m', '15', ORIGIN + '/version.txt'], { encoding: 'utf8' });
+    const deployed = (v.stdout || '').trim().split(/\s+/)[0];
+    if (!deployed || deployed.startsWith('<')) {
+      blocked('the deployed build is this commit', 'world', '/version.txt is not published yet — run ops/deploy once to start stamping it');
+    } else if (head && deployed === head) {
+      ok('the deployed build is this commit', 'world', `${deployed.slice(0, 7)} live and local`);
+    } else {
+      bad('the deployed build is this commit', 'world', `live is ${String(deployed).slice(0, 7)}, local HEAD is ${String(head).slice(0, 7)}`,
+        'the site is running code other than what is checked out here');
+    }
+  }
+
+  for (const [label, url] of [
+    ['UCLA Alma SRU', 'https://ucla.alma.exlibrisgroup.com/view/sru/01UCS_LAL?version=1.2&operation=searchRetrieve&recordSchema=marcxml&maximumRecords=0&query=alma.all_for_ui%3Dasthma'],
+    ['LibCal', 'https://api2.libcal.com/api_hours_grid.php?iid=1409&format=json&weeks=1'],
+    ['Primo', 'https://search.library.ucla.edu/primaws/rest/pub/pnxs?q=any,contains,asthma&limit=1&vid=01UCS_LAL:UCLA'],
+    ['LibGuides', 'https://lgapi-us.libapps.com/widgets.php?site_id=705&widget_type=2&output_format=1'],
+  ]) {
+    if (checks.some(c => c.name === `${label} is answering`)) continue;
+    const r = fetchStatus(url, 25000);
+    if (r.blockedByProxy) blocked(`${label} is answering`, 'upstream', 'not on the network allowlist');
+    else if (r.code >= 200 && r.code < 400) ok(`${label} is answering`, 'upstream', `HTTP ${r.code}`);
+    else bad(`${label} is answering`, 'upstream', `HTTP ${r.code || 'no response'}`,
+      'the site degrades rather than breaking, but this upstream is down for everyone');
+  }
+}
+
+/* ================= verdict ================= */
+
+const bads = checks.filter(c => c.state === 'BAD');
+const blockeds = checks.filter(c => c.state === 'BLOCKED');
+const exit = bads.length ? 1 : blockeds.length ? 3 : 0;
+
+if (JSON_OUT) {
+  console.log(JSON.stringify({
+    ok: exit === 0, sane: bads.length === 0, exit,
+    commit: head, branch,
+    counts: { ok: checks.length - bads.length - blockeds.length, bad: bads.length, blocked: blockeds.length },
+    checks,
+  }, null, 2));
+  process.exit(exit);
+}
+
+let group = '';
+for (const c of checks) {
+  if (c.group !== group) { group = c.group; console.log(`\n${group}`); }
+  const m = { ok: '  ok  ', BAD: ' BAD  ', BLOCKED: ' ---  ' }[c.state];
+  console.log(`${m}${c.name}${c.detail ? `  —  ${c.detail}` : ''}`);
+  if (c.evidence) console.log(String(c.evidence).split('\n').map(l => '        ' + l.trim()).join('\n'));
+}
+console.log(`\n${checks.length - bads.length - blockeds.length} ok, ${bads.length} bad, ${blockeds.length} could not be checked`);
+if (blockeds.length && !bads.length) {
+  console.log('\nNothing is known to be wrong, and nothing is known about production either.');
+  console.log(`${blockeds.length} check(s) never got to look. Exit 3 means "no opinion", not "all clear".`);
+}
+process.exit(exit);

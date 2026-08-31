@@ -1,0 +1,17 @@
+{
+  "total": 1894,
+  "suites": {
+    "Tools/assets.test.js": 117,
+    "Tools/catalog.test.js": 404,
+    "Tools/sru.test.js": 9,
+    "Tools/style.test.js": 172,
+    "Tools/ui.test.js": 52,
+    "Tools/walk.test.js": 52,
+    "Tools/worker.test.js": 259,
+    "Tools/xss.test.js": 44,
+    "ios/Tools/confusable.test.js": 33,
+    "ios/Tools/fonts.test.js": 37,
+    "ios/Tools/geometry.test.js": 430,
+    "ios/Tools/swiftcheck.test.js": 285
+  }
+}

@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+# Ship it, in the one order that cannot lie.
+#
+#   ops/deploy              the gate, then push, then deploy, then read the version back
+#   ops/deploy --dry-run    everything except the push and the deploy
+#   ops/deploy --skip-ui    skip the browser suite (it needs node_modules)
+#
+# THE ORDER IS THE POINT, and it is push-then-deploy, never the reverse. Deploying first opens a
+# window where the site is running code that the repository does not yet have. Anything reading
+# the repo during that window — a person, a link checker, a scheduled routine that clones fresh —
+# sees older code and honestly describes it as live. A three-minute gap once cost a scheduled
+# checker its entire headline.
+#
+# Nothing here deploys past a red gate. The gate is the whole value of the file; a deploy script
+# that can be talked into shipping anyway is just `wrangler deploy` with extra steps.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+DRY=0; SKIP_UI=0
+for a in "$@"; do
+  case "$a" in
+    --dry-run) DRY=1 ;;
+    --skip-ui) SKIP_UI=1 ;;
+    *) echo "unknown flag: $a" >&2; exit 64 ;;
+  esac
+done
+
+step() { printf '\n\033[1m== %s\033[0m\n' "$1"; }
+die()  { printf '\n\033[31mSTOPPED: %s\033[0m\n' "$1" >&2; exit 1; }
+
+step "1. the working tree"
+[ -z "$(git status --porcelain)" ] || die "uncommitted changes. Commit them; a deploy from a dirty tree is not reproducible.
+$(git status --porcelain | head -10)"
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+HEAD_SHA=$(git rev-parse HEAD)
+echo "  ${BRANCH} at ${HEAD_SHA:0:7}"
+
+step "2. the suite"
+# Piped to tail on purpose. One test failure in this repo's history put 745 KB into a context
+# window; the tail is what an operator reads and the file is where the rest goes.
+if ! ./ops/test > /tmp/shelfmark-deploy-test.log 2>&1; then
+  tail -30 /tmp/shelfmark-deploy-test.log
+  die "the suite is red. Full log: /tmp/shelfmark-deploy-test.log"
+fi
+tail -3 /tmp/shelfmark-deploy-test.log
+
+if [ "$SKIP_UI" = 0 ]; then
+  step "3. the browser"
+  if [ -d node_modules/playwright ]; then
+    if ! node Tools/ui.test.js > /tmp/shelfmark-deploy-ui.log 2>&1; then
+      tail -25 /tmp/shelfmark-deploy-ui.log
+      die "a user journey is broken. Full log: /tmp/shelfmark-deploy-ui.log"
+    fi
+    tail -2 /tmp/shelfmark-deploy-ui.log
+  else
+    echo "  playwright is not installed — the browser journeys did not run."
+    echo "  That is a gate that did not happen, not a gate that passed."
+    echo "  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install"
+  fi
+else
+  step "3. the browser"; echo "  skipped by --skip-ui — a gate that did not happen"
+fi
+
+step "4. is the state sane"
+set +e; ./ops/health --local; HEALTH=$?; set -e
+[ "$HEALTH" -eq 1 ] && die "ops/health reports the state is not sane. Fix that before shipping."
+echo "  (exit ${HEALTH}: 0 all ok, 3 means something could not be checked)"
+
+step "5. push BEFORE deploying"
+if [ "$DRY" = 1 ]; then
+  echo "  --dry-run: would run  git push -u origin ${BRANCH}"
+else
+  n=0
+  until git push -u origin "$BRANCH"; do
+    n=$((n+1)); [ "$n" -ge 4 ] && die "push failed four times. Not deploying: the repo must have the code first."
+    s=$((2 ** n)); echo "  push failed, retrying in ${s}s"; sleep "$s"
+  done
+fi
+
+step "6. stamp the version"
+# What makes parity checkable at all. /version.txt is the one file the deployment writes about
+# itself, and ops/health compares it to local HEAD. Generated, never committed: a file that
+# recorded the sha of the commit containing it could not exist.
+printf '%s\n' "$HEAD_SHA" > version.txt
+echo "  version.txt <- ${HEAD_SHA:0:7}"
+
+step "7. deploy"
+if [ "$DRY" = 1 ]; then
+  echo "  --dry-run: would run  npx wrangler deploy"
+else
+  npx wrangler deploy || die "wrangler failed. The push already happened, so the repo is ahead of the site; re-run once the deploy problem is fixed."
+fi
+
+step "8. what is actually live"
+if [ "$DRY" = 1 ]; then
+  echo "  --dry-run: would read /version.txt back off the site"
+  exit 0
+fi
+ORIGIN="${SHELFMARK_ORIGIN:-https://shelfmark.phineasfritsch.com}"
+sleep 3
+LIVE=$(curl -sS -m 20 "${ORIGIN}/version.txt" 2>/dev/null | tr -d '[:space:]' || true)
+if [ -z "$LIVE" ]; then
+  echo "  could not read ${ORIGIN}/version.txt — parity is UNKNOWN, not confirmed."
+  echo "  Check by hand before believing this deploy landed."
+  exit 3
+elif [ "$LIVE" = "$HEAD_SHA" ]; then
+  echo "  live: ${LIVE:0:7}  ==  local: ${HEAD_SHA:0:7}"
+  echo ""
+  echo "Now look at it. ops/prod, and then a browser:"
+  echo "  node Tools/ui.test.js --origin ${ORIGIN}"
+  echo "  Taste is not delegable — open the page and read it."
+else
+  die "the site reports ${LIVE:0:7} but this is ${HEAD_SHA:0:7}. The deploy did not land, or it landed on something else."
+fi
