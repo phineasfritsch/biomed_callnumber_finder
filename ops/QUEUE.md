@@ -11,6 +11,35 @@ An item that is `BLOCKED` names what would unblock it and who can do that.
 
 ---
 
+## DONE · The scheduled routines had no repository to check
+
+**What happened.** The first tester run reported `could not run. No repository is present in this
+environment` and stopped. That part was the brief working: it refused to round a gate it never
+reached up to a pass. But a monitor that cannot reach the thing it monitors reports nothing, every
+hour, forever.
+
+**Why.** `create_trigger` fires a fresh session and has no `source_url` parameter, so nothing is
+cloned. Both briefs assumed a checkout would be present.
+
+**Fixed.** The clone is in the routine's own hands now, and `ops/bootstrap` verifies the result
+before any gate runs. The incantation matters:
+
+    git clone --depth 1 --branch <branch> --filter=blob:none --sparse \
+      https://github.com/phineasfritsch/biomed_callnumber_finder <dir>
+    cd <dir> && git sparse-checkout set --no-cone '/*' '!/Floors'
+
+A plain clone is 2.1 GB and about forty seconds, because `Floors/` holds the raw shelf photographs.
+Excluding that one directory gives 13 MB in three seconds and every suite still passes: 2102
+assertions green in a sparse tree, measured rather than assumed. `ios/` is deliberately not
+excluded, because it carries 785 of them.
+
+**Verified.** The repository is public and a plain clone can both read and push, so the fixer can
+still push a branch. `ops/bootstrap` was run in a full checkout, in the sparse clone, and against
+`main` where the machinery has not landed; the last case fails with the branch name and a refusal
+to improvise a substitute gate.
+
+---
+
 ## OPEN · Two surfaces answer without looking anything up
 
 **What.** A six-person review panel drove the site and raised 45 findings; 24 survived adversarial

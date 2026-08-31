@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Get a working tree ready to be checked, and say plainly what is in it.
+#
+#   ops/bootstrap              verify this checkout and install what the suite needs
+#   ops/bootstrap --check      verify only, install nothing
+#
+# A scheduled routine fires into a FRESH SESSION WITH NO REPOSITORY. The first tester run said so
+# and stopped, which was the brief working: it reported "could not run" rather than rounding a
+# gate it never reached up to a pass. But a monitor that cannot reach the thing it monitors is a
+# monitor that reports nothing, so the clone belongs in the routine's own hands.
+#
+# The clone itself cannot live here, for the obvious reason. It is in the routine brief, and it is:
+#
+#   git clone --depth 1 --branch <branch> --filter=blob:none --sparse \
+#     https://github.com/phineasfritsch/biomed_callnumber_finder <dir>
+#   cd <dir> && git sparse-checkout set --no-cone '/*' '!/Floors'
+#
+# Four flags, and each is load-bearing. A plain clone of this repository is 2.1 GB and takes about
+# forty seconds, because Floors/ holds the raw shelf photographs the survey was transcribed from.
+# Excluding that one directory gives 13 MB in three seconds, and every suite still passes: the
+# photos are the evidence behind the dataset, not an input to anything that runs. --depth 1
+# because no check here reads history except ops/parity, which reads the current file. Measured,
+# not assumed: 2102 assertions green in the sparse tree.
+#
+# ios/ is NOT excluded. It carries 785 of those assertions.
+
+set -euo pipefail
+cd "$(dirname "$0")/.."
+CHECK_ONLY=0
+[ "${1:-}" = "--check" ] && CHECK_ONLY=1
+
+fail(){ printf '\n\033[31mBOOTSTRAP FAILED: %s\033[0m\n' "$1" >&2; exit 1; }
+
+# The machinery, named individually. A partial checkout that happens to contain ops/test and not
+# ops/parity would run a gate that silently checks less than the operator thinks it does.
+for f in ops/test ops/health ops/prod ops/parity ops/shoot OPERATIONS.md ops/QUEUE.md \
+         Tools/ui.test.js Tools/pins.test.js Tools/cohesion.test.js ops/baseline.json; do
+  [ -f "$f" ] || fail "$f is missing. This is not a full checkout of the branch that carries the
+  operator machinery. Do not improvise a substitute gate: a made-up check that passes is worse
+  than no check. Report which branch you are on and stop."
+done
+
+# The dataset the whole tool rests on. Excluded by sparse-checkout, these would fail deep inside a
+# suite with an unhelpful message.
+for f in biomed-shelf-ranges.json shelf-data.js shelf-core.js index.html site.css src/worker.js; do
+  [ -f "$f" ] || fail "$f is missing — the sparse-checkout pattern excluded something it should not."
+done
+[ -d fixtures ] || fail "fixtures/ is missing; the catalog suite has nothing to read."
+[ -d ios/Tools ] || fail "ios/Tools is missing; 785 assertions would silently not run."
+
+echo "  branch     $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '(detached)')"
+echo "  commit     $(git rev-parse --short HEAD 2>/dev/null || echo '?')"
+echo "  baseline   $(node -e 'const b=require("./ops/baseline.json");console.log(b.total+" assertions across "+Object.keys(b.suites).length+" suites")')"
+echo "  Floors/    $([ -d Floors ] && echo 'present' || echo 'excluded, which is expected and costs nothing')"
+
+if [ "$CHECK_ONLY" = 1 ]; then echo "  --check: nothing installed"; exit 0; fi
+
+# Playwright is the only dependency, and Chromium is already on the image.
+if [ -d node_modules/playwright ]; then
+  echo "  playwright already installed"
+else
+  echo "  installing playwright (Chromium is already on the image)"
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install --no-audit --no-fund >/tmp/bootstrap-npm.log 2>&1 \
+    || fail "npm install failed. Tail of /tmp/bootstrap-npm.log:
+$(tail -12 /tmp/bootstrap-npm.log)"
+fi
+node -e "require('playwright')" 2>/dev/null \
+  || fail "playwright installed but will not load. Tools/ui.test.js is the only suite that opens a
+  browser; without it that gate does not run, which is not the same as passing."
+
+echo "  ready"
