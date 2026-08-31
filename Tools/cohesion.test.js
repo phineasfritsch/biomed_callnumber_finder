@@ -124,6 +124,33 @@ for (const p of PAGES) {
   ok(`${p} says who built it`, /Built by\s*<a[^>]*>\s*Phineas Fritsch/.test(visible(p)) || /Built by Phineas Fritsch/.test(visible(p)));
 }
 
+/* The two pages carrying the site's whole argument are not in the nav, so the footer strings are
+   the only names they have. They had four names across seven footers: /about was "How to use
+   this" on five pages and "How to use it" on /methodology, /methodology was "How it works" on the
+   tool pages and "How it works in detail" on /about, and the 404 omitted the methodology link
+   altogether. The variants lived on exactly the pages a returning reader arrives from. */
+{
+  const names = {};
+  for (const p of PAGES) {
+    for (const m of visible(p).matchAll(/<a href="\/(about|methodology)">([^<]+)<\/a>/g)) {
+      (names[m[1]] = names[m[1]] || {})[m[2].trim()] = (names[m[1]][m[2].trim()] || 0) + 1;
+    }
+  }
+  for (const target of ['about', 'methodology']) {
+    const variants = Object.keys(names[target] || {});
+    ok(`/${target} is called one thing everywhere`, variants.length === 1,
+      `${variants.length} names in use: ${variants.map(v => JSON.stringify(v)).join(', ')}`);
+  }
+  /* And every page offers both, so neither is reachable only from the other. */
+  for (const p of PAGES) {
+    const v = visible(p);
+    for (const target of ['about', 'methodology']) {
+      if (p === `${target}.html`) continue;              // a page does not link to itself
+      ok(`${p} links /${target}`, v.includes(`href="/${target}"`));
+    }
+  }
+}
+
 /* ---- one design system ---- */
 
 section('one design system, defined in one place');

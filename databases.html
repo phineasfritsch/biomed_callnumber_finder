@@ -188,7 +188,7 @@
     }catch(e){
       failed=true;
       out.innerHTML='';
-      setStatus('Could not load the database list: '+e.message+'. The A to Z page itself is at library.ucla.edu.',true);
+      setStatus('Could not reach the database list: '+e.message+'. The A to Z page itself is at library.ucla.edu.',true);
     }finally{ loading=false; }
   }
 

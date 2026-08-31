@@ -164,7 +164,10 @@ const PINS = [
     signature: 'Could not reach the article index',
     why: 'the article index is a different upstream from the catalog and fails separately.' },
   { id: 'databases-failure-points-elsewhere', kind: 'error-text', home: 'databases.html',
-    signature: 'Could not load the database list',
+    /* "Could not reach", so the page's prefix and the worker's sentence agree instead of saying
+       two different things in one breath. The claim is the same one: the list failing says so and
+       points the reader at the library's own A to Z. */
+    signature: 'Could not reach the database list',
     why: 'and the same message points at the library\'s own A-Z, so the reader is not stranded.' },
 
   /* Nothing found is a real answer and has to look like one. */
@@ -182,11 +185,16 @@ const PINS = [
   { id: 'worker-caps-paging', kind: 'scope', home: 'src/worker.js',
     signature: 'offset cannot be past',
     why: 'deep paging is bounded, so the worker cannot be used to spend an upstream\'s time.' },
+  /* Reworded deliberately, not deleted. The worker's outright-failure string was a full sentence
+     while every sentence beside it is a noun phrase, so the page wrapping it in "Could not reach
+     the article index: " produced "Could not reach the article index: could not reach the article
+     index." on exactly the failure the message exists for. The property pinned here is unchanged:
+     the worker names WHICH upstream did not answer rather than returning a bare status. */
   { id: 'worker-names-upstream-failure', kind: 'error-text', home: 'src/worker.js',
-    signature: 'could not reach the article index',
+    signature: 'the article index did not respond',
     why: 'the worker\'s own 502 names the upstream rather than returning a bare status.' },
   { id: 'databases-worker-failure', kind: 'error-text', home: 'src/worker.js',
-    signature: 'could not reach the database list',
+    signature: 'the database list did not respond',
     why: 'the A-Z list has its own upstream and its own 502, named separately from the article index.' },
 
   /* Two properties that exist only for readers who never see the layout. Nothing about the page

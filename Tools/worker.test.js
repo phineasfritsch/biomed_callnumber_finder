@@ -416,7 +416,7 @@ const noDocs = JSON.stringify({ info: { total: 0, totalResultsLocal: 0, totalRes
   upstream({ throw: 'boom' });
   r = await call('/api/articles?q=x');
   await envelope('both requests threw', r, { status: 502 });
-  eq('an unreachable index says so', (await r.json()).error, 'could not reach the article index');
+  eq('an unreachable index says so', (await r.json()).error, 'the article index did not respond');
 
   reset();
   upstream({ status: 404 });
@@ -673,7 +673,7 @@ const noDocs = JSON.stringify({ info: { total: 0, totalResultsLocal: 0, totalRes
   upstream({ throw: 'boom' });
   r = await call('/api/databases');
   await envelope('unreachable LibGuides', r, { status: 502 });
-  eq('an unreachable list says so', (await r.json()).error, 'could not reach the database list');
+  eq('an unreachable list says so', (await r.json()).error, 'the database list did not respond');
 
   reset();
   upstream({ status: 500 });

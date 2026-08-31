@@ -88,7 +88,7 @@
     <div>Open Library</div><div>Direct, and only when you ask for covers.</div>
     <div>jsDelivr</div><div>Direct, and only when you use the photo reader.</div>
     <div>Primo PNX</div><div>Proxied. Answers without a key but sends no <code>Access-Control-Allow-Origin</code>, so a page cannot read it.</div>
-    <div>LibGuides A to Z</div><div>Proxied. CORS-open, but 1.17 MB of escaped markup to extract about 190 KB of facts.</div>
+    <div>LibGuides A to Z</div><div>Proxied. CORS-open, but 1.17 MB of escaped markup to extract about 184 KB of facts.</div>
   </div>
 
   <h2>1. Alma SRU, the catalog</h2>
@@ -258,7 +258,7 @@
   <p>Upstream: <code>https://lgapi-us.libapps.com/widgets.php?site_id=705&amp;widget_type=2&amp;output_format=1</code></p>
   <p>LibGuides has no JSON API without a key, but the public widget carries the whole list as escaped
   HTML inside a JavaScript file. It is CORS-open, so a browser could fetch it, except that it is
-  1.17 MB of markup to extract about 190 KB of facts. Parsing it in the Worker and caching for a day
+  1.17 MB of markup to extract about 184 KB of facts. Parsing it in the Worker and caching for a day
   means the page downloads the answer instead of the haystack, and LibGuides sees one request a day
   rather than one per reader. The databases page asks for it on load, because that page is the list
   and arriving at it is the request.</p>
@@ -409,7 +409,7 @@
   </main>
 
   <footer>
-    <a href="/about">How to use it</a> &middot; <a href="/">Back to the tool</a>
+    <a href="/about">How to use this</a> &middot; <a href="/">Back to the tool</a>
     <span class="by">Built by <a href="https://phineasfritsch.com">Phineas Fritsch</a>.
     Not affiliated with, or endorsed by, the UCLA Library.</span>
   </footer>

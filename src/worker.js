@@ -433,7 +433,7 @@ async function articles(request, url, ctx) {
     if (res && res.ok) break;
     if (res && res.status < 500) break;      // a 4xx is our fault and will not fix itself
   }
-  if (!res) return json({ error: 'could not reach the article index' }, 502);
+  if (!res) return json({ error: 'the article index did not respond' }, 502);
   if (!res.ok) return json({ error: 'the article index returned HTTP ' + res.status }, 502);
 
   let data;
@@ -483,7 +483,7 @@ async function articles(request, url, ctx) {
  *
  * LibGuides has no JSON API without a key, but the public widget carries the whole list as
  * escaped HTML inside a JS file. It is CORS-open, so a browser could fetch it — except it is
- * 1.17 MB of markup to extract about 60 KB of facts. Parsing here and caching for a day means
+ * 1.17 MB of markup to extract about 184 KB of facts. Parsing here and caching for a day means
  * the page downloads the answer instead of the haystack, and LibGuides sees one request a day
  * rather than one per reader.
  *
@@ -582,7 +582,7 @@ async function databases(request, url, ctx) {
       signal: AbortSignal.timeout(DEADLINE),
       headers: { 'User-Agent': 'Shelfmark/1.0 (UCLA library tool)' },
     });
-  } catch (e) { return json({ error: 'could not reach the database list' }, 502); }
+  } catch (e) { return json({ error: 'the database list did not respond' }, 502); }
   if (!res.ok) return json({ error: 'the database list returned HTTP ' + res.status }, 502);
 
   let raw;

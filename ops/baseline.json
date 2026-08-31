@@ -1,9 +1,9 @@
 {
-  "total": 2087,
+  "total": 2102,
   "suites": {
-    "Tools/assets.test.js": 118,
+    "Tools/assets.test.js": 119,
     "Tools/catalog.test.js": 404,
-    "Tools/cohesion.test.js": 112,
+    "Tools/cohesion.test.js": 126,
     "Tools/pins.test.js": 35,
     "Tools/sru.test.js": 9,
     "Tools/style.test.js": 196,
