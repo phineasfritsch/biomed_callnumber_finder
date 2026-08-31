@@ -20,6 +20,7 @@ believed, stop and read the section on adjudication.
     ops/health      is the state sane. Different question from whether the code is right.
     ops/prod        one read only way to look at production. GET only.
     ops/shoot       render every page to ops/shots/ as a person sees it.
+    ops/parity      does the deployment match this tree, and WHICH WAY does it differ.
     ops/deploy      the gate, then push, then deploy, then read the version back.
     ops/QUEUE.md    the work queue. Not a session, not your head. That file.
 
@@ -34,7 +35,11 @@ a fragment rather than a sentence, why the search is app wide rather than per fi
 comment stripper is not a regular expression.
 
 `Tools/ui.test.js` is the only suite that opens a browser, and therefore the only one that can
-catch a control wired to nothing. Everything else here reads the shipped files as text.
+catch a control wired to nothing. Everything else here reads the shipped files as text. It has
+three modes and the middle one matters whenever the tree and the deployment disagree: the default
+drives this working tree, `--deployed` fetches the published bytes and drives those, and
+`--origin` goes straight at a real deployment. Only the last can tell you production works, and it
+does not run from inside the cloud container; see the queue.
 
 `ops/test` and `ops/health` both take `--json`, which is what a routine should read. Neither ever
 reports success for a check that did not run.
@@ -61,7 +66,7 @@ week about a site that is down.
 Run these in order. The expected numbers are recorded so that drift is visible rather than
 discovered later.
 
-1. `ops/test` passes. **1894 assertions across 12 suites, 1 skipped.** The skip is
+1. `ops/test` passes. **2062 assertions across 14 suites, 1 skipped.** The skip is
    `ios/Tools/headcount.parity.test.mjs`, which needs a sibling repository that is normally not
    cloned; it says so itself. The per suite counts are in `ops/baseline.json`.
 2. A count that FELL fails the run even when everything is green. Something stopped being asked.
@@ -70,8 +75,17 @@ discovered later.
    that opens a browser, and therefore the only one that can catch a button wired to nothing.
    It is included in `ops/test`, and it is worth running alone while iterating.
 4. `ops/health --local` does not exit 1. Exit 3 is expected while production is unreachable.
-5. `ops/deploy` runs 1 through 4 itself and refuses to ship past any of them. It is the only
+5. `ops/parity` does not report the live site as ahead of this tree. It currently does, and that
+   is a known item at the top of `ops/QUEUE.md`: two published files carry a Primo linking feature
+   and a forced-colors focus fix that exist on no ref here. Until that is recovered, a deploy from
+   this repository would delete a shipped feature and an accessibility fix and report success.
+6. `ops/deploy` runs 1 through 5 itself and refuses to ship past any of them. It is the only
    thing that should ever deploy.
+
+`ops/parity` is the check that pushing before deploying does not give you. That rule stops the
+repository from lagging the site for three minutes. This one stops a deploy from overwriting a
+site that got ahead and stayed there, which is the same failure with the sign flipped and a much
+longer half-life.
 
 ## What parallelises here and what does not
 
