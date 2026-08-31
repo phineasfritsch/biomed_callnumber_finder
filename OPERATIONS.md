@@ -71,7 +71,7 @@ discovered later.
    cloned; it says so itself. The per suite counts are in `ops/baseline.json`.
 2. A count that FELL fails the run even when everything is green. Something stopped being asked.
    Either restore it or bless the drop deliberately with `ops/test --bless`.
-3. `node Tools/ui.test.js` passes. **52 assertions across 18 journeys.** This is the only suite
+3. `node Tools/ui.test.js` passes. **73 assertions across 20 journeys.** This is the only suite
    that opens a browser, and therefore the only one that can catch a button wired to nothing.
    It is included in `ops/test`, and it is worth running alone while iterating.
 4. `ops/health --local` does not exit 1. Exit 3 is expected while production is unreachable.
