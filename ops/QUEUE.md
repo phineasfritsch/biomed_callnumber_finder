@@ -33,10 +33,48 @@ Excluding that one directory gives 13 MB in three seconds and every suite still 
 assertions green in a sparse tree, measured rather than assumed. `ios/` is deliberately not
 excluded, because it carries 785 of them.
 
-**Verified.** The repository is public and a plain clone can both read and push, so the fixer can
-still push a branch. `ops/bootstrap` was run in a full checkout, in the sparse clone, and against
-`main` where the machinery has not landed; the last case fails with the branch name and a refusal
-to improvise a substitute gate.
+**Verified, and one line of that verification was wrong.** `ops/bootstrap` was run in a full
+checkout, in the sparse clone, and against `main` where the machinery has not landed; the last case
+fails with the branch name and a refusal to improvise a substitute gate. That part holds.
+
+The claim that a plain clone can push does not. It was tested with `git push --dry-run` from a
+temporary clone **inside an interactive session, which has the repository in its authorized sources
+and a credential helper injected for it**. A trigger-fired session has no sources, so the git proxy
+answers 403 to every push. The test passed because it was pointed at the one environment where the
+answer was already yes. Reads work either way: the repository is public.
+
+The first fixer run found this the way it should have been found, by trying: it did the work,
+could not push, and said so instead of claiming success. See the item below.
+
+---
+
+## DONE · The fixer could not push what it had built
+
+**What happened.** The first fixer run completed its queue item and then reported: *the repo isn't
+in this session's authorized sources, so all pushes get a 403 from the git proxy.* It did not
+claim success, which is the brief working twice in two days.
+
+**Why.** Pushing needs the repository in the session's authorized sources; an interactive session
+has that and a trigger-fired session does not. `create_trigger` takes no source. `add_repo` would
+attach one, but it is an MCP connector tool and fired sessions carry no connectors, which the
+trigger warned about when it was created.
+
+**Fixed by changing what the fixer delivers.** It now commits locally, runs `git format-patch`,
+**checks the patch applies to a clean clone**, and sends the `.patch` file with `SendUserFile`,
+which fired sessions do have. A patch that has been verified to apply is worth more than a branch
+nobody reviewed, and the human was already required to open the pull request.
+
+Applying one:
+
+    git am < 0001-<name>.patch        # or: git apply, to stage without the commit message
+
+**What would restore real pushing**, either is a one-time action and neither is mine to take:
+
+- Recreate the two routines from the Routines interface on claude.ai so they carry connectors.
+  A fired session holding the `claude-code-remote` connector can call `add_repo` with
+  `access: "push"` and attach the repository itself.
+- Or attach the repository to the environment the routines fire into, so every fired session has
+  it in its sources from the start.
 
 ---
 
