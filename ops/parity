@@ -1,0 +1,167 @@
+#!/usr/bin/env node
+/* Does the deployment match the working tree, and WHICH WAY does it differ?
+ *
+ *   ops/parity              every published file, compared byte for byte
+ *   ops/parity --json       machine-readable, for ops/deploy and ops/health
+ *   ops/parity --diff /     show the diff for one path
+ *
+ * `ops/health` compares /version.txt to HEAD, which answers "is the deployment the commit I
+ * think it is". That is a fine question and it cannot answer this one, because a deployment
+ * that was never stamped has no version to read, and the first deploy that stamps one makes
+ * every earlier divergence disappear into agreement.
+ *
+ * WHY THIS EXISTS. On the first occasion anything here could reach the real site, three of the
+ * sixteen published files differed from origin/main, and the difference was in the dangerous
+ * direction: the LIVE SITE WAS AHEAD. It carried a feature linking catalog results out to Primo,
+ * the stylesheet for it, and a `@media (forced-colors: active)` block restoring keyboard focus
+ * rings for Windows High Contrast users, which appears nowhere in the repository at all. None of
+ * it is on any ref. It exists only on the web and on whichever machine deployed it.
+ *
+ * A deploy from the repository at that moment would have DELETED all of it, and reported success,
+ * because every gate it passed was a gate about the repository. That is the whole argument for
+ * this file: `ops/deploy` gates on tests, and tests know nothing about what is already live.
+ *
+ * THREE VERDICTS. The middle one is normal and the third is the one to stop for:
+ *
+ *   same        the file on the web is the file here.
+ *   tree-ahead  this tree has changes not yet deployed. That is what deploying is for.
+ *   LIVE-AHEAD  the web has content this tree does not. Deploying would destroy it.
+ *
+ * Exit: 0 all same · 2 tree is ahead (deploy would publish it) · 1 LIVE IS AHEAD.
+ */
+
+'use strict';
+const { spawnSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+
+const ROOT = path.join(__dirname, '..');
+const argv = process.argv.slice(2);
+const JSON_OUT = argv.includes('--json');
+const DIFF = (() => { const i = argv.indexOf('--diff'); return i >= 0 ? argv[i + 1] : null; })();
+const ORIGIN = (process.env.SHELFMARK_ORIGIN || 'https://shelfmark.phineasfritsch.com').replace(/\/$/, '');
+
+/* The published set, and the URL each is served at. Extensionless for the pages, because that is
+   how Cloudflare serves them and how a reader reaches them. */
+const PUBLISHED = [
+  ['index.html', '/'], ['about.html', '/about'], ['methodology.html', '/methodology'],
+  ['hours.html', '/hours'], ['map.html', '/map'], ['databases.html', '/databases'],
+  ['404.html', '/404'], ['site.css', '/site.css'], ['shelf-core.js', '/shelf-core.js'],
+  ['shelf-data.js', '/shelf-data.js'], ['robots.txt', '/robots.txt'],
+];
+
+function fetchBody(url) {
+  const r = spawnSync('curl', ['-sS', '-m', '30', '-w', '\n__CODE__%{http_code}', ORIGIN + url],
+    { encoding: 'latin1', maxBuffer: 64 * 1024 * 1024 });
+  const out = r.stdout || '';
+  const i = out.lastIndexOf('\n__CODE__');
+  if (i < 0) return { code: 0, body: null, err: (r.stderr || '').split('\n')[0] };
+  return { code: parseInt(out.slice(i + 9), 10) || 0, body: out.slice(0, i), err: '' };
+}
+
+/* Line endings are compared separately from content. The live databases.html is byte-different
+   from the committed one and identical once newlines are normalised: whatever deployed it wrote
+   CRLF. That is worth knowing and it is not lost work, so it must not read the same as a file
+   carrying a feature nobody pushed. */
+const normalise = s => s.replace(/\r\n/g, '\n');
+
+const rows = [];
+for (const [file, url] of PUBLISHED) {
+  const local = fs.readFileSync(path.join(ROOT, file), 'latin1');
+  const { code, body, err } = fetchBody(url);
+  if (body === null || code !== 200) {
+    rows.push({ file, url, verdict: 'unreachable', detail: err || `HTTP ${code}` });
+    continue;
+  }
+  if (body === local) { rows.push({ file, url, verdict: 'same', bytes: local.length }); continue; }
+  if (normalise(body) === normalise(local)) {
+    rows.push({ file, url, verdict: 'same', note: 'differs only in line endings',
+      detail: `live ${/\r\n/.test(body) ? 'CRLF' : 'LF'}, tree ${/\r\n/.test(local) ? 'CRLF' : 'LF'}` });
+    continue;
+  }
+  /* Which way. Lines present live and absent here are the dangerous ones: deploying removes them.
+     Computed on trimmed lines so that indentation changes do not read as lost content. */
+  const liveLines = new Set(normalise(body).split('\n').map(l => l.trim()).filter(Boolean));
+  const treeLines = new Set(normalise(local).split('\n').map(l => l.trim()).filter(Boolean));
+  const onlyLive = [...liveLines].filter(l => !treeLines.has(l));
+  const onlyTree = [...treeLines].filter(l => !liveLines.has(l));
+
+  /* A MODIFIED line looks exactly like a deleted one to a set difference: its old form is only
+     live and its new form is only here. Counting those as lost content makes this cry wolf on
+     every ordinary edit, and the first version did. Adding `id="main"` to three <main> tags
+     flagged all three pages as LIVE-AHEAD, alongside the two files that genuinely were.
+     So an only-live line is only counted as LOST if no only-tree line is recognisably a rewrite
+     of it. Similarity is token overlap, which is crude and sufficient: the question is not how
+     alike two lines are, it is whether a plausible successor exists at all. */
+  const tok = l => new Set(l.toLowerCase().split(/[^a-z0-9_-]+/i).filter(w => w.length > 1));
+  const treeToks = onlyTree.map(tok);
+  const similar = (a, b) => {
+    if (!a.size || !b.size) return 0;
+    let shared = 0;
+    for (const w of a) if (b.has(w)) shared++;
+    return shared / Math.max(a.size, b.size);
+  };
+  const lost = onlyLive.filter(l => {
+    const t = tok(l);
+    return !treeToks.some(u => similar(t, u) >= 0.6);
+  });
+
+  rows.push({
+    file, url,
+    verdict: lost.length ? 'LIVE-AHEAD' : 'tree-ahead',
+    onlyLive: onlyLive.length, onlyTree: onlyTree.length, lost: lost.length,
+    sample: lost.slice(0, 3),
+  });
+}
+
+const liveAhead = rows.filter(r => r.verdict === 'LIVE-AHEAD');
+const treeAhead = rows.filter(r => r.verdict === 'tree-ahead');
+const unreachable = rows.filter(r => r.verdict === 'unreachable');
+const exit = liveAhead.length ? 1 : unreachable.length ? 1 : treeAhead.length ? 2 : 0;
+
+if (DIFF) {
+  const row = PUBLISHED.find(([, u]) => u === DIFF);
+  if (!row) { console.error(`not a published path: ${DIFF}`); process.exit(64); }
+  const { body } = fetchBody(DIFF);
+  const tmp = path.join('/tmp', 'parity-' + row[0].replace(/\//g, '_'));
+  fs.writeFileSync(tmp, body, 'latin1');
+  const d = spawnSync('diff', ['-u', path.join(ROOT, row[0]), tmp], { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+  console.log(`--- ${row[0]} (this tree)\n+++ ${ORIGIN}${DIFF} (live)\n`);
+  console.log((d.stdout || '(identical)').split('\n').slice(0, 400).join('\n'));
+  process.exit(0);
+}
+
+if (JSON_OUT) {
+  console.log(JSON.stringify({ origin: ORIGIN, ok: exit === 0, exit, liveAhead: liveAhead.length,
+    treeAhead: treeAhead.length, unreachable: unreachable.length, rows }, null, 2));
+  process.exit(exit);
+}
+
+console.log(`${ORIGIN} vs this working tree\n`);
+for (const r of rows) {
+  const mark = { same: '  ok  ', 'tree-ahead': ' tree ', 'LIVE-AHEAD': ' LIVE ', unreachable: ' ???  ' }[r.verdict];
+  const extra = r.verdict === 'same' ? (r.note ? `  (${r.note}: ${r.detail})` : '')
+    : r.verdict === 'unreachable' ? `  ${r.detail}`
+    : `  ${r.lost} line(s) live-only with no counterpart here (${r.onlyLive} differ, ${r.onlyTree} the other way)`;
+  console.log(`${mark} ${r.url.padEnd(16)} ${r.file.padEnd(18)}${extra}`);
+}
+
+if (liveAhead.length) {
+  console.log(`\nTHE LIVE SITE IS AHEAD OF THIS TREE in ${liveAhead.length} file(s).`);
+  console.log('Deploying from here would DELETE work that exists only on the web:\n');
+  for (const r of liveAhead) {
+    console.log(`  ${r.url}  (${r.lost} lines)`);
+    for (const s of r.sample) console.log(`      ${s.slice(0, 96)}`);
+  }
+  console.log('\n  Recover it before deploying anything:');
+  console.log(`    ops/parity --diff ${liveAhead[0].url}`);
+  console.log('  Whoever deployed this has it locally and never pushed. Get it into the repository');
+  console.log('  first. Push before deploying is the rule this is the other half of.');
+}
+if (treeAhead.length && !liveAhead.length) {
+  console.log(`\n${treeAhead.length} file(s) are ahead in this tree. That is what a deploy is for.`);
+}
+if (unreachable.length) {
+  console.log(`\n${unreachable.length} file(s) could not be read. No opinion on those.`);
+}
+process.exit(exit);

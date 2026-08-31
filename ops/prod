@@ -73,7 +73,12 @@ const API = [
 
 function get(path, wantHeaders) {
   const url = ORIGIN + path;
-  const args = ['-sS', '-m', '25', '-o', '/dev/stdout',
+  /* No -o. curl writes the body to stdout on its own, and `-o /dev/stdout` under a pipe rather
+     than a terminal loses the body entirely and reports size_download as 0 — which is how this
+     printed "0b" for all 23 routes on its first contact with the real site, including the ones
+     that had just served 197 KB. The status column was right the whole time, which is what made
+     it survive: a check can be half wrong and still look like it is working. */
+  const args = ['-sS', '-m', '25',
     '-w', '\n__META__ %{http_code} %{size_download} %{time_total} %{content_type}\n', url];
   if (wantHeaders) args.unshift('-D', '/dev/stderr');
   const r = spawnSync('curl', args, { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });

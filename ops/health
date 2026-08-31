@@ -176,6 +176,25 @@ if (LOCAL_ONLY) {
       ? bad('the worker answers', 'world', apiBad.map(r => `${r.p} -> ${r.code}`).join('; '))
       : ok('the worker answers', 'world', 'all three routes return 200');
 
+    /* Byte parity, which /version.txt cannot answer for a deployment that was never stamped.
+       This is the check that found the live site running a Primo linking feature and a
+       forced-colors focus fix that exist on no ref in the repository. */
+    const par = spawnSync(path.join(__dirname, 'parity'), ['--json'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+    let parity = null;
+    try { parity = JSON.parse(par.stdout || 'null'); } catch { /* fall through to the BAD below */ }
+    if (!parity) {
+      bad('the deployment matches this tree', 'world', 'ops/parity could not be read', (par.stderr || '').split('\n')[0]);
+    } else if (parity.liveAhead) {
+      bad('the deployment matches this tree', 'world',
+        `${parity.liveAhead} published file(s) have content this tree does not`,
+        parity.rows.filter(r => r.verdict === 'LIVE-AHEAD').map(r => `${r.url}: ${r.lost} live-only lines`).join('\n') +
+        '\nDeploying from here would delete them. ops/parity --diff <path>');
+    } else if (parity.treeAhead) {
+      ok('the deployment matches this tree', 'world', `${parity.treeAhead} file(s) ahead here, waiting to deploy`);
+    } else {
+      ok('the deployment matches this tree', 'world', 'every published file is byte-identical');
+    }
+
     /* Parity is a fact or it is a hope. /version.txt carries the commit the running deployment
        was built from; ops/deploy writes it. Absent, this cannot claim parity and says so. */
     const v = spawnSync('curl', ['-sS', '-m', '15', ORIGIN + '/version.txt'], { encoding: 'utf8' });
@@ -190,12 +209,32 @@ if (LOCAL_ONLY) {
     }
   }
 
+  /* Every upstream URL is READ OUT OF THE SHIPPED CODE, not written down here.
+     The first version hard-coded them, and the LibCal one carried iid=1409, which is a number
+     this file invented. It returns 404. So on the very first run against a healthy production
+     LibCal, this check reported the upstream as down: a guess, confirmed by nothing, firing on
+     perfectly good data at first contact. The real id is 3244 and hours.html has always known it.
+     Reading the URL from the caller also means the check follows the code: change the endpoint
+     and this tests the new one instead of quietly testing a URL nobody calls any more. */
+  const readSrc = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
+  const find = (f, re, what) => {
+    const m = re.exec(readSrc(f));
+    if (!m) { bad(`${what} endpoint is where this expects`, 'upstream', `could not find it in ${f}`); return null; }
+    return m[1];
+  };
+  const sru = find('index.html', /SRU\s*=\s*'([^']+)'/, 'Alma SRU');
+  const grid = find('hours.html', /GRID\s*=\s*'([^']+)'/, 'LibCal');
+  const pnx = find('src/worker.js', /PNX\s*=\s*'([^']+)'/, 'Primo');
+  const az = find('src/worker.js', /AZ\s*=\s*'([^']+)'/, 'LibGuides');
+
   for (const [label, url] of [
-    ['UCLA Alma SRU', 'https://ucla.alma.exlibrisgroup.com/view/sru/01UCS_LAL?version=1.2&operation=searchRetrieve&recordSchema=marcxml&maximumRecords=0&query=alma.all_for_ui%3Dasthma'],
-    ['LibCal', 'https://api2.libcal.com/api_hours_grid.php?iid=1409&format=json&weeks=1'],
-    ['Primo', 'https://search.library.ucla.edu/primaws/rest/pub/pnxs?q=any,contains,asthma&limit=1&vid=01UCS_LAL:UCLA'],
-    ['LibGuides', 'https://lgapi-us.libapps.com/widgets.php?site_id=705&widget_type=2&output_format=1'],
-  ]) {
+    /* maximumRecords=0 asks Alma for a count and no records: the cheapest question that still
+       proves the index answers. */
+    ['UCLA Alma SRU', sru && sru + '?version=1.2&operation=searchRetrieve&recordSchema=marcxml&maximumRecords=0&query=alma.all_for_ui%3Dasthma'],
+    ['LibCal', grid],
+    ['Primo', pnx && pnx + '?q=any,contains,asthma&limit=1&vid=01UCS_LAL:UCLA'],
+    ['LibGuides', az],
+  ].filter(([, u]) => u)) {
     if (checks.some(c => c.name === `${label} is answering`)) continue;
     const r = fetchStatus(url, 25000);
     if (r.blockedByProxy) blocked(`${label} is answering`, 'upstream', 'not on the network allowlist');

@@ -66,7 +66,28 @@ set +e; ./ops/health --local; HEALTH=$?; set -e
 [ "$HEALTH" -eq 1 ] && die "ops/health reports the state is not sane. Fix that before shipping."
 echo "  (exit ${HEALTH}: 0 all ok, 3 means something could not be checked)"
 
-step "5. push BEFORE deploying"
+step "5. will this deploy destroy anything"
+# The other half of "push before deploying". That rule stops the REPO from lagging the site for
+# three minutes. This stops a deploy that would overwrite work which only ever existed on the web.
+# It is not hypothetical: the first time anything here could reach the real site, index.html and
+# site.css were both ahead of the repository, carrying a Primo linking feature and a
+# forced-colors focus fix that appear on no ref at all. Every gate above passes in that state,
+# because every gate above is a gate about this repository.
+if [ -n "${SHELFMARK_SKIP_PARITY:-}" ]; then
+  echo "  SHELFMARK_SKIP_PARITY is set. This gate did not run, which is not the same as passing."
+else
+  set +e; ./ops/parity; PARITY=$?; set -e
+  case "$PARITY" in
+    0) echo "  the deployment already matches this tree" ;;
+    2) echo "  this tree is ahead. That is what deploying is for." ;;
+    *) die "the live site has content this tree does not, or could not be read.
+  Recover it into the repository before deploying, or this deploy deletes it.
+  Look with: ops/parity --diff /
+  Override only if you are certain, with: SHELFMARK_SKIP_PARITY=1 ops/deploy" ;;
+  esac
+fi
+
+step "6. push BEFORE deploying"
 if [ "$DRY" = 1 ]; then
   echo "  --dry-run: would run  git push -u origin ${BRANCH}"
 else
@@ -77,21 +98,21 @@ else
   done
 fi
 
-step "6. stamp the version"
+step "7. stamp the version"
 # What makes parity checkable at all. /version.txt is the one file the deployment writes about
 # itself, and ops/health compares it to local HEAD. Generated, never committed: a file that
 # recorded the sha of the commit containing it could not exist.
 printf '%s\n' "$HEAD_SHA" > version.txt
 echo "  version.txt <- ${HEAD_SHA:0:7}"
 
-step "7. deploy"
+step "8. deploy"
 if [ "$DRY" = 1 ]; then
   echo "  --dry-run: would run  npx wrangler deploy"
 else
   npx wrangler deploy || die "wrangler failed. The push already happened, so the repo is ahead of the site; re-run once the deploy problem is fixed."
 fi
 
-step "8. what is actually live"
+step "9. what is actually live"
 if [ "$DRY" = 1 ]; then
   echo "  --dry-run: would read /version.txt back off the site"
   exit 0
