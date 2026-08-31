@@ -48,7 +48,36 @@ could not push, and said so instead of claiming success. See the item below.
 
 ---
 
-## OPEN · Stage 02: page briefs, written from the frozen direction
+## OPEN · Stage 02b: settle the audit before any page is ported
+
+**Where Stage 02 got to.** Seven briefs, `ops/briefs/`, **82 numbered rulings**, 128 sentences
+listed as must-survive, 36 new claims to pin. Every ruling carries how a suite would catch a
+violation.
+
+**Then one reader held all seven at once**, which is the only way a disagreement between two of
+them is visible. Its verdict, in `ops/briefs/AUDIT.md`: *close to one product, but not yet one.
+Port them as they stand and it ships as seven pages that agree about ethics and disagree about
+nouns.*
+
+Eleven contradictions and eight gaps. Three matter more than the rest:
+
+- **MAP-1 swapped the whole bet for something easier.** The direction says the marked shelf stays
+  under the same point on screen when you cross from home to `/map`. MAP-1 wrote "centred". Those
+  are not the same property, and continuity is the entire reason this direction won its bracket.
+- **Nobody owns the drawing.** Seven briefs regulate what may be drawn where; none owns the
+  renderer contract that makes home's crop and `/map`'s plan the same drawing at two zooms. Ported
+  as written, the product gets two drawings, which is the one thing the direction is named after
+  not doing.
+- **Five briefs cite G5 and instantiate four different grammars of failure.** The ruling that says
+  one grammar for failure was broken by the process meant to enforce it, which is what parallel
+  authorship does when nobody owns the shared thing.
+
+**Done when.** The eleven contradictions are resolved in the briefs themselves, the eight gaps have
+a named owner, and a re-audit returns "one product". Ten escalations need the owner rather than us.
+
+---
+
+## DONE · Stage 02: page briefs, written from the frozen direction
 
 **Stopping condition.** `ops/SHIP.md` now defines what finished means and who says so, written
 before the work it judges, because a bar set afterwards is set to whatever was achieved. Eight
