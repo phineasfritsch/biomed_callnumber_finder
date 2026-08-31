@@ -11,7 +11,52 @@ An item that is `BLOCKED` names what would unblock it and who can do that.
 
 ---
 
-## BLOCKED · Nothing here can see production
+## OPEN · The live site is ahead of this repository, and nobody has the difference
+
+**What.** Two of the eleven published files on `https://shelfmark.phineasfritsch.com` contain code
+that exists on no ref in this repository.
+
+- `index.html`, 30 lines: a feature linking catalog results out to Primo. `PRIMO_VIEW`,
+  `primoHref()`, `recordLink()`, a linked title on each result card, and an "In the catalog" chip
+  in the tag row.
+- `site.css`, 25 lines: the styling for those links, and a `@media (forced-colors: active)` block
+  that restores keyboard focus rings for Windows High Contrast users. Focus is drawn everywhere
+  else as `outline:none` plus a box-shadow ring, in twenty-six declarations; under forced colours
+  the browser discards the shadow and honours the `outline:none`, so without that block a keyboard
+  user gets no focus indicator on any control on the site.
+
+The string `forced-colors` does not appear anywhere in this repository. The live `index.html`
+hashes to nothing in the history. The live code's own comment says `ENDPOINTS.md` documents the
+Primo URL and `Tools/catalog.test.js` asserts it agrees with the worker's, and neither file
+mentions Primo, so the tests and documentation intended to land with the feature did not arrive
+either.
+
+`databases.html` also differs, but only in line endings: the deployed copy is CRLF and the
+committed one is LF. Content identical, no work lost.
+
+**Why it matters.** Until this is resolved, any deploy from this repository deletes a shipped
+feature and an accessibility fix, and reports success while doing it, because every gate it passes
+is a gate about the repository. `ops/parity` now refuses that deploy, so the immediate danger is
+handled, but the work is still only in two places: the public web, and whichever machine ran
+wrangler. It is not in version control.
+
+**Who can resolve it.** Whoever deployed it. They have the source, and they know whether the
+tests and the `ENDPOINTS.md` section exist on that machine too.
+
+**How to see exactly what is missing.**
+
+    ops/parity                     # which files, and how many lines
+    ops/parity --diff /            # the index.html difference
+    ops/parity --diff /site.css    # the stylesheet difference
+
+**Done when.** The Primo linking feature, its styles and the forced-colors block are committed and
+pushed, `ops/parity` exits 0 or 2, and `ops/health` stops reporting that the deployment does not
+match the tree. If the tests and documentation that comment refers to also exist locally, they
+belong in the same commit.
+
+---
+
+## DONE · Nothing here could see production
 
 **What.** The container this runs in reaches `github.com` and `registry.npmjs.org` and nothing
 else. `shelfmark.phineasfritsch.com` is refused by the egress proxy with a 403 on CONNECT, and so
@@ -24,9 +69,13 @@ commit, or whether a private file has been published by accident. The browser jo
 against a local server serving the identical bytes, which is a good stand-in for the pages and no
 statement at all about the deployment.
 
-**Who can unblock it.** The account owner, by adding these hosts to the network policy of the
-environment that runs these sessions. The policy is chosen per environment at claude.ai, and the
-docs are at https://code.claude.com/docs/en/claude-code-on-the-web.
+**RESOLVED 2026-08-31.** The account owner added the hosts to the environment's network policy
+mid-session. All six now answer. `ops/prod` reports all 23 routes correct, `ops/health` reports
+all four upstreams answering, and the browser journeys can be pointed at the real site with
+`node Tools/ui.test.js --origin https://shelfmark.phineasfritsch.com`. Two checks in this
+repository fired on healthy production data at first contact and both were wrong rather than
+production being wrong; see the commit that added `ops/parity`. The heading above is left as
+`BLOCKED` for one more read so the next operator sees what the state was and what changed.
 
     shelfmark.phineasfritsch.com
     ucla.alma.exlibrisgroup.com
