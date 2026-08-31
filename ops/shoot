@@ -1,0 +1,151 @@
+#!/usr/bin/env node
+/* Render every page the way a person sees it, and write down what is on the screen.
+ *
+ *   ops/shoot                    every page, desktop and phone, to ops/shots/
+ *   ops/shoot --origin https://…  the same against a real deployment
+ *   ops/shoot --page /hours      one page
+ *
+ * This exists because reading source is not looking at the page, and the difference is where
+ * taste lives. A layout can satisfy every assertion in Tools/ui.test.js and still be ugly,
+ * off-brand, or quietly unreadable at 390 pixels — and no simulated reader can tell you that.
+ * So this produces two artefacts per page per viewport: a full-page PNG for a person to look at,
+ * and the rendered visible text, which is what the page actually says once the scripts have run
+ * rather than what the markup hoped it would say.
+ *
+ * The text files are also the honest input for a review panel. Handing readers the HTML source
+ * asks them to judge a thing nobody experiences.
+ */
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const { execFileSync } = require('child_process');
+
+const ROOT = path.join(__dirname, '..');
+const OUT = path.join(ROOT, 'ops', 'shots');
+const argv = process.argv.slice(2);
+const arg = (f, d) => { const i = argv.indexOf(f); return i >= 0 && argv[i + 1] ? argv[i + 1] : d; };
+const ORIGIN = arg('--origin', null);
+const ONE = arg('--page', null);
+
+let chromium;
+try { ({ chromium } = require('playwright')); }
+catch { console.error('playwright is not installed: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install'); process.exit(2); }
+
+const { startServer, installStubs } = (() => {
+  /* Reuse the harness's server and stubs rather than keeping a second copy that drifts from it.
+     Tools/ui.test.js exports nothing, so this lifts the two pieces by running it in a sandbox
+     would be worse — instead the server is small enough to state once, here, and the harness is
+     the thing that tests it. */
+  const http = require('http');
+  const pats = fs.readFileSync(path.join(ROOT, '.assetsignore'), 'utf8')
+    .split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+  const ignored = rel => pats.some(p => p.endsWith('/') ? (rel === p.slice(0, -1) || rel.startsWith(p))
+    : p.startsWith('*.') ? rel.endsWith(p.slice(1)) : (rel === p || rel.startsWith(p + '/')));
+  const T = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
+    '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.txt': 'text/plain; charset=utf-8', '.pdf': 'application/pdf' };
+  const startServer = () => new Promise(r => {
+    const s = http.createServer((q, res) => {
+      const rel = decodeURIComponent(q.url.split('?')[0]).replace(/^\/+/, '');
+      for (const c of [rel, rel + '.html', rel === '' ? 'index.html' : null]) {
+        if (!c || ignored(c)) continue;
+        const abs = path.join(ROOT, c);
+        if (abs.startsWith(ROOT) && fs.existsSync(abs) && fs.statSync(abs).isFile()) {
+          res.writeHead(200, { 'content-type': T[path.extname(abs)] || 'application/octet-stream' });
+          return res.end(fs.readFileSync(abs));
+        }
+      }
+      res.writeHead(404, { 'content-type': 'text/html; charset=utf-8' });
+      res.end(fs.readFileSync(path.join(ROOT, '404.html')));
+    });
+    s.listen(0, '127.0.0.1', () => r({ server: s, base: `http://127.0.0.1:${s.address().port}` }));
+  });
+  const FIXD = path.join(ROOT, 'fixtures');
+  const installStubs = async ctx => {
+    await ctx.route('**/*', route => {
+      const url = route.request().url();
+      if (/127\.0\.0\.1|localhost/.test(url)) return route.continue();
+      if (/alma\.exlibrisgroup\.com.*\/sru\//.test(url)) {
+        const q = decodeURIComponent(url).toLowerCase();
+        if (/maximumrecords=0/.test(q)) return route.fulfill({ status: 200, contentType: 'application/xml',
+          body: '<?xml version="1.0"?><searchRetrieveResponse xmlns="http://www.loc.gov/zing/srw/"><version>1.2</version><numberOfRecords>4217</numberOfRecords><records/></searchRetrieveResponse>' });
+        const f = /ultrasound/.test(q) ? 'focused-ultrasound.xml' : 'harrisons.xml';
+        return route.fulfill({ status: 200, contentType: 'application/xml', body: fs.readFileSync(path.join(FIXD, f), 'utf8') });
+      }
+      if (/api2\.libcal\.com/.test(url)) {
+        const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+        const mk = (name, open) => ({ lid: name.length, name, weeks: [Object.fromEntries(days.map((d, i) => [d, {
+          date: `2026-08-${String(30 + i).padStart(2, '0')}`,
+          times: open ? { status: 'open', currently_open: true, hours: [{ from: '8am', to: '10pm' }] } : { status: 'closed', currently_open: false } }]))] });
+        return route.fulfill({ status: 200, contentType: 'application/json',
+          body: JSON.stringify({ locations: [mk('Biomedical Library', true), mk('Powell Library', true), mk('Law Library', false)] }) });
+      }
+      if (/fonts\.(googleapis|gstatic)\.com/.test(url))
+        return route.fulfill({ status: 200, contentType: /css2/.test(url) ? 'text/css' : 'font/woff2', body: '' });
+      return route.abort();
+    });
+    await ctx.route('**/api/databases', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ count: 3, licensed: 2, items: [
+      { name: 'PubMed', url: 'https://pubmed.ncbi.nlm.nih.gov/', auth: false, best: true },
+      { name: 'Embase', url: 'https://www.embase.com/', auth: true, best: true },
+      { name: 'Web of Science', url: 'https://www.webofscience.com/', auth: true, best: false }] }) }));
+    await ctx.route('**/api/articles**', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ count: 1,
+      items: [{ title: 'Asthma in adults', creator: 'Smith J', date: '2024', isPeerReviewed: true, doi: '10.1000/x', id: 'a1', source: 'The Lancet' }] }) }));
+    await ctx.route('**/api/suggest**', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ suggestion: 'asthma' }) }));
+  };
+  return { startServer, installStubs };
+})();
+
+/* Each page, plus the states you only reach by doing something. A panel that only ever sees the
+   empty home page is reviewing a screenshot of a text box. */
+const VIEWS = [
+  { name: '01-home',            path: '/',            do: null },
+  { name: '02-home-located',    path: '/',            do: async p => { await p.fill('#q', 'W1 AM4990'); await p.press('#q', 'Enter'); await p.waitForTimeout(1200); } },
+  { name: '03-home-unmapped',   path: '/',            do: async p => { await p.fill('#q', 'ZZ 999 Q999'); await p.press('#q', 'Enter'); await p.waitForTimeout(1200); } },
+  { name: '04-home-catalog',    path: '/',            do: async p => { await p.fill('#q', 'harrisons principles of internal medicine'); await p.press('#q', 'Enter'); await p.waitForTimeout(4000); } },
+  { name: '05-about',           path: '/about',       do: null },
+  { name: '06-methodology',     path: '/methodology', do: null },
+  { name: '07-hours',           path: '/hours',       do: async p => { await p.waitForTimeout(1500); } },
+  { name: '08-map',             path: '/map',         do: async p => { await p.waitForTimeout(1500); } },
+  { name: '09-databases',       path: '/databases',   do: async p => { await p.waitForTimeout(1500); } },
+  { name: '10-404',             path: '/not-a-page',  do: null },
+];
+
+(async () => {
+  const local = ORIGIN ? null : await startServer();
+  const base = ORIGIN ? ORIGIN.replace(/\/$/, '') : local.base;
+  fs.mkdirSync(OUT, { recursive: true });
+  const browser = await chromium.launch();
+  const views = ONE ? VIEWS.filter(v => v.path === ONE) : VIEWS;
+  const index = [];
+
+  for (const v of views) {
+    for (const vp of [{ tag: 'desktop', width: 1280, height: 900 }, { tag: 'phone', width: 390, height: 844 }]) {
+      const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height },
+        deviceScaleFactor: 1, isMobile: vp.tag === 'phone', hasTouch: vp.tag === 'phone' });
+      if (!ORIGIN) await installStubs(ctx);
+      const page = await ctx.newPage();
+      try {
+        await page.goto(base + v.path, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await page.waitForTimeout(500);
+        if (v.do) await v.do(page);
+        const png = path.join(OUT, `${v.name}-${vp.tag}.png`);
+        await page.screenshot({ path: png, fullPage: true });
+        if (vp.tag === 'desktop') {
+          /* innerText, not textContent: it reflects what is actually visible, so a panel is not
+             handed the copy of three collapsed panels as though it were on the screen. */
+          const text = await page.evaluate(() => document.body.innerText.replace(/\n{3,}/g, '\n\n').trim());
+          fs.writeFileSync(path.join(OUT, `${v.name}.txt`), `# ${v.path}\n# rendered ${text.length} chars\n\n${text}\n`);
+          index.push({ view: v.name, path: v.path, chars: text.length });
+        }
+        console.log(`  ${v.name}-${vp.tag}  ${v.path}`);
+      } catch (e) {
+        console.log(`  FAILED ${v.name}-${vp.tag}: ${e.message.split('\n')[0]}`);
+      }
+      await ctx.close();
+    }
+  }
+  await browser.close();
+  if (local) local.server.close();
+  fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify({ base, when: 'see git log', views: index }, null, 2));
+  console.log(`\n${views.length} views, two viewports each -> ops/shots/`);
+  console.log('Look at them yourself. Every assertion in the suite can pass on a page that is ugly.');
+})().catch(e => { console.error(e.stack); process.exit(1); });

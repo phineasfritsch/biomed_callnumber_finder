@@ -41,6 +41,9 @@ const BUDGETS = {
 const DOCS = [
   'README.md', 'CATALOG.md', 'ENDPOINTS.md', 'SEARCH-REPORT.md',
   'ios/README.md', 'ios/DESIGN.md', 'ios/TESTING.md',
+  // The operator docs are held to the same rules as everything else, with no budget. A house
+  // style that the house's own operating manual is exempt from is a preference, not a rule.
+  'OPERATIONS.md', 'ops/QUEUE.md',
 ];
 const PAGES = [
   'index.html', 'about.html', 'hours.html', 'databases.html',
