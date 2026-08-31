@@ -154,6 +154,12 @@
 <script>
 function renderPlan(){
   const plan=document.getElementById('plan');
+  /* The legend explains marks that only the stacks drawing has. On floor 4 the plan is a card
+     saying there is no per-shelf map, and the legend sat under it naming colours for shelves that
+     are not on the screen. `hidden` is no use here: `.legend{display:flex}` in the sheet outranks
+     the browser's own `[hidden]` rule, so the row stayed exactly where it was. */
+  const legend=document.querySelector('.legend');
+  if(legend) legend.style.display = SPECIAL_FLOORS[level] ? 'none' : '';
   if(SPECIAL_FLOORS[level]){
     const name=SPECIAL_FLOORS[level];
     plan.innerHTML =
@@ -228,20 +234,52 @@ function renderLevels(){
 }
 
 /* ===== detail panel ===== */
-function pick(id){ selected=id; flashId=null; renderPlan(); renderDetail(); }
+/* The face something named, when something named one: {id, side, q}. A lookup knows which face
+   matched and a link can carry one, and the panel used to print both faces of an aisle in
+   identical rows and leave the reader to carry "Right side" across a page navigation, on a
+   phone, in a building they have never been inside. A tap on the plan names a shelf and not a
+   face, so it clears this rather than leaving the last search's mark on a different question. */
+let marked=null;
+function pick(id){ selected=id; flashId=null; marked=null; renderPlan(); renderDetail(); }
 window.pick=pick;
 function renderDetail(){
   const el=document.getElementById('detail');
-  if(!selected){ el.className='detail empty'; el.textContent='Tap any shelf to see its mapped ranges, or search a call number above.'; return; }
+  /* On a floor with no per-shelf map there is no shelf to tap, and the invitation to tap one was
+     pointing at a control that is not on this screen. */
+  if(!selected){
+    el.className='detail empty';
+    el.textContent = SPECIAL_FLOORS[level]
+      ? `${SPECIAL_FLOORS[level]} is shelved by call number on floor ${level}. There is no per-shelf map.`
+      : 'Tap any shelf to see its mapped ranges, or search a call number above.';
+    return;
+  }
   const s=shelfById(selected); el.className='detail';
   let html=`<h2>Index ${s.index} · ${s.row} row</h2><div class="meta">level ${level} · ${s.group} · ${s.type}-shelf</div>`;
   let any=false;
   sidesOf(s).forEach(side=>{
     const d=DATA[k(level,s.id,side)];
-    if(d){any=true; html+=`<div class="face-row"><span class="fl">${sideName[side]}</span><span class="rg">${d.start} → ${d.end}</span></div>`;}
+    if(!d) return;
+    any=true;
+    const mine = marked && marked.id===s.id && marked.side===side;
+    const note = mine
+      ? ` <b>· ${marked.q ? escHtml(marked.q.toUpperCase())+' is on this face' : 'the face you were sent to'}</b>`
+      : '';
+    html+=`<div class="face-row"${mine?' style="background:var(--green-soft)"':''}><span class="fl">${sideName[side]}</span><span class="rg">${d.start} → ${d.end}${note}</span></div>`;
   });
   if(!any) html+=`<div class="face-row"><span class="rg" style="color:var(--ink-soft)">No ranges mapped on this level yet.</span></div>`;
   el.innerHTML=html;
+}
+
+/* Is this even shaped like a call number. Only the Reference branch asks, because it is the one
+   answer here with no lookup underneath it; everywhere else findFaces answers by finding nothing.
+   Deliberately narrow, and knowingly a second copy of the home page's `looksLikeCallNumber`: this
+   page does not load that script, and the alternative was going on answering "floor 4" to any
+   string at all. If a third caller wants it, it belongs in shelf-core.js with the comparator. */
+function cnShaped(t){
+  const s=(t||'').trim();
+  if(!s || s.length>48) return false;
+  if(/^W[1-4][A-Z]{0,2}\s*[A-Z]/i.test(s)) return true;      // W1 AM477
+  return /^[A-Z]{1,3}\s*\d{1,4}(?:\.\d+)?\b/i.test(s);      // WM 100, QL737.C22
 }
 
 /* ===== lookup =====
@@ -255,11 +293,35 @@ function locate(){
   const hd=q.match(/^hist\.?\s*div\.?\s+(.+)/i);
   if(hd){ q=hd[1].trim(); inp.value=q; setCollection('spec'); }
   const out=document.getElementById('result');
+  /* Reference is not surveyed, so this branch has no shelf data to consult and for a while it
+     consulted nothing at all: it echoed whatever was in the box and asserted floor 4, which meant
+     it could not be wrong in any way it was able to detect. It put "NOT A CALL NUMBER AT ALL" on
+     floor 4, and W1 AM4990, which this tool's own data places on level 7. Two questions it can
+     answer honestly before it names a floor: is this shaped like a call number at all, and does
+     the stacks survey already place it somewhere else. */
   if(collection==='ref'){
-    const subject = q ? `<code>${escHtml(q.toUpperCase())}</code>` : 'Your book';
-    out.innerHTML = `<div class="hit"><div class="loc">Floor 4 · Reference</div>`+
-      `<div class="rng">${subject} is on floor 4, shelved by call number.</div></div>`;
-    level=4; selected=null; flashId=null;
+    /* An empty box is not a question. It used to be answered anyway, with "Your book is on
+       floor 4", which is the same sentence about a book nobody had named yet. */
+    let ans='';
+    if(q && !cnShaped(q)){
+      ans=`<div class="miss">No mapped shelf contains <code>${escHtml(q.toUpperCase())}</code>. It may be on a level not yet entered, or outside the mapped ranges.</div>`;
+    } else if(q){
+      const stacked=findFaces(q,'stacks');
+      const lv=stacked.map(h=>h.lvl).filter((n,i,a)=>a.indexOf(n)===i);
+      /* Conditional on purpose. A number can sit in a mapped stacks range and still have a
+         Reference copy on floor 4, and the survey covers whole classes, so a flat "it is on level
+         7" here would send a genuine Reference lookup down seven floors. What the map knows is
+         where the stacks put the number; who wants which copy is the reader's to say. */
+      if(lv.length){
+        const range = lv.length>1 ? `mapped stacks ranges on levels ${lv.join(', ')}` : `a mapped stacks range on level ${lv[0]}`;
+        ans=`<div class="miss"><code>${escHtml(q.toUpperCase())}</code> is inside ${range}. If that is the copy you want, switch to Main stacks for the shelf.</div>`;
+      } else {
+        ans=`<div class="hit"><div class="loc">Floor 4 · Reference</div>`+
+            `<div class="rng"><code>${escHtml(q.toUpperCase())}</code> is on floor 4, shelved by call number.</div></div>`;
+      }
+    }
+    out.innerHTML=ans;
+    level=4; selected=null; flashId=null; marked=null;
     renderLevels(); renderPlan(); renderDetail();
     return;
   }
@@ -273,6 +335,7 @@ function locate(){
     out.innerHTML = collection==='spec'
       ? `<div class="miss">No mapped Special Collections range contains <code>${escHtml(q.toUpperCase())}</code>.</div>`
       : `<div class="miss">No mapped shelf contains <code>${escHtml(q.toUpperCase())}</code>. It may be on a level not yet entered, or outside the mapped ranges.</div>`;
+    marked=null;
     if(collection==='spec'){ level=9; renderLevels(); renderPlan(); renderDetail(); }
     return;
   }
@@ -285,6 +348,7 @@ function locate(){
   + (hits.length>1?`<div class="examples">${hits.length} shelves match. For serials, check the volume and year on the spine.</div>`:'');
   const first=hits[0];
   level=first.lvl; selected=first.id; flashId=first.id;
+  marked={id:first.id, side:first.side, q};
   renderLevels(); renderPlan(); renderDetail();
   setTimeout(()=>{flashId=null;renderPlan();},1600);
 }
@@ -350,9 +414,23 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     return;
   }
   if(Number.isFinite(lvl) && id && shelfById(id) && STACK_LEVELS.includes(lvl)){
+    const sh=shelfById(id), side=p.get('side');
     level=lvl; selected=id; flashId=id;
+    // `side` is which face of the aisle the linking page matched. Nothing sends it yet; when
+    // something does, the detail panel marks that row instead of listing both faces the same.
+    marked = side && sidesOf(sh).includes(side) ? {id, side, q:''} : null;
     setCollection(LEVEL_TO_COLL[lvl] || 'stacks');
     renderLevels(); renderPlan(); renderDetail();
+    /* Drawing the highlighted face is not the same as putting it on the screen. At 390px the plan
+       is 560px wide in a box that shows 365 of them, so a catalog link to index 10 rendered the
+       answer past the right edge with the index strip reading 0 to 9 and nothing about the box
+       saying it scrolls. A walk stop already scrolls the stage into view; an arrival is the same
+       moment and needs the horizontal scroll as well. */
+    const st=document.querySelector('.stage'); if(st) st.scrollIntoView({behavior:'smooth',block:'center'});
+    const wrap=document.querySelector('.planwrap');
+    if(wrap && wrap.scrollWidth>wrap.clientWidth){
+      wrap.scrollLeft = colX(sh.index)*(wrap.scrollWidth/720) - wrap.clientWidth/2;
+    }
     setTimeout(()=>{ flashId=null; renderPlan(); },1600);
     return;
   }
@@ -796,7 +874,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
      but what a reader types or pastes is whatever they typed or pasted. */
   function miss(arr){ return `<div class="itin-miss">Not located (${arr.length}): ${arr.map(escHtml).join(' · ')}<br>Mis-read by OCR, shelved in Reference on floor 4, or outside the mapped ranges. Fix the spelling above and rebuild.</div>`; }
 
-  window.routeShow=function(lvl,id){ level=lvl; selected=id; flashId=id; if(typeof syncCollectionToLevel==='function') syncCollectionToLevel(); renderLevels(); renderPlan(); renderDetail(); setTimeout(()=>{ flashId=null; renderPlan(); },1600); const st=document.querySelector('.stage'); if(st) st.scrollIntoView({behavior:'smooth',block:'center'}); };
+  window.routeShow=function(lvl,id){ level=lvl; selected=id; flashId=id; marked=null; if(typeof syncCollectionToLevel==='function') syncCollectionToLevel(); renderLevels(); renderPlan(); renderDetail(); setTimeout(()=>{ flashId=null; renderPlan(); },1600); const st=document.querySelector('.stage'); if(st) st.scrollIntoView({behavior:'smooth',block:'center'}); };
 })();
 </script>
 </body>

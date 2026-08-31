@@ -62,10 +62,12 @@
   which side of the unit it is (L or R), which row, which level. Nothing derives it from the catalog,
   because the catalog does not know how the furniture is arranged. The survey ships inside the page,
   keyed by level, row index and side, so locating a call number needs no network request at all.</p>
-  <p>That has consequences worth stating. The map is accurate as of when a face was walked, and
-  shelves get shifted. A face nobody has surveyed shows as a dash rather than as an empty shelf,
-  because those are different claims. Where a range start equals its end, many volumes share one call
-  number and every matching face is returned for you to check the spine.</p>
+  <p>That has consequences worth stating. The walk that produced it ran from 28 May to 5 June 2026,
+  so the map is accurate as of then rather than as of today, and shelves get shifted. Nothing in the
+  data notices when they do, which is why the date is on the page. A face nobody has surveyed shows
+  as a dash rather than as an empty shelf, because those are different claims. Where a range start
+  equals its end, many volumes share one call number and every matching face is returned for you to
+  check the spine.</p>
 
   <h2>Matching a call number to a shelf</h2>
   <p>A call number is parsed into parts and compared part by part, not as a string. Class letters
@@ -86,7 +88,7 @@
     <div>Open Library</div><div>Direct, and only when you ask for covers.</div>
     <div>jsDelivr</div><div>Direct, and only when you use the photo reader.</div>
     <div>Primo PNX</div><div>Proxied. Answers without a key but sends no <code>Access-Control-Allow-Origin</code>, so a page cannot read it.</div>
-    <div>LibGuides A to Z</div><div>Proxied. CORS-open, but 1.17 MB of escaped markup to extract about 60 KB of facts.</div>
+    <div>LibGuides A to Z</div><div>Proxied. CORS-open, but 1.17 MB of escaped markup to extract about 190 KB of facts.</div>
   </div>
 
   <h2>1. Alma SRU, the catalog</h2>
@@ -258,7 +260,8 @@
   HTML inside a JavaScript file. It is CORS-open, so a browser could fetch it, except that it is
   1.17 MB of markup to extract about 190 KB of facts. Parsing it in the Worker and caching for a day
   means the page downloads the answer instead of the haystack, and LibGuides sees one request a day
-  rather than one per reader. The page fetches it the first time the panel is opened, not on load.</p>
+  rather than one per reader. The databases page asks for it on load, because that page is the list
+  and arriving at it is the request.</p>
   <p>The parse unescapes the payload and then finds each record by its tracked anchor: LibGuides wraps
   every database link in an <code>onclick</code> that reports the click back to Springshare, and nothing
   else in the payload carries one. That is what separates a database from the little key icon beside it,
@@ -272,7 +275,7 @@
   1,360 databases, 1,254 of them needing a login, 340 best bets, and 106 that open to anybody.</p>
   <p>Two things the list does not carry. The first is descriptions. Every one of the 1,365
   description elements in the payload is empty, and asking the widget for them changes nothing, so
-  the panel shows names and links and does not pretend to more. The second is entitlement. UCLA
+  the page shows names and links and does not pretend to more. The second is entitlement. UCLA
   tags one database as a trial and none as free, which makes this an inventory rather than an
   access map, so the free-versus-licensed question is answered per provider by the resolver
   instead.</p>
@@ -344,6 +347,16 @@
   openlibrary.org. <code>default=false</code> makes a missing cover a 404 rather than a placeholder,
   so the image removes itself instead of leaving a grey box in the row.</p>
 
+  <h3>Google Fonts, on every page load</h3>
+  <p>Two typefaces: a stylesheet from <code>fonts.googleapis.com</code>, and the two woff2 files it
+  names from <code>fonts.gstatic.com</code>. Every page here asks for them on load, before you have
+  typed anything, so Google sees a request from your browser whether or not you go on to search for
+  something. Nothing else on this site leaves the UCLA and Cloudflare pair until you ask it to. The
+  stylesheet is loaded without blocking the paint, and both families name a local fallback picked to
+  break lines in the same places, so the page does not move when the fonts arrive. Serving the two
+  files from this domain would end the request, and is the fix; until that is done it is counted
+  here, rather than filed under what happens on demand.</p>
+
   <h3>Also, on demand only</h3>
   <div class="rows">
     <div>jsDelivr</div><div><code>tesseract.js@5.1.1</code> and <code>heic2any@0.0.4</code>, fetched the
@@ -351,9 +364,6 @@
     against a hash of the reviewed bytes, so the CDN cannot hand this page different code than the code
     that was read. Recognition runs in your browser and the images are never uploaded.</div>
     <div>doi.org</div><div>A link target, not a request this page makes.</div>
-    <div>Google Fonts</div><div>Two font files. The stylesheet is loaded without blocking the paint,
-    and both families name a local fallback picked to break lines in the same places, so the page does
-    not move when the fonts arrive.</div>
   </div>
 
   <h2>The Worker</h2>
@@ -385,11 +395,12 @@
   </ul>
 
   <h2>Privacy, in one paragraph</h2>
-  <p>No accounts, no cookies, no analytics, and no third-party code on load. What you type goes to
+  <p>No accounts, no cookies, no analytics, and no third-party script on load. What you type goes to
   UCLA&rsquo;s public endpoints, and to Primo by way of the Worker, in order to answer the search. The
   Worker sees the query because it has to forward it, and retains it only inside the cache key of a
-  cached answer. Cover images are the one request that leaves the UCLA and Cloudflare pair, and they
-  happen only if you ask for covers.</p>
+  cached answer. Two kinds of request leave the UCLA and Cloudflare pair. Fonts, from Google, on every
+  page load and before you have asked this site for anything. And cover images, from Open Library,
+  while the show covers box is ticked.</p>
 
   <h2>What this is not</h2>
   <p>It is not an official UCLA service, it has no access to your library account, and it cannot place

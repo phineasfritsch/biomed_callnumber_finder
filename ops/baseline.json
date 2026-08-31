@@ -1,13 +1,13 @@
 {
-  "total": 2075,
+  "total": 2087,
   "suites": {
-    "Tools/assets.test.js": 117,
+    "Tools/assets.test.js": 118,
     "Tools/catalog.test.js": 404,
-    "Tools/cohesion.test.js": 109,
+    "Tools/cohesion.test.js": 112,
     "Tools/pins.test.js": 35,
     "Tools/sru.test.js": 9,
     "Tools/style.test.js": 196,
-    "Tools/ui.test.js": 65,
+    "Tools/ui.test.js": 73,
     "Tools/walk.test.js": 52,
     "Tools/worker.test.js": 259,
     "Tools/xss.test.js": 44,

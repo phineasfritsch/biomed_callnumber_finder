@@ -132,6 +132,9 @@
      about today, whatever week the reader has wandered into. */
   const weeks=new Map();
   let today='', sel='', cur='', todayWeek='', pick='', loaded=false, loading=false;
+  /* The sentence renderSummary writes into the lede, kept because the status line has to say it
+     as well: the lede is a plain <p>, and a reader who is not looking at it is never told. */
+  let countLine='';
 
   // Local date as YYYY-MM-DD. Not toISOString(), which is UTC and puts Los Angeles on
   // tomorrow's row after 4pm.
@@ -223,8 +226,12 @@
     if(!parents.length){
       /* Far enough ahead LibCal has nothing entered for anybody. That is not an error and not
          "closed": it is hours nobody has posted yet, and saying so is the only honest reading. */
-      out.innerHTML='<div class="cat-empty">No hours are posted for '+
-        esc(d0.date?longDate(d0.date):pick)+' yet.</div>';
+      const none='No hours are posted for '+(d0.date?longDate(d0.date):pick)+' yet.';
+      out.innerHTML='<div class="cat-empty">'+esc(none)+'</div>';
+      // And in the live region, for the same reason as the line at the foot of this function:
+      // this is the answer, and leaving 'Asking LibCal…' standing says the answer never came.
+      statusEl.textContent=none;
+      statusEl.classList.remove('err');
       return;
     }
     out.innerHTML=parents.map(p=>{
@@ -233,9 +240,15 @@
       if(sub.length) h+='<div class="hr-sub">'+sub.map(k=>row(k,pick,isToday)).join('')+'</div>';
       return h+'</div>';
     }).join('');
-    // Which day is on screen, so a reader four weeks out is never guessing.
+    /* Which day is on screen, so a reader four weeks out is never guessing. On today this used
+       to clear instead, which left the page's only live region saying 'Asking LibCal…' and then
+       nothing ever again: the count the reader came for lands in the lede, and the lede is a
+       plain <p> with nothing to announce it. databases.html leaves its result sitting in the
+       identical role=status region rather than emptying it, and this is that. The count only
+       rides along beside today, because "open now" is a claim about now and not about the
+       Thursday somebody is browsing. */
     if(d0.date && !isToday) statusEl.textContent='Showing '+longDate(d0.date)+'.';
-    else statusEl.textContent='';
+    else statusEl.textContent=countLine?countLine+', '+(d0.date?longDate(d0.date):pick)+'.':'';
     statusEl.classList.remove('err');
   }
 
@@ -251,7 +264,8 @@
       return t.currently_open===true || (t.status||'').toLowerCase()==='24hours';
     }).length;
     const total=locs.filter(l=>known(onToday(l))).length;
-    summary.textContent=open?open+' of '+total+' locations open now':'all locations closed';
+    countLine=open?open+' of '+total+' locations open now':'all locations closed';
+    summary.textContent=countLine;
   }
 
   /* One week, fetched once and kept. The key is the Sunday LibCal itself returns rather than the
@@ -273,14 +287,27 @@
     [dateIn,todayBtn,prevBtn,nextBtn].forEach(el=>{ if(el) el.disabled=on; });
   }
 
-  /* Show a date, fetching its week only if this is the first time it has been asked for. */
-  async function show(date){
+  /* A week press replaces the day strip and every row under it. The line renderDay leaves
+     behind names a date but not that the week moved, so the week it landed on goes in front of
+     it, the way picking a day already names the day. */
+  function announceWeek(from){
+    if(!cur || (from!==prevBtn && from!==nextBtn)) return;
+    const wk=new Date(parse(cur)).toLocaleDateString(undefined,{day:'numeric',month:'long',timeZone:'UTC'});
+    statusEl.textContent='Week of '+wk+'. '+statusEl.textContent;
+  }
+
+  /* Show a date, fetching its week only if this is the first time it has been asked for.
+     `from` is the button that asked, when a button did: the fetch disables it, and disabling the
+     element the reader is standing on drops them to the top of the document with no way back to
+     the control they just pressed. */
+  async function show(date, from){
     if(loading) return;
     sel=date;
     if(dateIn) dateIn.value=date;
     pick=DAYS[dayIndex(date)];
     const key=sundayOf(date);
-    if(weeks.has(key)){ cur=key; renderDays(); renderDay(); return; }
+    // A week already in hand disables nothing, so focus is still where the reader left it.
+    if(weeks.has(key)){ cur=key; renderDays(); renderDay(); announceWeek(from); return; }
     busy(true);
     setTimeout(()=>{ if(loading) statusEl.textContent='Asking LibCal…'; },300);
     out.innerHTML='<div class="hr-lib"><div class="skel" style="width:45%"></div></div>'+
@@ -290,7 +317,7 @@
       cur=await fetchWeek(date);
       if(!todayWeek && weeks.get(cur).some(l=>DAYS.some(n=>(dayOf(l,n)||{}).date===today)))
         todayWeek=cur;
-      renderSummary(); renderDays(); renderDay();
+      renderSummary(); renderDays(); renderDay(); announceWeek(from);
       loaded=true;
     }catch(e){
       out.innerHTML='';
@@ -298,7 +325,12 @@
       if(!loaded) summary.textContent='hours unavailable';
       statusEl.innerHTML='Could not reach LibCal: '+esc(e.message||'network error')+'.';
       statusEl.classList.add('err');
-    }finally{ busy(false); }
+    }finally{
+      busy(false);
+      /* Taken back only if the disable is what took it. A reader who moved on somewhere else
+         while LibCal answered keeps their place. */
+      if(from && (!document.activeElement || document.activeElement===document.body)) from.focus();
+    }
   }
 
 
@@ -309,8 +341,8 @@
     else dateIn.value=sel;
   });
   if(todayBtn) todayBtn.addEventListener('click',e=>{ e.stopPropagation(); show(today); });
-  if(prevBtn)  prevBtn.addEventListener('click', e=>{ e.stopPropagation(); show(addDays(sel,-7)); });
-  if(nextBtn)  nextBtn.addEventListener('click', e=>{ e.stopPropagation(); show(addDays(sel,7)); });
+  if(prevBtn)  prevBtn.addEventListener('click', e=>{ e.stopPropagation(); show(addDays(sel,-7),prevBtn); });
+  if(nextBtn)  nextBtn.addEventListener('click', e=>{ e.stopPropagation(); show(addDays(sel,7),nextBtn); });
 
   /* The summary rides on the collapsed header, so this week is fetched on load rather than on
      open: "is anything open" is the question most of the time, and it should not need a click.
