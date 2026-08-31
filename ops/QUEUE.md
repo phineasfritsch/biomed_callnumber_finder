@@ -193,3 +193,37 @@ changing the green means finding all eight by hand and getting seven of them.
 **Done when.** `--green-line` and `--orange-line` exist beside the other twenty-one tokens, the
 nine call sites use them, and `LOOSE_COLOUR_BUDGET` in `Tools/cohesion.test.js` comes down to
 four. The remaining four are the carrier chips and one white, which are genuinely one-off.
+
+---
+
+## OPEN · Chromium cannot reach the site from this container, though curl can
+
+**What.** `node Tools/ui.test.js --origin https://shelfmark.phineasfritsch.com` fails every journey
+with `net::ERR_CONNECTION_RESET`, while `ops/prod` fetches all 23 routes successfully from the same
+container at the same moment. Two separate causes were found and one is fixed:
+
+- Chromium does not read `HTTPS_PROXY`, and needs the proxy CA in the NSS store, which is absent by
+  default. Fixed by launching with an explicit proxy and installing the CA:
+
+      apt-get update && apt-get install -y libnss3-tools
+      certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n ccr-agent-proxy-ca -i /root/.ccr/agent-proxy-ca.crt
+
+  That resolves `ERR_CERT_AUTHORITY_INVALID` and `https://api.github.com` then loads in Chromium.
+
+- The remaining failure is host specific and not understood. The relay reports
+  `ws_closed_mid_exchange`: roughly 1,750 bytes sent, 39 received, tunnel closed after six seconds,
+  every time. Disabling PostQuantumKyber, EncryptedClientHello and TLS13EarlyData changed nothing.
+  The CA is not the issue any more, because github loads.
+
+**What was done instead.** `Tools/ui.test.js --deployed` fetches the published set with curl, which
+does reach the site, serves it locally and runs all 18 journeys against it. That drives the real
+deployed artefact in a real browser and currently passes 52 of 52. It is the honest substitute and
+not the equal one: it cannot exercise anything that depends on the real hostname, which means the
+worker's `/api` routes, edge caching, redirects and response headers.
+
+**Never fix this with `--ignore-certificate-errors`.** A browser that trusts everything is not
+testing TLS at all, and the failure it hides next time will be a real one.
+
+**Done when.** `node Tools/ui.test.js --origin https://shelfmark.phineasfritsch.com` runs green
+from somewhere, whether that is this container with the tunnel problem solved or a developer
+machine with ordinary network access.

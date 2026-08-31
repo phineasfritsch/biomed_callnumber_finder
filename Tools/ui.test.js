@@ -26,10 +26,30 @@
 //           LibCal, /api/*, and the cover art are synthesised here and are the weakest part of
 //           this file — they prove the page handles a shape, not that the shape is current.
 //
-// --origin runs the identical journeys against a real deployment with the stubs off. That is the
-// only mode that can tell you production works, and it is the mode to run after every deploy.
-// It cannot run in this container: the egress proxy allows github.com and the npm registry and
-// nothing else, so ops/health reports the site as BLOCKED rather than as passing.
+// THREE MODES, and which one you can run depends on where you are:
+//
+//   (default)   the files in this working tree, served locally, upstreams stubbed.
+//   --deployed  the files CURRENTLY PUBLISHED, fetched with curl and served locally, upstreams
+//               stubbed. This drives the real deployed artefact in a real browser, which matters
+//               whenever the deployment and the tree disagree; run ops/parity to find out whether
+//               they do. What it does not cover is anything that depends on the real hostname:
+//               the worker's /api routes, edge caching, redirects, headers.
+//   --origin U  the identical journeys straight at a real deployment, no stubs and no local
+//               server. This is the only mode that can tell you production works, and it is the
+//               one to run after every deploy.
+//
+// --origin does not work from inside this container, and the reason is worth writing down because
+// it looks exactly like the site being down. Chromium does not read HTTPS_PROXY, so it is launched
+// with the proxy explicitly. Even then its TLS handshake to some hosts dies in the tunnel with
+// ERR_CONNECTION_RESET while curl reaches the same URL and gets a 200. Chromium also needs the
+// proxy CA in the NSS store, which is not there by default:
+//
+//     apt-get update && apt-get install -y libnss3-tools
+//     certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n ccr-agent-proxy-ca -i /root/.ccr/agent-proxy-ca.crt
+//
+// That fixes ERR_CERT_AUTHORITY_INVALID and is enough for some hosts. Never pass
+// --ignore-certificate-errors instead: a browser that trusts everything is not testing TLS at all.
+// --deployed exists because of this, and it is the honest substitute rather than the equal one.
 
 'use strict';
 const fs = require('fs');
@@ -40,6 +60,8 @@ const ROOT = path.join(__dirname, '..');
 const argv = process.argv.slice(2);
 const SHOT = argv.includes('--shot');
 const ORIGIN = (() => { const i = argv.indexOf('--origin'); return i >= 0 ? argv[i + 1] : null; })();
+const DEPLOYED = argv.includes('--deployed');
+const DEPLOYED_FROM = (process.env.SHELFMARK_ORIGIN || 'https://shelfmark.phineasfritsch.com').replace(/\/$/, '');
 const ONLY = (() => { const i = argv.indexOf('--only'); return i >= 0 ? argv[i + 1] : null; })();
 const SHOTDIR = path.join(ROOT, 'ops', 'shots');
 
@@ -69,18 +91,19 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=
   '.js': 'text/javascript; charset=utf-8', '.json': 'application/json', '.png': 'image/png',
   '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.pdf': 'application/pdf', '.txt': 'text/plain; charset=utf-8' };
 
-function startServer() {
+function startServer(docRoot) {
+  const RT = docRoot || ROOT;
   const server = http.createServer((req, res) => {
     const rel = decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, '');
     const send = (code, body, type) => { res.writeHead(code, { 'content-type': type || 'text/html; charset=utf-8' }); res.end(body); };
-    const notFound = () => send(404, fs.readFileSync(path.join(ROOT, '404.html')));
+    const notFound = () => send(404, fs.readFileSync(path.join(RT, '404.html')));
     /* The published set is the whole document root. A path .assetsignore excludes must 404 here
        exactly as it does on the web, or this harness would happily serve /README.md and prove
        nothing about the deployment. */
     for (const candidate of [rel, rel + '.html', rel === '' ? 'index.html' : null]) {
       if (!candidate || ignored(candidate)) continue;
-      const abs = path.join(ROOT, candidate);
-      if (!abs.startsWith(ROOT)) return notFound();
+      const abs = path.join(RT, candidate);
+      if (!abs.startsWith(RT)) return notFound();
       if (fs.existsSync(abs) && fs.statSync(abs).isFile()) {
         return send(200, fs.readFileSync(abs), TYPES[path.extname(abs)] || 'application/octet-stream');
       }
@@ -430,13 +453,39 @@ journey('map · the floor plan draws shelves', 'librarian', async (page, base) =
 
 /* ---------- run ---------- */
 
+/* Pull the published set down with curl and lay it out the way the server expects. curl rather
+   than fetch because curl is what already reads this container's proxy configuration and CA
+   bundle, and it is the client that demonstrably reaches the site. */
+function fetchDeployed() {
+  const { execFileSync } = require('child_process');
+  const dir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'shelfmark-deployed-'));
+  const SET = [['/', 'index.html'], ['/about', 'about.html'], ['/methodology', 'methodology.html'],
+    ['/hours', 'hours.html'], ['/map', 'map.html'], ['/databases', 'databases.html'],
+    ['/404', '404.html'], ['/site.css', 'site.css'], ['/shelf-core.js', 'shelf-core.js'],
+    ['/shelf-data.js', 'shelf-data.js'], ['/robots.txt', 'robots.txt']];
+  for (const [url, name] of SET) {
+    const out = path.join(dir, name);
+    execFileSync('curl', ['-sS', '-f', '-m', '45', '-o', out, DEPLOYED_FROM + url], { stdio: 'pipe' });
+    if (!fs.existsSync(out) || fs.statSync(out).size === 0) throw new Error(`empty response for ${url}`);
+  }
+  return dir;
+}
+
 (async () => {
-  const local = ORIGIN ? null : await startServer();
+  let servedFrom = ROOT;
+  if (DEPLOYED) {
+    servedFrom = fetchDeployed();
+    console.log(`fetched the published set from ${DEPLOYED_FROM} into ${servedFrom}`);
+  }
+  const local = ORIGIN ? null : await startServer(servedFrom);
   const base = ORIGIN ? ORIGIN.replace(/\/$/, '') : local.base;
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(ORIGIN && process.env.HTTPS_PROXY
+    ? { proxy: { server: process.env.HTTPS_PROXY } } : {});
   if (SHOT) fs.mkdirSync(SHOTDIR, { recursive: true });
 
-  console.log(ORIGIN ? `against ${base} — LIVE, no stubs\n` : `against ${base} — local server, network stubbed\n`);
+  console.log(ORIGIN ? `against ${base} — LIVE, no stubs\n`
+    : DEPLOYED ? `against the PUBLISHED bytes from ${DEPLOYED_FROM}, served locally, network stubbed\n`
+    : `against ${base} — this working tree, served locally, network stubbed\n`);
 
   const list = ONLY ? journeys.filter(j => j.name.includes(ONLY)) : journeys;
   for (const j of list) {
