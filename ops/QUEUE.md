@@ -50,6 +50,10 @@ could not push, and said so instead of claiming success. See the item below.
 
 ## OPEN · Stage 02: page briefs, written from the frozen direction
 
+**Stopping condition.** `ops/SHIP.md` now defines what finished means and who says so, written
+before the work it judges, because a bar set afterwards is set to whatever was achieved. Eight
+criteria plus a human gate the board cannot close on its own.
+
 **What.** The bracket is finished. `ops/DIRECTION.md` is the frozen direction: One Drawing, Two
 Zooms, with fifteen grafts from the directions it eliminated. Next is one brief per surface, each
 with numbered rulings a code comment can cite.
