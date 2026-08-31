@@ -227,3 +227,78 @@ testing TLS at all, and the failure it hides next time will be a real one.
 **Done when.** `node Tools/ui.test.js --origin https://shelfmark.phineasfritsch.com` runs green
 from somewhere, whether that is this container with the tunnel problem solved or a developer
 machine with ordinary network access.
+
+---
+
+## OPEN · Nine mutations that a green suite does not notice
+
+**What.** An inventory pass verified each of these by making the change and running the gate. Every
+one passes all assertions. Two were about `Tools/ui.test.js` itself and are fixed; these nine are
+not, and each is its own piece of work.
+
+| Mutation | What the reader gets |
+| --- | --- |
+| Swap `left` and `right` on all 453 shelf faces | Sent to the wrong side of every aisle, with the same confident wording |
+| Delete every level 3 and level 6 face (99 of 453) | A third of the building silently unmapped |
+| Drop the level 9 exclusion from `routeLocate` in map.html | Every book on levels 10 and 11 routed to Special Collections. This is the exact regression the code documents at length |
+| Unwire the Build route button in map.html | The itinerary never appears; looks like an OCR failure |
+| Read the publication year from MARC 008 offset 11 instead of 7 | Every "newest edition first" cluster silently reordered |
+| Delete the `covers.checked` gate in index.html | Every catalog search sends an ISBN to openlibrary.org whether or not the reader opted in |
+| Collapse `statusOf` in hours.html to always return "Open now" | Someone walked to a room that closed an hour ago |
+| Remove the "Show 60 more" handler in databases.html | 1,300 of about 1,360 databases unreachable |
+| Make `looksLikeArticle` always return false | Every DOI, PMID and ISSN goes to the catalog instead of the resolver |
+
+**Why the suite misses them.** Three structural reasons, and they are worth separating because the
+fixes differ.
+
+The shelf survey's *content* is unverified. Six call numbers in `Tools/catalog.test.js` and three
+in `Tools/ui.test.js` exercise 453 faces. `ops/health` catches a changed face count and a changed
+side histogram, but `ops/health` is not part of `ops/test`, and its strongest dataset check
+compares `shelf-data.js` to `biomed-shelf-ranges.json`, so a label mis-transcribed at survey time
+is in both files and invisible to everything.
+
+Whole modules are unreachable by any suite. The trip planner, the OCR pipeline and the one box
+that routes every query all sit outside the `/* == …:start ==` markers the harnesses extract, so
+nothing can reach them. The fix is mechanical: add markers and extract, exactly as
+`Tools/catalog.test.js` does with `catalog-core`.
+
+The MARCXML reader that ships has never parsed the fixtures. `Tools/sru.test.js` stubs
+`readRecord` out entirely, and `Tools/catalog.test.js` parses `fixtures/*.xml` with its own regex
+scanner rather than running the shipped parser over them.
+
+**Done when.** Each row above fails at least one assertion. Take them one at a time; the shelf
+survey and the trip planner are the two that decide whether the tool sends people to the right
+place, and they are the two to do first.
+
+---
+
+## OPEN · The response, as opposed to the file on disk, is unchecked
+
+**What.** `robots.txt` is in the `EXPECTED` list in `Tools/assets.test.js` and its contents are
+never read, so changing it to `Disallow: /` ships green and deindexes the site. There is no
+`_headers` file: no Content-Security-Policy, no Referrer-Policy, no X-Content-Type-Options, and
+nothing notices their absence. That matters more here than it usually would, because `index.html`
+loads two scripts from `cdn.jsdelivr.net` at runtime and the SRI check in `Tools/xss.test.js` is
+the only thing standing behind them.
+
+**Done when.** `Tools/assets.test.js` reads `robots.txt` and asserts it allows the site and
+disallows `/api/`, a `_headers` file exists with a script-src allowlist, and `ops/prod` checks the
+headers come back on a real response.
+
+---
+
+## OPEN · A third of the assertion count is a text scan of code nothing here can run
+
+**What.** The iOS port contributes 785 of the 2075 assertions. There is no Swift toolchain in this
+container. `ios/Tools/swiftcheck.test.js` says in its own header that it is not a type checker and
+will not catch a wrong argument type or a missing await, and `ios/Tools/geometry.test.js` tests a
+JavaScript transcription of `WalkPath.swift` rather than the Swift itself.
+
+**Why it matters.** An operator reading "2075 assertions, all green" has no way to tell that a
+third of that number is a textual scan. The number is the thing this system asks people to trust.
+
+**Done when.** `ops/test` reports the iOS suites in a separate line with a word about what they
+are, so the headline number is not read as more than it is. Separately, and more useful: drive
+`ios/Tools/geometry.test.js` and `Tools/walk.test.js` from one shared table of cases, so a
+divergence between the Swift-mirroring JavaScript and `shelf-core.js` fails rather than passing
+twice in two dialects.
