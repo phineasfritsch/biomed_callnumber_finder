@@ -158,9 +158,19 @@ const DB_LIST = { count: 3, licensed: 2, items: [
   { name: 'Embase', url: 'https://www.embase.com/', auth: true, best: true },
   { name: 'Web of Science', url: 'https://www.webofscience.com/', auth: true, best: false },
 ] };
-const ARTICLES = { count: 2, items: [
-  { title: 'Asthma in adults', creator: 'Smith J', date: '2024', isPeerReviewed: true, doi: '10.1000/x', id: 'a1', source: 'The Lancet' },
-  { title: 'Childhood asthma review', creator: 'Doe A', date: '2023', isPeerReviewed: false, id: 'a2', source: 'BMJ' },
+/* Shaped from src/worker.js's own slim() output, field for field. The first version of this
+   invented {count, items:[{creator, isPeerReviewed, id}]} while the worker returns
+   {total, docs:[{title, authors, jtitle, ..., access, oa, link}]} and the page reads the latter.
+   A stub that does not match the contract is worse than no stub: it makes the panel look
+   exercised while nothing on either side of the wire has been checked against the other.
+   Tools/worker.test.js proves the worker emits this shape; this proves the page can read it. */
+const ARTICLES = { total: 2, docs: [
+  { title: 'Asthma in adults', authors: ['Smith J'], jtitle: 'The Lancet', volume: '403', issue: '10422',
+    pages: '112-120', date: '2024', doi: '10.1000/x', issn: '0140-6736', type: 'article',
+    source: 'The Lancet', access: 'subscription', oa: false, link: 'https://example.invalid/a1' },
+  { title: 'Childhood asthma review', authors: ['Doe A'], jtitle: 'BMJ', date: '2023',
+    doi: '10.1000/y', issn: '0959-8138', type: 'article', source: 'BMJ',
+    access: 'free', oa: true, link: 'https://example.invalid/a2' },
 ] };
 
 async function installStubs(context, seen) {
@@ -185,7 +195,7 @@ async function installStubs(context, seen) {
      These three routes stand in for the worker; Tools/worker.test.js is what tests the worker. */
   await context.route('**/api/databases', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(DB_LIST) }));
   await context.route('**/api/articles**', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(ARTICLES) }));
-  await context.route('**/api/suggest**', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ suggestion: 'asthma' }) }));
+  await context.route('**/api/suggest**', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ q: 'asthmaa', suggest: 'asthma' }) }));
 }
 
 /* ---------- the harness ---------- */
@@ -207,13 +217,36 @@ const CN_MISS = 'ZZ 999 Q999';     // in no mapped range on any level
 
 /* Waits for the page to have actually answered, rather than for a fixed number of milliseconds.
    A sleep here would pass on a fast machine and fail on a loaded one, which is the shape of a
-   test everybody learns to re-run instead of read. */
+   test everybody learns to re-run instead of read.
+   AND CHECKS THE ANSWER IS ON THE SCREEN. The first version of this read textContent and stopped
+   there, which returns text for hidden nodes: appending
+       .result,.cat-results,.hr-row,.db-row{display:none}
+   to site.css passed all 52 of these assertions. Every answer was computed, inserted into the
+   DOM, and invisible, and the suite written specifically to catch "the page loads and the button
+   does nothing" could not see "the page loads and the reader gets an empty box". That is the
+   rule in OPERATIONS.md about never weakening an assertion into one that would pass on an empty
+   artefact, broken by the file that enforces it.
+   Height rather than a CSS property lookup, because there are many ways to end up invisible
+   (display, visibility, opacity, zero height, clipped) and only one way to occupy space. */
 const settled = async (page, sel, ms = 15000) => {
   await page.waitForFunction(
     s => { const el = document.querySelector(s); return el && el.textContent.trim().length > 0; },
     sel, { timeout: ms },
   ).catch(() => {});
-  return (await page.textContent(sel).catch(() => '')) || '';
+  const text = (await page.textContent(sel).catch(() => '')) || '';
+  if (text.trim()) {
+    const seen = await page.evaluate(s => {
+      const el = document.querySelector(s);
+      if (!el) return { box: 0, vis: 'no element' };
+      const r = el.getBoundingClientRect(), cs = getComputedStyle(el);
+      return { box: r.height * r.width, vis: cs.visibility, display: cs.display, opacity: cs.opacity };
+    }, sel);
+    ok(`${sel} is actually on the screen, not just in the DOM`,
+      seen.box > 0 && seen.vis !== 'hidden' && seen.display !== 'none' && Number(seen.opacity) > 0,
+      `${sel} holds ${text.trim().length} characters the reader cannot see: ` +
+      `box=${seen.box}px2 display=${seen.display} visibility=${seen.vis} opacity=${seen.opacity}`);
+  }
+  return text;
 };
 
 journey('locate · a call number becomes a shelf', 'desk worker', async (page, base) => {
