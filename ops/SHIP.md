@@ -146,3 +146,54 @@ NOT YET, two dissents of six. Four readers — the reference librarian, the priv
 > Neither dissent is weak, and the round should not have passed. Both were driven live, both produced a specific wrong shelf face for input a real desk sees, and both sit exactly on the standard the tool sets for itself in its own code — 'a wrong aisle is worse than none'. The desk worker hit theirs on the fourth thing they typed, without hunting. Marking either as a preference would be dishonest.
 > What is worth noting is the discipline in both dissents: each separated the blocker from the wish list and shipped everything else. The cross-surface reader could have blocked on the three inconsistent library counts, the 404's arithmetic and the LibCal error jargon — all real, all filed as notes. Had the NOT YET rested on those, it would have been a preference dressed as a blocker and the round should have passed. It did not.
 > One caution for the next round: item 1 and item 2 are one defect with two call sites. A fix that lands only in the home box will read as 'the blocker is fixed' and will not move the cross-surface vote. Both dissenters should re-drive their own reported strings — 'W1 AM 4990', 'asthma', 'banana bread', and the four-line paste — before the round is called.
+
+---
+
+### Round 1 - 31 August, 21 days out, commit 9cd5e6e
+
+    desk worker            NOT YET
+    reference librarian    NOT YET
+    distrusting patron     NOT YET
+    first-year on a phone  NOT YET
+    screen-reader user     NOT YET
+    cohesion reviewer      NOT YET
+    ----
+    verdict: NOT YET (0 of 6)
+
+Worse than round 0 on the count, and better than round 0 on the evidence. Every one of the six
+found the same defect independently, with six different paste lists, and every one of them waived
+everything else they found. Round 0 had passed four readers who never opened the pickup walk.
+
+**The defect.** The guard added after round 0 went into `findFaces`, and a comment in
+`shelf-core.js` said that everything resolving a shelf goes through `findFaces`, naming the route
+builder among them. That sentence was written before it was true. `map.html` carried a second,
+independent copy called `routeLocate`, so the pull-list walk never saw the guard. Pasting a list
+the way a real shift produces one returned "asthma" and "banana bread" as stops on Level 11 with
+the words printed on the shelf face, counted by the summary as "5 books across 3 floors", while
+"W1 AM 4990" routed to index 4 and the box six inches above it answered index 9.
+
+The round-0 tally had warned about exactly this shape: *"a fix that lands only in the home box
+will read as 'the blocker is fixed' and will not move the cross-surface reader's vote."* The fix
+did land in more than the home box. It landed in every call site that went through the shared
+parser, and the one that did not was the one nobody had counted.
+
+**Fixed in `c1cef82`.** `routeLocate` delegates to `findFaces`. Items 1 and 2 landed together, as
+the tally asked, because item 2 is a few lines on item 1's own code path and item 1 alone would
+hand a reader a silently shortened walk. Verified against all 651 range endpoints: none route
+differently, and the only string the guard rejects is the bare "A" that opens Special Collections,
+which is a range endpoint rather than a query. Five new assertions, all five red against the
+previous commit.
+
+**What the round is worth as a process result.** Six of six is not a worse outcome than four of
+six; it is a better-instrumented one. The retest note handed every reader the strings the previous
+round had failed on and told them not to take the fix on trust. Four readers who had voted SHIP in
+round 0 opened a surface they had not opened before, and found the defect the two dissenters had
+predicted would survive a partial fix. The instruction that produced that was one sentence: do not
+assume the rest of the site is unchanged, because a fix can regress a surface you care about.
+
+**Filed as queue items rather than bars**, on the tally's own reading, since both are contradicted
+by the readers' own ship-anyway answers: the map's refusal wording for a non-call-number ("No
+mapped shelf contains ASTHMA" reads as though asthma were a call number the survey missed), and
+the missing route-position announcement for a screen-reader user. Also noted: the `/map` detail
+panel does not clear under a refusal, so a stale shelf face stays on screen labelled with the
+previous call number.
