@@ -48,6 +48,33 @@ could not push, and said so instead of claiming success. See the item below.
 
 ---
 
+## OPEN · Stage 02: page briefs, written from the frozen direction
+
+**What.** The bracket is finished. `ops/DIRECTION.md` is the frozen direction: One Drawing, Two
+Zooms, with fifteen grafts from the directions it eliminated. Next is one brief per surface, each
+with numbered rulings a code comment can cite.
+
+**What the direction commits to, and what a brief may not undo.** Three rules the bracket made
+binding rather than decorative:
+
+1. The drawing is never the answer. The answer is the text line in its current position and
+   wording, plus the staff code at equal weight. Nothing is ever placed between the top of the
+   viewport and that line.
+2. The drawing never appears without a mark, because a plan with nothing filled asserts a place
+   nobody looked up. A refusal renders as a positive object with the named refusal, the voided
+   staff-code slot, and the evidence line, and draws nothing.
+3. One answer shape serves one book and twelve. A pull list is a route; one call number is a route
+   of length one.
+
+**Done when.** Every surface in `ops/DIRECTION.md` has a brief, roughly three rulings each, and a
+brief with no rulings is unfinished. Any new claim a brief introduces is pinned in
+`Tools/pins.test.js` before the page carrying it is written.
+
+**Before any of it lands.** The live-ahead item below still blocks Stage 05. Briefs touch no code
+and can be written now.
+
+---
+
 ## DONE · The fixer could not push what it had built
 
 **What happened.** The first fixer run completed its queue item and then reported: *the repo isn't
