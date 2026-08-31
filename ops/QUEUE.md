@@ -40,7 +40,7 @@ to improvise a substitute gate.
 
 ---
 
-## OPEN · Two surfaces answer without looking anything up
+## DONE · Two surfaces answered without looking anything up
 
 **What.** A six-person review panel drove the site and raised 45 findings; 24 survived adversarial
 verification. The full report is `ops/PANEL.md`. Two findings are one defect wearing two coats,
@@ -77,6 +77,20 @@ These are the two places it does not.
 **Done when.** Neither surface asserts a location it did not look up, and `Tools/ui.test.js` has a
 journey for each: one typing a second call number into a used box, one asking the Reference view
 for something that is not a call number.
+
+**DONE.** Both journeys exist and pass: `locate · a second call number does not answer for the
+first` and `map · the Reference view refuses what it cannot look up`. Both were written RED before
+the fix and went green with it.
+
+The home box needed two attempts. The first parsed the field into a call number plus a remainder,
+which cannot be done: the tail of a real call number can itself be a real call number, and judged
+on shape eleven of the 906 endpoints in the survey came apart. What shipped instead needs no
+parsing. The page already knows what it last answered, so a box beginning with exactly that string
+and carrying more after it is an append, and the appended part is what the reader meant.
+
+Left as a note for whoever reads this next: this item sat marked `OPEN` for several commits after
+it was finished, which would have sent the daily fixer to redo it, because that routine takes the
+topmost `OPEN` item. Closing an item is part of doing it.
 
 ---
 
