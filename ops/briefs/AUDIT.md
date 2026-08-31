@@ -8,6 +8,45 @@ them is visible: each author saw only their own page.
 
 Close to one product, but not yet one. The honesty instincts are consistent across all seven — every brief refuses to assert what it did not look up, and none of them tries to make the drawing the answer. The seams are in exactly the three places seven parallel authors always seam: the shared drawing (nobody owns it, and MAP-1 has already swapped the continuity property that is the whole bet for the easier 'centred'), the shared grammar of failure (five briefs cite G5 and instantiate four different shapes), and the shared vocabulary (MAP-9 bans words the frozen direction itself uses, ABOUT-2 and METH-1 each claim sole ownership of the definition of 'index', and the same shelf gets two different accessible sentences at the two zooms). Two briefs also name enforcement machinery the product does not have — a build step — and one, MAP-4, quietly reads binding rule 2 as governing marks rather than drawings, which is either the right reading for a browse surface or a hole through rule 2, and only the owner can say which. Fix the six ownership gaps and settle the ten escalations, and these are one product; port them as they stand and it ships as seven pages that agree about ethics and disagree about nouns.
 
+## Resolution status (Stage 02b)
+
+This audit has been worked. What follows is the record of what was resolved, what was escalated,
+and where the audit itself was wrong — kept in place rather than rewritten, because an audit that
+is edited to agree with the fixes stops being evidence.
+
+**The eleven contradictions.** Nine resolved in the briefs themselves; each amended ruling carries
+an *Amended (Stage 02b)* paragraph stating what it used to say and why that could not stand. One
+(MAP-4 vs the five absolute readings) is escalation E-1, because it cannot be settled without
+reading frozen text that does not address it. One (ABOUT-2 vs METH-1) is resolved mechanically —
+one constant per term, nothing retyped — with the direction of the quotation held as escalation
+E-3 and a reversible default in force.
+
+**The eight gaps.** Six are now owned by `ops/briefs/shared.md`, a cross-surface brief written for
+exactly the objects seven parallel authors could not own: the drawing (SHARED-1, SHARED-2), the
+grammar of failure (SHARED-3), the list grammar (SHARED-4), the shelf's spoken sentence
+(SHARED-5), the partial-knowledge caption (SHARED-7), the transition (SHARED-8), and the guards
+(SHARED-10). Two are escalations: intake (E-8) and nav (E-7).
+
+**The ten escalations.** Eight stand, in `ops/ESCALATIONS.md`, each with a recommendation and a
+default in force so that nothing is blocked on an answer. Two were resolved rather than deferred:
+the vocabulary question, because the frozen direction speaks the words `/map` had banned; and the
+no-build-step question, because both rulings that said "fails the build" already had suite
+assertions in their own *Caught by* clauses and never needed a build at all.
+
+**Where this audit was wrong, and it matters more than where it was right.** The audit's headline
+drift finding — that MAP-1 "quietly substituted an easier property" for the continuity bet by
+writing "centred" — is not what happened. MAP-1 cites DIRECTION line 141, which says in the frozen
+text: "programmatic focus moves to the target shelf, **scrolled to the centre**." Line 58 says the
+mark is "held under the same point on screen". **The direction contradicts itself, and MAP-1 was
+faithfully applying one half of it while the audit judged it against the other.** The two are
+reconcilable at no cost — require home's crop to centre the mark, and the near and far zooms agree
+by construction — which is SHARED-2, and is why this never became a ninth escalation.
+
+The lesson is the audit's own, turned on itself: a single reader holding all seven briefs at once
+is the only way a disagreement between two of them becomes visible, and that reader is also the
+only one positioned to mistake a contradiction in the source for a drift in the copy. The check on
+the checker is to read what a ruling cites before judging it against something else.
+
 ## Contradictions (11)
 
 ### MAP-4 vs HOME-5, 404-1, METH-6, DB-2, HOURS-3

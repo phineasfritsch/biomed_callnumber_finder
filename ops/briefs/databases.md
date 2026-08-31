@@ -19,7 +19,9 @@ The scope sentence "Listed, not searched." renders as a standing sentence in the
 
 ### DB-2
 
-No floor drawing, crop, map link or geometry of any kind appears on this surface.
+No drawing, crop or shelf geometry of any kind appears on this surface.
+
+*Amended (Stage 02b).* This previously also banned any "map link", which read literally deleted the Map entry from the one shared header nav that this brief's own must-survive list and refusal 10 both require on every surface. The shared nav is not this brief's to touch; the ban is narrowed to drawings, crops and geometry, which is what it was for.
 
 *Because.* Binding rule 2 — the drawing never appears without a mark — and G2. This page holds names and URLs, no shelf geometry; any plan drawn here would assert a place nobody looked up. It is also the direction's own rule that a picture of nothing is a lie (graft from subtract-2, line ~around the grafts list).
 

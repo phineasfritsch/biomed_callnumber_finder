@@ -59,7 +59,9 @@ An unlocatable call number in a pull list keeps its numbered slot in the itinera
 
 ### MAP-7
 
-Every stop row and every shelf on the plan is a real focus target with the accessible name shelfLabel() already produces (index, row, level, then each face's range, or "no ranges mapped"), and the drawing keeps exactly one aria-label for itself — the arrow-key row walk moves the mark and announces one sentence per row carrying that row's number and call-number range.
+Every stop row and every shelf on the plan is a real focus target whose accessible name is the SHARED-5 shelf sentence — level, row, side, landmark, flanking indexes — with that row's call-number range appended as a trailing clause. The drawing keeps exactly one aria-label for itself. The arrow-key row walk moves the mark and announces that sentence, and announces the row's position in the SHARED-4 list grammar.
+
+*Amended (Stage 02b).* This ruling adopted shelfLabel()'s existing word order (index, row, level, then each face and its range), which is a different order and different content from the sentence HOME-9 fixes for the same shelf at the near zoom: /map's carried ranges and no landmark, home's the landmark and no ranges. Two zooms of one drawing therefore named the same shelf two ways, breaking G5 and the direction's same-string acceptance test at the exact moment the reader crossed between them — the one moment this direction exists to make continuous. Appending is the only difference a zoom may make. The mechanism this ruling was protecting is untouched: role="group" on #plan, the delegated Enter/Space handler, and the refusal to re-simplify back to role="img" all stand.
 
 *Because.* G6, plus the /map paragraph's arrow-key walk and the acceptance test at DIRECTION.md:44 — same string for sighted and screen-reader, one aria-label per drawing, "never forty spoken R L's". The existing role="group" (not role="img") on #plan and the delegated Enter/Space handler are the mechanism that already satisfies half of this and must not be re-simplified back into role="img".
 
@@ -75,7 +77,9 @@ Unrecorded space is drawn hollow with a dashed edge and named "not recorded" in 
 
 ### MAP-9
 
-One word per thing, across the plan, the banner, the itinerary and the level bar: a floor is a "level", a shelf position is an "index", a face is "Left"/"Right"/"Single (R)". "Floor", "bay" and "aisle" are not used as synonyms for these on this surface.
+One word per thing, across the plan, the banner, the itinerary and the level bar: a stacks level is a "level", a shelf position is an "index", a face is "Left"/"Right"/"Single (R)". A stacks level is never called a "floor".
+
+*Amended (Stage 02b).* The ban on "bay" and "aisle" is lifted; see SHARED-6. Three reasons it could not stand. The frozen direction uses both as its own words for real things ("adjacent bays and the aisle drawn around the target", "bays are counted from the aisle mouth", "same aisle, four bays further"), and a surface may not ban a word the direction speaks — HOME-8's justification quotes the aisle-mouth sentence, so home would have printed a word /map forbids. This brief's own must-survive list keeps "shelved in Reference on floor 4" and the per-floor walk cards, and /about keeps "Reference on floor 4, Special Collections on floor 9". And the ban flattened a distinction the data actually makes: a building floor and a stacks level are different things, so "floor" stays correct for Reference on 4 and Special Collections on 9. What remains is the one substitution this ruling was really for, and it is the one that was breaking the reader mid-walk: walkList's "to aisle 7" for a thing the plan labels index 7 is still forbidden, because there "aisle" was standing in for "index" rather than naming an aisle.
 
 *Because.* G5. Today one page says "Level 8", "Floor 4 · Reference", "FLOOR 10" in the special-floor card, "floor 4" in the Reference sentence and the OCR miss line, and walkList prints "to aisle 7" for a thing the plan labels index 7. A reader crossing from home's "index 10" to a step that says "aisle 7" is being asked to translate mid-walk. Which noun the building itself prints on its shelf ends is out of remit (see below); that a single one is used is not.
 

@@ -48,7 +48,7 @@ could not push, and said so instead of claiming success. See the item below.
 
 ---
 
-## OPEN · Stage 02b: settle the audit before any page is ported
+## DONE · Stage 02b: settle the audit before any page is ported
 
 **Where Stage 02 got to.** Seven briefs, `ops/briefs/`, **82 numbered rulings**, 128 sentences
 listed as must-survive, 36 new claims to pin. Every ruling carries how a suite would catch a
@@ -74,6 +74,35 @@ Eleven contradictions and eight gaps. Three matter more than the rest:
 
 **Done when.** The eleven contradictions are resolved in the briefs themselves, the eight gaps have
 a named owner, and a re-audit returns "one product". Ten escalations need the owner rather than us.
+
+**What was done.** Nine of the eleven contradictions are resolved inside the rulings themselves,
+each amended ruling carrying an *Amended (Stage 02b)* paragraph that states what it used to say and
+why that could not stand, so a reader six weeks from now finds the argument and not just the outcome.
+The six ownership gaps went to `ops/briefs/shared.md`, a cross-surface brief for the objects no page
+author could legitimately claim: the drawing, the grammar of failure, the list grammar, the shelf's
+spoken sentence, the caption, the transition, the vocabulary and the guards. One new ruling, HOME-15,
+was needed, because `/methodology` had anchored a link to a two-claim catalog sentence that no HOME
+ruling created.
+
+**Two of the ten escalations turned out not to be escalations.** The vocabulary question answered
+itself once someone read the frozen direction rather than the brief: it speaks the words `/map` had
+banned. And both rulings that demanded a "build failure" in a product with no build step already had
+suite assertions in their own *Caught by* clauses. The rule was fine; only its enforcement story
+was fiction. The remaining eight are in `ops/ESCALATIONS.md`, each with a recommendation and a
+default in force, so the port is blocked on none of them. Two of those defaults are marked expensive
+to reverse and one (E-8, where intake lives) is deliberately left with no default at all, because
+building either way before it is answered is the costly mistake.
+
+**The audit was wrong about the thing it led with, and that is the finding worth keeping.** Its
+headline was that MAP-1 had quietly swapped the continuity bet, "the mark stays under the same
+point on screen", for the easier "centred". MAP-1 had done no such thing: it cites DIRECTION line
+141, which says "scrolled to the centre" in the frozen text, while line 58 says "the same point on
+screen". The direction contradicts itself and the audit judged a faithful reading of one half
+against the other. The two reconcile at no cost. Require home's crop to centre the mark and the
+two zooms agree by construction, which is SHARED-2. A single reader holding all seven briefs is
+the only way to see a disagreement between two of them, and is also the only reader positioned to
+mistake a contradiction in the source for drift in the copy. The check on that checker is to read
+what a ruling cites before judging it against something else.
 
 ---
 

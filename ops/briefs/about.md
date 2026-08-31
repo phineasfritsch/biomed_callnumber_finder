@@ -19,7 +19,9 @@ This surface renders no floor drawing unless the drawing is produced by the same
 
 ### ABOUT-2
 
-Every term the home answer line makes pressable has exactly one anchored section here, and the single sentence the pressable term opens is the first sentence of that section, character for character.
+Every term the home answer line makes pressable has exactly one anchored section here, and the single sentence the pressable term opens is that section's first sentence. All three renderings of a term — home's expansion, this section's first sentence, and /methodology's paragraph — are generated from one constant per term, held in one file. Nothing is retyped anywhere.
+
+*Provisionally amended (Stage 02b), reversible by the owner.* ABOUT-2 and METH-1 each claimed sole ownership of the definitive string, so "index" acquired a home expansion, an /about first sentence and a /methodology paragraph with two briefs each asserting theirs was the single one. The default taken here: **/methodology owns the term paragraph**, because DIRECTION line 42 sends key terms there explicitly; /about quotes it and home's expansion quotes it. The /about ÷ /methodology boundary as a whole is escalation E-3 and the owner may reverse the direction of the quotation without disturbing the mechanism. "Character for character" is dropped as the *rule* and kept as the *consequence*: with one generating constant it is automatic, and without one it was enforceable only by a human diffing two hand-written pages — which is exactly the drift it existed to prevent.
 
 *Because.* G5 (one vocabulary for the same thing) and layer 6/7 of the seven layers: the pressable expansion is the in-place version and this page is 'the permanently reachable version' of it. Two wordings of 'index' is two products.
 
@@ -43,7 +45,9 @@ The definition of 'index' states what it is counted from and what physical label
 
 ### ABOUT-5
 
-No coordinate on this page is written by hand: every level, row, index, side and range printed as an example is regenerated from the recorded geometry, and an example that no longer resolves fails the build rather than printing.
+No coordinate on this page is written by hand: every level, row, index, side and range printed as an example is regenerated from the recorded geometry, and an example that no longer resolves fails `ops/test` rather than printing.
+
+*Amended (Stage 02b).* "Fails the build" named machinery that does not exist in a product whose hard constraints state there is no build step. As with METH-1, none was ever needed: this ruling's own *Caught by* is a suite assertion that resolves every call-number literal on the page through shelf-core. The rule is unchanged; only its enforcement story is now true.
 
 *Because.* G2 — no surface asserts a location it did not look up — applies to illustrations as hard as to answers. A stale worked example is a fluent wrong aisle with a teaching voice.
 
@@ -127,7 +131,7 @@ Read off the working page. These are what a rewrite deletes without noticing.
 - **"Results are scoped to whichever library you say you are working at, and they widen to the rest of UCLA only when yours turns up nothing."** — Explains why a search can return fewer results than the reader expects. Without it a narrowed answer is indistinguishable from a gap in the collection — the exact failure the catalog-scope-is-named pin guards on home.
 - **The skip link (class="skip", "Skip to the guide"), nav aria-label="Sections", lang="en", the h1/h2/h3 hierarchy, and the canonical URL.** — Pinned (skip-link-exists) and asserted across all seven pages by Tools/cohesion.test.js. Nothing about the page looks different when they go, which is why they need naming.
 - **"Filtering happens in your browser against the list already on screen, so it answers as you type and costs nothing."** — States where computation happens, which is both a privacy fact and a performance promise the reader can hold the product to.
-- **"Any shelf shown in a catalog result is a link. Click it and the map opens on that floor with the shelf already lit."** — The only prose description of the home-to-/map crossing. Under the frozen direction this sentence needs rewording (it becomes a zoom with the mark held under the same point on screen), not deleting — G4.
+- **SUPERSEDED (Stage 02b) — "Any shelf shown in a catalog result is a link. Click it and the map opens on that floor with the shelf already lit."** — The only prose description of the home-to-/map crossing. The zoom sentence on the new-claims list **replaces** it: what must survive is the *claim* that a shelf in a catalog result is a link and that following it lands on the lit shelf, not this wording. Two further reasons it cannot be preserved verbatim: it says "that floor" where SHARED-6 requires "level" for a stacks level, and the crossing is now a change of frame rather than a page that opens. The pin signature is updated deliberately, in the same commit as the string, per G4 and SHARED-10 — which is the whole difference between a rewrite and a regression.
 
 ## New claims, to be pinned before the page is written
 

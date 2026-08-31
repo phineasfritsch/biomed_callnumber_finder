@@ -11,7 +11,9 @@ comment can cite one six weeks from now by somebody arguing with it.
 
 ### HOME-1
 
-After a lookup, the answer line is the first element in DOM order below the search field; the h1, the lede, the examples row, the site nav, the catalog panel and the article panel all render after the crop, and the answer's vertical offset is identical for every answer type including refusals.
+After a lookup, nothing renders between the top of the viewport and the answer line except the echoed query and its routing statement, whose contents HOME-12 defines; the h1, the lede, the examples row, the site nav, the catalog panel and the article panel all render after the crop, and the answer's vertical offset is identical for every answer type including refusals.
+
+*Amended (Stage 02b).* This ruling previously read "the answer line is the first element in DOM order below the search field", absolute, while HOME-12 made the routing statement with its one-click reversals mandatory and "the only thing permitted above the answer line". An implementer obeying the old wording literally would have deleted the thing HOME-12 requires. The new wording matches DIRECTION line 52 and lets HOME-12 own what that block may contain.
 
 *Because.* Rule 1 and subtract-4's acceptance test adopted verbatim in DIRECTION ("nothing — no header, count, mode label, legend, level chooser or upload affordance — is ever placed between the top of the viewport and the answer line"), plus G1. Without it the picture, the mode label or the panel headings buy pixels from the one thing measured in seconds.
 
@@ -21,7 +23,9 @@ After a lookup, the answer line is the first element in DOM order below the sear
 
 The answer line keeps today's exact composition and order — "Level 10 · top row · index 10 · Right side" — with the landmark clause appended after "side" and the staff code rendered at a computed font-size equal to the sentence's, never inside a caption, aside, small or figcaption element.
 
-*Because.* Layer 1 ("today's wording, today's position, unmoved") and layer 2 (graft from spatial-1, "never demoted to caption"). The expert's cost for the arrival of a picture must be zero, which is only true if the string he scans is byte-identical to today's.
+*Because.* Layer 1 ("today's wording, today's position, unmoved") and layer 2 (graft from spatial-1, "never demoted to caption"). The invariant is that **the four values keep today's order, wording and screen position**; the landmark clause is appended after them and the pressable terms of HOME-8 wrap three of the existing words. The expert's cost is the four words of landmark the direction books explicitly as his cost, not zero.
+
+*Amended (Stage 02b).* This ruling justified itself on the rendered string being "byte-identical to today's" while the same sentence appends a clause and HOME-8 wraps three words in buttons. The string cannot be byte-identical and also four words longer, so the stated test could never pass and the ruling was unfalsifiable as written. "Byte-identical" is dropped; the order-wording-position invariant is what is actually meant and is testable.
 
 *Caught by.* String-compare the rendered line for a known hit against the pinned fixture prefix; assert getComputedStyle(staffCode).fontSize === getComputedStyle(sentence).fontSize and staffCode.closest('figcaption,small,aside') === null.
 
@@ -31,7 +35,9 @@ The crop is inline SVG emitted in the same render pass as the sentence, from the
 
 *Because.* Rule 1 ("paints with it from geometry already in memory, never a second request, never a lazy load, never an image fetch") and G1. Today's previewMap already satisfies this by calling planShelves; the ruling exists so a port does not turn it into an <img> or a fetch when it grows.
 
-*Caught by.* Instrument fetch/XMLHttpRequest around the render and assert zero calls; assert the crop subtree has no [src] or [href^="http"].
+*Amended (Stage 02b).* Gains one requirement from SHARED-2: the crop centres the marked face horizontally. This is what makes DIRECTION line 58 ("the same point on screen") and line 141 ("scrolled to the centre") describe one behaviour rather than two contradictory ones, and it is the condition under which the home-to-/map transition preserves continuity at all.
+
+*Caught by.* Instrument fetch/XMLHttpRequest around the render and assert zero calls; assert the crop subtree has no [src] or [href^="http"]; assert the marked face's centre falls within the middle third of the crop's width.
 
 ### HOME-4
 
@@ -51,7 +57,9 @@ A refusal renders as a filled object: the named refusal in the answer's grammar,
 
 ### HOME-6
 
-One emitter produces the answer line for both answer paths — the direct call-number path (today shelfPreview) and each catalog holding (today shelfBlock) — so the same hit yields a byte-identical sentence, staff code, landmark clause and crop wherever it appears on the page.
+One emitter produces the **shelf claim** — sentence, staff code, landmark clause and crop — for both answer paths, the direct call-number path (today shelfPreview) and each catalog holding (today shelfBlock), so the same hit yields identical output wherever it appears on the page. The **catalog claim** on the derived path is a separate line, owned by HOME-15, rendered above the shelf claim and never merged into it.
+
+*Amended (Stage 02b).* As written this required the two paths to render identically, which the grafted derived/looked-up separation forbids: a title answer must state two claims, "The catalog gave QP 376 for this title" and "QP 376 maps to Level 10 · Index 10 · Right", and a direct lookup has only the second. METH-4 already assumed home printed the two-claim sentence and made itself its link target, while no HOME ruling created it. Splitting the emitter by claim keeps both.
 
 *Because.* G5 (one vocabulary for the same thing) and rule 3. Today these are two independent renderers that already disagree in markup and in whether a range is shown; a port that keeps both will drift the moment the crop is added to one of them.
 
@@ -79,7 +87,9 @@ Each crop carries exactly one accessible name — one sentence naming level, row
 
 *Because.* spatial-4's acceptance test adopted whole ("the same string for sighted and screen-reader"), G6, and the fact that today's page already has this property (role="img" with one aria-label on .prevmap) and would lose it silently to a redraw that labels shelves individually.
 
-*Caught by.* Assert the SVG has role="img" and one aria-label, and that no descendant of the crop carries aria-label, title or role="img".
+*Amended (Stage 02b).* The sentence itself is no longer fixed here. It is generated by the one shelf-sentence generator of SHARED-5, which both zooms use, because MAP-7 was independently giving the same shelf a different word order and different content at the far zoom — so the two zooms of one drawing named the same shelf two ways at exactly the moment the reader crossed between them. This ruling keeps what is genuinely home's: one accessible name per crop, no per-shelf labels.
+
+*Caught by.* Assert the SVG has role="img" and one aria-label, and that no descendant of the crop carries aria-label, title or role="img"; assert the aria-label equals the SHARED-5 generator's output for that face.
 
 ### HOME-10
 
@@ -91,7 +101,9 @@ The mapped range that produced the answer prints as plain text under the answer 
 
 ### HOME-11
 
-Twelve stops render as twelve of the same answer object in one list, each its own focus target, with the crop belonging to the focused stop; an entry that cannot be mapped keeps its position in the list and carries its refusal by name, and is never dropped or moved to the end.
+Twelve stops render as twelve of the same answer object in one list, each its own focus target, with the crop belonging to the focused stop; an entry that cannot be mapped keeps its position in the list and carries its refusal by name, and is never dropped or moved to the end. Focusing a stop announces its position in the SHARED-4 list grammar — "stop 3 of 12 shown, 12 found".
+
+*Amended (Stage 02b).* This ruling required focus targets and no position announcement, while DIRECTION grafted one list grammar for rows, records and stops and named this very list as the instance it was grafted for. `/databases` had written the string without authority and `/map` had written a third shape. Home owns the string now; the other two cite it (SHARED-4).
 
 *Because.* Rule 3 and refusal 7 (no second layout for the pull list). A dropped entry is a silent claim that the reader's twelfth slip does not exist.
 
@@ -120,6 +132,28 @@ Only geometry that was looked up is drawn: a row with an unrecorded bay count dr
 *Because.* Refusal 4 and G2. The crop is generated from the same DATA the sentence came from; the moment it fills a gap to look complete it asserts a place nobody surveyed, which is the failure mode the whole file is built around.
 
 *Caught by.* A fixture level with an unrecorded row must produce a crop with no rect for that row and a dashed "not recorded" region; assert the renderer reads only from DATA keys, with no arithmetic over neighbouring shelf ids.
+
+### HOME-15
+
+*Added at Stage 02b, to close the HOME-6 / METH-4 contradiction.*
+
+On the derived path — a title searched, a holding returned — the answer states two claims as two
+separately-sourced lines, in this order: what the catalog said ("The catalog gave QP 376 for this
+title"), then what this site did with it ("QP 376 maps to Level 10 · Index 10 · Right side"). The
+second line is HOME-6's shelf claim, unchanged and identical to the direct path's. Neither line
+may be collapsed into the other, and the catalog line names UCLA's catalog as its source rather
+than stating the call number in this site's own voice.
+
+*Because.* The derived/looked-up separation, grafted at DIRECTION line 147 and ruled the best
+trust mechanic in the bracket. A title answer is two lookups and they can fail independently: the
+catalog can hand back the wrong record for a title, and the mapping can be right about a call
+number that was never the reader's book. Merging them produces one confident sentence whose two
+halves have different warrants, which is the same class of failure as an unmarked plan. METH-4
+already anchors an explanation to this sentence.
+
+*Caught by.* A derived-path fixture must render two distinct nodes; assert the catalog line names
+the catalog and precedes the shelf line, and assert the shelf line is byte-identical to the same
+hit rendered through the direct path.
 
 ## Must survive the port
 

@@ -11,7 +11,9 @@ comment can cite one six weeks from now by somebody arguing with it.
 
 ### METH-1
 
-Every term the product prints in a legend, in a refusal, or in a disclosure has exactly one anchored paragraph on this page, addressed by a stable id; a linked term with no anchor and an anchor no surface links to are both build failures.
+Every term the product prints in a legend, in a refusal, or in a disclosure has exactly one anchored paragraph on this page, addressed by a stable id; a linked term with no anchor and an anchor no surface links to both fail `ops/test`.
+
+*Amended (Stage 02b).* "Build failures" named enforcement machinery this product does not have — the hard constraints state there is no build step — which made the ruling unfalsifiable as written. It never needed one: this ruling's own *Caught by* is a suite assertion, and the suite exists. The completeness check also runs over a term list nobody has ratified, so it cannot be run at all until that list has an owner; SHARED-10 owns it.
 
 *Because.* DIRECTION line 42 and the /methodology section: "linked directly from every legend word, every key term in a refusal and every disclosure." Serves G5 (one vocabulary for the same thing) and G3 (explanation reachable without occupying the fold). Without the completeness check, the port ships legend words whose links land on #main and the reader learns the links are decorative.
 
@@ -75,7 +77,9 @@ The verification-interval paragraph states the mechanism — a row past its inte
 
 ### METH-9
 
-Nothing may be added to the shared stylesheet, and no script, font or asset may be added to any page, for /methodology's sake; this surface stays static HTML served by the existing site.css.
+No new **fetched** asset — script, font, image or stylesheet — may be added to this page; /methodology stays static HTML served by the existing site.css. The handful of bytes METH-10's `:target` treatment needs in the shared stylesheet are budgeted and permitted.
+
+*Amended (Stage 02b).* Two faults. It bound all seven surfaces from inside one surface's brief — the same overreach ABOUT-11 deliberately refused to commit — so the site-wide asset rule moves to SHARED-9 where it can be argued with by everyone it binds. And it forbade adding anything to the shared stylesheet while METH-10 requires a `:target` treatment that does not rely on hue alone, which is CSS that does not exist today and had nowhere to live: the brief required and forbade the same thing. A stylesheet rule is not a fetched asset; the cost it names is bytes, and bytes are budgetable.
 
 *Because.* G1 and the hard constraints — home is 198 KB and the stylesheet 53 KB, and web fonts once cost 803 ms of a 3.5 s first paint. This page is off the path to a shelf; a term-paragraph style that ships in the stylesheet is paid for on every home load by every reader who never opens it.
 

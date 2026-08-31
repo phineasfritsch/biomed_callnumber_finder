@@ -13,6 +13,10 @@ comment can cite one six weeks from now by somebody arguing with it.
 
 Every asynchronous outcome resolves into one string that is simultaneously the visible text of #hrsStatus and its aria-live content; there is no visible-only outcome and no announced-only outcome, and the pending string "Asking LibCal…" is never the last thing that string ever says.
 
+The collapsed <summary> label is not a second outcome and is exempt, on one condition: it is derived from that same string rather than written independently. A <summary> reading "hours unavailable" while the status region reads a different failure sentence is exactly the second outcome this ruling forbids.
+
+*Amended (Stage 02b).* As written this ruling both required and forbade the preserved `summary.textContent = 'hours unavailable'` on first-load failure, which is a second visible outcome string, in different words from HOURS-2's required failure sentence, outside the live region. Deriving it resolves the contradiction without dropping a pinned string.
+
 *Because.* The frozen /hours section: "in one string that is both the visible text and the aria-live region." Grafted from subtract-3 and ruled non-negotiable, it is the only stated fix for the /hours failure. Serves G6 and G2. Without it the pending state is a permanent claim that an answer is still coming.
 
 *Caught by.* Drive the page with LibCal stubbed to (a) success, (b) HTTP 500, (c) a never-resolving promise then a reject. In every case assert #hrsStatus.textContent is non-empty, is not the pending string, and equals the rendered outcome sentence. Assert no code path writes the outcome to out.innerHTML without also writing statusEl.
