@@ -308,3 +308,43 @@ only drawn, which closed a silent dead end for a screen-reader user at the desk;
 count contradiction is gone. On that last one, both numbers were wrong to hardcode: LibCal returns
 32 today, `/about` claimed 27, and the count can change without anyone noticing. The prose no
 longer states a number, and the page keeps counting live.
+
+---
+
+### Round 4 - 1 September, 20 days out - VOID
+
+    verdict: VOID (not counted, in either direction)
+
+**This round is not a result, and the reason is my error.** It was launched against `92fb640` and
+I then rewrote `shelf-core.js` twice while its six readers were driving it. Every previous round in
+this file was run against a frozen tree for exactly this reason: a verdict about a moving target
+describes nothing, and recording it as a pass or a fail would put something in this file that looks
+like evidence and is not. The votes it returned (five SHIP, one NOT YET) are discarded.
+
+**One finding survives being void, because it was checked afterwards against the committed tree and
+reproduces.** The reference librarian drove a phrase rather than a call number:
+
+    B12 deficiency      -> Level 11 · top row · index 1 · Left side
+    CD4 count           -> Level 11 · top row · index 3 · Left side
+    IL6 signaling       -> Level 11 · top row · index 3 · Right side
+    K2 vitamin therapy  -> Level 11 · top row · index 3 · Right side
+    vitamin B12         -> the catalog, correctly
+
+A phrase a patron says out loud at the desk, answered with a confident shelf face, with the
+remaining words silently discarded and the catalog never asked. The same topic with the words the
+other way round behaved correctly, which is what made it findable.
+
+The cause is one character's worth of oversight, and it is old: the shape test was anchored at the
+start and not at the end, so any string that merely BEGAN like a call number took the shelf path.
+The fix is measured rather than guessed - across all 651 range endpoints there is not one purely
+alphabetic token after the class, so a leftover English word means the string is a phrase. Fixed,
+with four regression assertions, and verified not to cost any of the 906 endpoint lookups.
+
+**What this says about the process, which matters more than the finding.** The void round still
+produced the most valuable result of the four, and it did so because a reader ignored the brief.
+The brief asked readers to attack the parser with mangled call numbers and with non-call-numbers;
+it did not think to ask about a call number with a word after it. Every round that has found
+something real found it slightly outside what it was told to look at.
+
+The rule stands and I broke it: no shipped file changes while a round is in flight. The next round
+runs against a commit and the tree stays frozen until it returns.

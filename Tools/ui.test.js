@@ -697,6 +697,20 @@ journey('locate · a gene is not a shelf', 'librarian', async (page, base) => {
       !/Level \d+ · (top|bottom) row · index/i.test(got), got.slice(0, 160));
   }
 
+  /* The same failure with a word attached, found by the reference librarian in round 4 and worse
+     than the bare acronyms: the shape test was anchored at the start and not at the end, so
+     anything that merely BEGAN like a call number took the shelf path and the rest of the phrase
+     was discarded. "B12 deficiency" is something a patron says out loud at the desk, and it was
+     answered with Level 11, index 1 -- while "vitamin B12", the same topic the other way round,
+     correctly reached the catalog. */
+  for (const phrase of ['B12 deficiency', 'CD4 count', 'IL6 signaling', 'K2 vitamin therapy']) {
+    await page.fill('#q', phrase);
+    await page.press('#q', 'Enter');
+    const got = await settled(page, '#result');
+    ok(`"${phrase}" is a phrase, not a shelf`,
+      !/Level \d+ · (top|bottom) row · index/i.test(got), got.slice(0, 160));
+  }
+
   /* And the other side of the same rule: a class this building really has still works spaceless. */
   await page.fill('#q', 'WB115H322');
   await page.press('#q', 'Enter');

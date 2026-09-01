@@ -569,8 +569,31 @@ function meansACallNumber(t){
   return spacelessReadings(raw).some(c => shapedLikeCallNumber(c));
 }
 
+/* Does the WHOLE string read as a call number, or only its opening?
+ *
+ * The shape test below is anchored at the start and not at the end, so it answered yes to
+ * anything that merely BEGAN like a call number. "B12 deficiency" was answered with Level 11 ·
+ * top row · index 1 — a confident shelf face for a phrase a patron says out loud at the desk —
+ * and the catalog was never asked. So were "CD4 count", "IL6 signaling" and "K2 vitamin therapy".
+ * Meanwhile "vitamin B12", the same topic with the words the other way round, correctly reached
+ * the catalog. Found by the reference librarian in ship round 4.
+ *
+ * The discriminator is measured, not guessed: across all 651 range endpoints in the survey there
+ * is not one purely alphabetic token after the class. Every cutter, volume and year carries a
+ * digit — M616g, AA1, P6P, 2003. An English word does not. So a leftover word means the string is
+ * a phrase with a call-number-shaped opening, and it belongs in the catalog. */
+function everyTokenIsPartOfIt(s){
+  const toks=String(s||'').trim().split(/\s+/);
+  /* Where the head ends: "WB 115 ..." spends two tokens on class and number, "B12 ..." and
+     "W1 ..." spend one, because the number is already attached. */
+  const head=/[0-9]/.test(toks[0]) ? 1 : 2;
+  for(let i=head;i<toks.length;i++) if(!/[0-9]/.test(toks[i])) return false;
+  return true;
+}
+
 function shapedLikeCallNumber(t){
   const s=(t||'').trim();
+  if(!everyTokenIsPartOfIt(s)) return false;
   if(!s || s.length>48) return false;
   if(/\s/.test(s)===false && s.length<3) return false;
   if(/[A-Za-z]{2,}:/.test(s)) return false;                       // mesh:, title:, at: …
