@@ -221,6 +221,40 @@ topmost `OPEN` item. Closing an item is part of doing it.
 
 ---
 
+## OPEN · A fiscal quarter is answered with a shelf, and a cutter should be required before a year
+
+**Found while ship round 7 was in flight**, by feeding the new grammar notation from other systems
+entirely: Dewey, UDC, gene loci, chemical names, legal citations, identifiers, versions,
+measurements, coordinates, dates. Thirty-nine of forty-one groups came back clean. Two did not, and
+only one is a defect:
+
+    Q3 2025   -> Level 11 · index 4        a fiscal quarter
+    Q1 2024   -> Level 11                  and every other quarter
+    W2 2020   -> Level 1
+    H1 2019   -> Level 11
+    QC 2025   -> Level 11
+
+`Z 675 .M4` also resolved and is not a defect: Z is Libraries, and that is a real LC number.
+
+**Why the grammar admits them.** It accepts CLASS, NUMBER, then a year as a tail. `Q3 2025` reads
+as class Q, number 3, year 2025, and Q is a class the survey recorded. Nothing in the grammar says
+a year has to be a year *of something*.
+
+**The fix, and it is measured.** Across all 906 endpoint lookups in the survey, **904 carry a
+Cutter**; the two that do not are `ZWZ 330` and the bare `A`, both range boundaries rather than book
+numbers. So a year or volume tail should require a Cutter to have been seen. That kills every string
+above and keeps `WB 115 H322 2018`, which has one, and `WM 100`, which has no tail at all. The cost
+is `WB 115 2018` - a class and number with a year and no Cutter - which becomes a refusal; two
+endpoints out of 906 say that shape is not how books here are numbered.
+
+**Why it is not already fixed.** `shelf-core.js` is a shipped file and round 7 is driving it. Round
+4 was voided for exactly this, and one queued item is cheaper than another wasted round.
+
+**Done when.** A year or volume tail requires a Cutter, the strings above route to the catalog,
+906 endpoint lookups keep their route, and a journey covers it.
+
+---
+
 ## OPEN · The live site is ahead of this repository, and nobody has the difference
 
 **What.** Two of the eleven published files on `https://shelfmark.phineasfritsch.com` contain code
