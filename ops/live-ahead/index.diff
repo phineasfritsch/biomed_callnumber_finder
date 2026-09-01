@@ -1,0 +1,525 @@
+--- index.html	2026-09-01 00:16:20.607761737 +0000
++++ ops/live-ahead/index.live.html	2026-09-01 00:22:00.015571850 +0000
+@@ -122,11 +122,8 @@
+   </div>
+ <div class="cat" id="cat">
+     <div class="cat-head" id="catHead">
+-      <h2 id="catTitle">Find a book in the catalog <span class="h2-sub">all 21 UCLA libraries</span></h2>
+-      <!-- Named by itself and then by the heading, so the buttons list reads "Open, Find a book
+-           in the catalog" instead of two adjacent buttons both called "Open". The word that
+-           tells them apart was already on screen; it just was not wired to the control. -->
+-      <button class="btn ghost" type="button" id="catToggle" aria-expanded="false" aria-controls="catBody" aria-labelledby="catToggle catTitle"><span class="tgl">Open</span></button>
++      <h2>Find a book in the catalog <span class="h2-sub">all 21 UCLA libraries</span></h2>
++      <button class="btn ghost" type="button" id="catToggle" aria-expanded="false" aria-controls="catBody"><span class="tgl">Open</span></button>
+     </div>
+     <div class="cat-body" id="catBody" hidden>
+       <p class="cat-hint">Everything goes in the one box at the top. A call number goes to the shelf map; anything else searches UCLA&rsquo;s catalog.</p>
+@@ -159,12 +156,7 @@
+         </label>
+         <label class="chk"><input type="checkbox" id="catGroupEd" checked> Group editions <span class="chk-note">(newest on top)</span></label>
+         <label class="chk"><input type="checkbox" id="catBiomed" checked> Only my library</label>
+-        <!-- Unticked, and the default is the whole point. /methodology says the cover requests
+-             "happen only if you ask for covers", and this box is inside a panel that is shut
+-             until the results render, so ticked-by-default sent seven ISBNs to openlibrary.org
+-             before the reader could see the box, let alone untick it. Consent that arrives after
+-             the request is not consent. Tick it and the covers come back. -->
+-        <label class="chk"><input type="checkbox" id="catCovers"> Show covers <span class="chk-note">(sends the ISBN to openlibrary.org)</span></label>
++        <label class="chk"><input type="checkbox" id="catCovers" checked> Show covers <span class="chk-note">(sends the ISBN to openlibrary.org)</span></label>
+       </div>
+ 
+       <details class="cat-adv">
+@@ -277,8 +269,8 @@
+        and CORS-open, so it needs no more infrastructure than the catalog search does. -->
+ <div class="cat" id="art">
+     <div class="cat-head" id="artHead">
+-      <h2 id="artTitle">Find an article <span class="h2-sub">by title, or by DOI, PMID or ISSN</span></h2>
+-      <button class="btn ghost" type="button" id="artToggle" aria-expanded="false" aria-controls="artBody" aria-labelledby="artToggle artTitle"><span class="tgl">Open</span></button>
++      <h2>Find an article <span class="h2-sub">by title, or by DOI, PMID or ISSN</span></h2>
++      <button class="btn ghost" type="button" id="artToggle" aria-expanded="false" aria-controls="artBody"><span class="tgl">Open</span></button>
+     </div>
+     <div class="cat-body" id="artBody" hidden>
+       <p class="cat-hint">Search UCLA&rsquo;s article index by title or subject. Paste a DOI, a PubMed ID or an ISSN instead and it asks the link resolver who carries the full text, and for which years.</p>
+@@ -397,10 +389,17 @@
+    "Shaped like a call number" is deliberately narrow: class letters followed by a number, or the
+    W1-series form. A title is almost never either. A `field:value` filter token and a bare ISBN are
+    sent to the catalog outright. */
+-/* Delegates. The predicate lives in shelf-core.js so the map, the route builder and the catalog
+-   cannot each carry their own version and drift; two of them already had. */
+-function looksLikeCallNumber(t){ return meansACallNumber(t); }
+-
++function looksLikeCallNumber(t){
++  const s=(t||'').trim();
++  if(!s || s.length>48) return false;
++  if(/\s/.test(s)===false && s.length<3) return false;
++  if(/[A-Za-z]{2,}:/.test(s)) return false;                       // mesh:, title:, at: …
++  const digits=s.replace(/[^0-9Xx]/g,'');
++  if(/^[0-9][0-9Xx-]{8,}$/.test(s) && (digits.length===10||digits.length===13)) return false;
++  if(/^W[1-4][A-Z]{0,2}\s*[A-Z]/i.test(s)) return true;           // W1 AM477
++  if(/^[A-Z]{1,3}\s*\d{1,4}(?:\.\d+)?\b/i.test(s)) return true;   // WM 100, QL737.C22, BF 400
++  return false;
++}
+ /* A DOI, a PubMed ID or an ISSN identifies an *article or a journal run*, which the catalog
+    answers badly and the link resolver answers exactly.
+ 
+@@ -432,106 +431,14 @@
+     + planShelves(lvl, tint, false) + planFeatures() + `</svg>`;
+ }
+ 
+-/* ===== what the comparator actually read =====
+-   `parseCN` never refuses. A token it cannot segment becomes one opaque Cutter, which still
+-   sorts and still lands inside somebody's range, so a slip typed into a box that still held the
+-   last one ("W1 AM4990W1 AB123") came back with a shelf and nothing on screen said that the
+-   second half of the string had gone into deciding which one. Forty slips a shift, and the only
+-   tell was a range line nobody re-reads on a lookup that looks like it worked.
+-
+-   This applies the same normalisation `parseCN` does, keeps the leading run of tokens that are
+-   shaped like a call number, and hands back whatever follows so the page can say it is there.
+-   What it does not catch is two whole call numbers with a space between them: after a cutter,
+-   "W1" is indistinguishable from another cutter, and guessing there would cost more than it
+-   saves. Selecting the box on focus is the other half of this. */
+-/* The reader locates one slip, then clicks into the box and types the next one. If the field
+-   still holds the last query, the second lands glued onto the first, and the comparator reads the
+-   leading part and answers with the PREVIOUS book's shelf, in a panel identical to a correct one.
+-
+-   This is decided from what the page last answered, not by parsing. A parser cannot settle it:
+-   the tail of a real call number can itself be a real call number. Judged on shape, eleven of the
+-   906 endpoints in the survey came apart ("W1 A1C7" into "W1 A1" + "C7"); requiring both halves
+-   to land on a mapped face brought that to five, because "W4C Z89" and "P 2009" both genuinely
+-   resolve. Five real call numbers looked up short and answered confidently from the wrong string
+-   is a worse bug than the one being fixed, so that whole approach was dropped.
+-
+-   The prefix test has no such ambiguity. If the box begins with the exact string this page last
+-   answered and there is more after it, the reader appended, and the appended part is what they
+-   meant. Nothing is guessed and no legitimate call number can trigger it. */
+-let lastAnswered='';
+-
+-/* A W1 number with the space left out. `scheme()` still reads "W1AM4990" as the biomedical
+-   serials prefix, so it never reaches the NLM branch that tolerates "WA900.1M300", and the parse
+-   comes apart underneath into class W, number 1, which is on no shelf anywhere. The miss then
+-   said the level might not be entered yet, which is the sentence for a book that is genuinely
+-   not in the building: retype, versus send the reader to SRLF. Opposite instructions.
+-
+-   So the space goes back in. This offers the splits; `shelfPreview` decides which of them was
+-   real, because a split that merely lands somewhere is not evidence of anything. */
+-function w1Spacings(term){
+-  const t=String(term||'').trim().toUpperCase(), first=t.split(/\s+/)[0]||'';
+-  if(scheme(t)!=='w1') return [];
+-  if(/^W[1-4][A-Z]{0,2}$/.test(first)) return [];         // the prefix is already its own token
+-  const out=[];
+-  for(let n=2;n<=4 && n<first.length;n++)
+-    if(/^W[1-4][A-Z]{0,2}$/.test(first.slice(0,n))) out.push(first.slice(0,n)+' '+t.slice(n));
+-  return out;
+-}
+-
+ function shelfPreview(q){
+   const out=document.getElementById('result');
+   const spec=/^hist\.?\s*div\.?\s+/i.test(q);
+-  const coll=spec?'spec':'stacks';
+-  let typed=spec ? q.replace(/^hist\.?\s*div\.?\s+/i,'').trim() : q;
+-  const said=[];
+-  /* The appended slip. Take what follows the last answer, which is what the reader typed. */
+-  if(lastAnswered && typed.length>lastAnswered.length && typed.indexOf(lastAnswered)===0){
+-    const added=typed.slice(lastAnswered.length).trim();
+-    if(added){
+-      said.push(`Read as <code>${escHtml(added)}</code>. <code>${escHtml(lastAnswered)}</code> was `
+-        +`still in the box from the last search and had no part in this answer.`);
+-      typed=added;
+-      const box=document.getElementById('q');
+-      if(box) box.value=(spec?'Hist Div ':'')+added;
+-    }
+-  }
+-  let term=typed;
+-  /* Before the lookup, not after it. See w1RejoinCutter. */
+-  const rejoined=w1RejoinCutter(term);
+-  if(rejoined){
+-    said.push(`Read as <code>${escHtml(rejoined)}</code>. In a W1 number the cutter is one word, `
+-      +`so the letters and their number are not separated.`);
+-    term=rejoined;
+-  }
+-  let hits=findFaces(term, coll);
+-  if(!hits.length){
+-    /* A split counts only if the face it lands on is labelled with the prefix it claims. Landing
+-       is not enough, and that is what was wrong with the first version of this: one face runs
+-       from "W1 ZH765" to "W2 AN231AN", so the invented prefixes "W1A" and "W1AM" sort perfectly
+-       comfortably inside it and all three splits of "W1AM4990" came back looking like answers. */
+-    const forms=w1Spacings(term);
+-    const found=forms.filter(c=>{
+-      const pre=c.split(' ')[0]+' ';
+-      return findFaces(c,coll).some(h=>String(h.d.start).toUpperCase().indexOf(pre)===0
+-                                    || String(h.d.end).toUpperCase().indexOf(pre)===0);
+-    });
+-    if(found.length===1){
+-      term=found[0];
+-      hits=findFaces(term,coll);
+-      said.push(`Read as <code>${escHtml(term)}</code>. A W1 number needs a space after the prefix.`);
+-    } else if(forms.length){
+-      out.innerHTML=`<div class="miss">A W1 number needs a space after the prefix, and `
+-        +`<code>${escHtml(typed.toUpperCase())}</code> has none. Nothing on the mapped shelves `
+-        +`matches it as typed.</div>`
+-        +`<div class="examples"><a class="tomap" href="/map">Open the shelf map</a></div>`;
+-      return;
+-    }
+-  }
+-  const note=said.length?`<div class="miss">${said.join(' ')}</div>`:'';
+-  lastAnswered=term;
++  const term=spec ? q.replace(/^hist\.?\s*div\.?\s+/i,'').trim() : q;
++  const hits=findFaces(term, spec?'spec':'stacks');
+   const href='/map?q='+encodeURIComponent(term)+(spec?'&coll=spec':'');
+   if(!hits.length){
+-    out.innerHTML=note+`<div class="miss">No mapped shelf contains <code>${escHtml(term.toUpperCase())}</code>. `
++    out.innerHTML=`<div class="miss">No mapped shelf contains <code>${escHtml(term.toUpperCase())}</code>. `
+       +`It may be on a level not yet entered, or outside the mapped ranges.</div>`
+       +`<div class="examples"><a class="tomap" href="/map">Open the shelf map</a></div>`;
+     return;
+@@ -539,7 +446,7 @@
+   const first=hits[0];
+   const s=shelfById(first.id);
+   const where = spec ? 'Level 9 · Special Collections' : ('Level '+first.lvl);
+-  out.innerHTML=note+hits.map(h=>{
++  out.innerHTML=hits.map(h=>{
+     const sh=shelfById(h.id);
+     const w2 = spec ? 'Level 9 · Special Collections' : ('Level '+h.lvl);
+     return `<div class="hit"><div class="loc">${w2} · ${sh?sh.row+' row · index '+sh.index:'shelf '+escHtml(h.id)} · ${sideName[h.side]} side</div>`
+@@ -583,15 +490,7 @@
+   const t=document.getElementById('q').value.trim();
+   if(!t){ showRouted(''); document.getElementById('result').innerHTML=''; return; }
+   if(looksLikeCallNumber(t) || /^hist\.?\s*div\.?\s/i.test(t)){ showRouted('shelf'); shelfPreview(t); return; }
+-  /* Clear the shelf region on the way past it. A reader who looks up a call number, gets a shelf,
+-     then searches a title used to leave the old shelf sitting on screen under the new answer:
+-     a confident location for a book nobody asked about, which is the same failure as answering
+-     prose with a shelf, arrived at from the other direction. */
+-  if(looksLikeArticle(t) && window.articleLookup){
+-    document.getElementById('result').innerHTML='';
+-    showRouted('article'); window.articleLookup(t); return;
+-  }
+-  document.getElementById('result').innerHTML='';
++  if(looksLikeArticle(t) && window.articleLookup){ showRouted('article'); window.articleLookup(t); return; }
+   showRouted('catalog');
+   if(window.catalogSearch) window.catalogSearch();
+ }
+@@ -603,11 +502,6 @@
+   if(window.catalogClear) window.catalogClear();
+ };
+ document.getElementById('q').addEventListener('keydown',e=>{ if(e.key==='Enter') unifiedSearch(); });
+-/* A slip typed into a box that still holds the last one runs the two together: a scanner types
+-   at the caret, and the caret is where the last number ended. Selecting on focus means the next
+-   thing typed replaces rather than appends. It only covers the case where focus was lost and
+-   regained, which is why `readCallNumber` is the half of this that has to be right. */
+-document.getElementById('q').addEventListener('focus',e=>{ e.target.select(); });
+ document.querySelectorAll('.examples .ex').forEach(b=>b.onclick=()=>{
+   document.getElementById('q').value=b.dataset.q;
+   unifiedSearch();
+@@ -1731,6 +1625,30 @@
+     }
+     return null;
+   }
++
++  /* A result here answers "which edition, and which shelf". Everything else about a record --
++     the full subject headings, request and recall, the citation exports, a login that knows
++     whether you already have it out -- lives in Primo, and there is no reason to reimplement any
++     of it. Primo addresses a bib by its Alma MMS id with an `alma` prefix, which is the 001
++     already parsed out of every record: docid=alma9974748673606533. Verified against the live
++     pnxs API, where `recordid` comes back in exactly that form.
++
++     `src/worker.js` builds the same URL for article records, from ids that are not always MMS
++     numbers, so it derives `context` and encodes what it is given. The two are documented
++     together in ENDPOINTS.md, and Tools/catalog.test.js asserts they still agree on a bib id --
++     which is the only thing that stops a change to one of them from being made to one of them.
++
++     Inside the markers so it is covered: this builds a URL out of a value read off the network,
++     and the assertion that an 001 which is not an MMS number links nowhere should be run rather
++     than believed. */
++  const PRIMO_VIEW='https://search.library.ucla.edu/discovery/fulldisplay',
++        PRIMO_VID='01UCS_LAL:UCLA';
++  function primoHref(mms){
++    const id=String(mms==null?'':mms).trim();
++    if(!/^\d+$/.test(id)) return '';     // an 001 that is not an MMS number links nowhere
++    // Digits only by the line above, so there is nothing here that needs escaping.
++    return PRIMO_VIEW+'?docid=alma'+id+'&context=L&vid='+PRIMO_VID;
++  }
+ /* == catalog-core:end == */
+ 
+   /* ---- MARCXML ---- */
+@@ -1919,6 +1837,14 @@
+   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+   const SIDE={left:'Left', right:'Right', single:'Single (R)'};
+ 
++  // Title, linked to the record it came from. Unlinkable records still get their title.
++  function recordLink(rec,cls,label){
++    const href=primoHref(rec.mms);
++    return href
++      ? '<a class="'+cls+'" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+esc(label)+'</a>'
++      : '<span class="'+cls+'">'+esc(label)+'</span>';
++  }
++
+   // Counts are per holding, not per bib (verified on multi-AVA records). check_holdings
+   // arrives with $f/$g absent, so no number is invented for it.
+   function availChip(a){
+@@ -1939,25 +1865,12 @@
+ 
+   function shelfBlock(r){
+     if(r.hits.length){
+-      /* What the reader had to carry across the navigation in their head: the call number, and
+-         which face of the shelf it was on. The map lists a shelf's left and right ranges
+-         neutrally, so arriving without either meant re-reading two ranges in a building you have
+-         never been in, on a phone.
+-
+-         `q` only when this is the only face that matched. The map answers `q` by looking the
+-         number up again and selecting the lowest-level hit, so on a serial run that spans floors
+-         it would land the reader on the first face whatever they clicked, and a shelf you did
+-         not ask for is the failure this file is built around. `side` is safe either way: it
+-         names the face this link is for and nothing else reads it. */
+-      const cn=(r.parts&&r.parts.cn)||'';
+-      const carry=(r.hits.length===1&&cn)?'&q='+encodeURIComponent(cn):'';
+       let h=r.hits.map(hit=>{
+         const s=shelfById(hit.id);
+         const where=s?(s.row+' row \u00b7 index '+s.index):('shelf '+hit.id);
+         /* A link, not a button: the map is its own page now, and a shelf hit is a place you go
+            rather than a thing that happens here. Middle-click and "open in new tab" work for free. */
+-        return '<a class="found" href="/map?lvl='+hit.lvl+'&id='+encodeURIComponent(hit.id)+
+-               '&side='+encodeURIComponent(hit.side)+carry+'">'+
++        return '<a class="found" href="/map?lvl='+hit.lvl+'&id='+encodeURIComponent(hit.id)+'">'+
+                '<span class="lead">Level '+hit.lvl+' \u00b7 '+esc(where)+' \u00b7 '+(SIDE[hit.side]||esc(hit.side))+' side</span>'+
+                '<span class="rng">'+esc(hit.d.start)+' \u2192 '+esc(hit.d.end)+'</span></a>';
+       }).join('');
+@@ -2040,12 +1953,7 @@
+ 
+   function workHead(rec,extra){
+     let h='<div class="work-h">'+coverTag(rec)+'<div class="work-t">';
+-    /* A heading, not a styled div. Twenty-seven records used to be one 4,670-character run of
+-       text with nothing for heading navigation to land on, so the only way to record 2 was to
+-       arrow through record 1's publisher, edition, holdings and copy notes. `margin:0` is
+-       inline because the rule in site.css was written for a div and this file does not own
+-       that sheet; everything else about the look comes from `.work-h .ti` unchanged. */
+-    h+='<h3 class="ti" style="margin:0">'+esc(rec.title)+'</h3>';
++    h+='<div class="ti">'+recordLink(rec,'ti-l',rec.title)+'</div>';
+     const by=[rec.author, rec.pub].filter(Boolean).join(' \u00b7 ');
+     if(by) h+='<div class="by">'+esc(by)+'</div>';
+     let tags='';
+@@ -2055,6 +1963,11 @@
+     if(cl) tags+='<span class="carr '+esc(rec.carrier)+'">'+esc(cl)+'</span>';
+     if(rec.edition) tags+='<span class="ed">'+esc(rec.edition)+'</span>';
+     if(extra) tags+=extra;
++    /* A linked title is easy to miss on a card that is mostly call numbers, so the way out to
++       Primo is named in the chip row too, where the reader is already looking. */
++    const href=primoHref(rec.mms);
++    if(href) tags+='<a class="catlink" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+
++                   'In the catalog</a>';
+     if(tags) h+='<div class="tags">'+tags+'</div>';
+     return h+'</div></div>';
+   }
+@@ -2062,26 +1975,20 @@
+   // One cluster = one book. The newest printing is the card; the rest fold away behind a
+   // count, because "which edition is current" is the question and 32 rows of Harrison's is
+   // an answer to a different one.
+-  //
+-  // The two labels below say "editions" and not "printings", which is not pedantry. The
+-  // cluster key is the 245, so the 1970 6th edition of Harrison's and the 2018 20th land in
+-  // the same group; calling the 6th a printing of the 20th tells a resident the older text is
+-  // interchangeable. "Editions" is also what the checkbox above and /methodology already say,
+-  // so the page stopped contradicting itself in two places a reader can check.
+   function clusterCard(c,idx){
+     const head=holdingsHtml(c.head);
+     if(onlyMine() && !head.kept && !c.head.online.length && !c.rest.length) return '';
+     const older=c.rest.filter(r=>r!==c.head);
+     let badge='';
+-    if(older.length) badge='<span class="edcount">'+(older.length+1)+' editions \u00b7 newest shown</span>';
++    if(older.length) badge='<span class="edcount">'+(older.length+1)+' printings \u00b7 newest shown</span>';
+     let h='<article class="work">'+workHead(c.head,badge)+head.html;
+     if(older.length){
+-      h+='<details class="eds"><summary>'+older.length+' earlier edition'+(older.length===1?'':'s')+
++      h+='<details class="eds"><summary>'+older.length+' earlier printing'+(older.length===1?'':'s')+
+          ' of this title</summary><div class="eds-body">';
+       older.forEach(r=>{
+         const sub=holdingsHtml(r), y=recordYear(r);
+         h+='<div class="edrow"><div class="edrow-h"><span class="edy">'+(y==null?'no date':y)+'</span>'+
+-           '<span class="edt">'+esc(r.edition||r.title)+'</span></div>'+sub.html+'</div>';
++           recordLink(r,'edt',r.edition||r.title)+'</div>'+sub.html+'</div>';
+       });
+       h+='</div></details>';
+     }
+@@ -2153,38 +2060,15 @@
+      also removed the only control that could fetch the records where the matches actually
+      were: 34 931 hits, 150 ranked, 0 shown, and no way forward. An empty page is exactly when
+      "load more" is the thing the reader needs. */
+-  function footer(hidden,dropped){
++  function footer(hidden){
+     let f='';
+     if(hidden>0) f+='<div class="cat-note">'+hidden+' record'+(hidden===1?'':'s')+
+       ' in the ranked pool hidden by the shelf-side filters.</div>';
+-    /* The other way a record leaves the list. `clusterCard` drops a record whose only copy is
+-       at a library the tick has hidden, and it used to do it silently, while three records in
+-       the same condition were kept and annotated. Two records short of the count above it is
+-       exactly the gap a reader cannot see and cannot ask about. */
+-    if(dropped>0) f+='<div class="cat-note">'+dropped+' record'+(dropped===1?'':'s')+
+-      ' with no '+esc(LIBRARY[library].short)+' copy hidden by “only my library”.</div>';
+     if(loaded.length<total) f+='<div class="cat-more"><button class="btn ghost" type="button" id="catMore">Load '+
+       Math.min(PAGE,total-loaded.length)+' more \u00b7 '+loaded.length+' of '+total+' ranked so far</button></div>';
+     return f;
+   }
+ 
+-  /* The scope line has to describe the list underneath it, and a search is not the only thing
+-     that changes that list: "only my library" hides cards, "group editions" folds them, and
+-     both redraw without going near the catalog. So the half a search decides is kept here and
+-     the half that counts what is on the page is recomputed by `draw`. Before this the line read
+-     "27 records in Biomed Library" over rendered sets of 22, 25 and 27, and that is the
+-     sentence a librarian reads out when someone asks whether that is everything. */
+-  let statusLead=[], statusTail=[], onPage=0;
+-  function paintStatus(){
+-    const ranked=Math.min(loaded.length,total);
+-    const bits=statusLead.concat(
+-      total+' record'+(total===1?'':'s')+' in '+esc(SCOPE(usedScope).label)+
+-      (ranked<total?' \u00b7 newest '+ranked+' ranked':'')+' \u00b7 '+onPage+' shown');
+-    if(widenedAway && biomedOnly.checked)
+-      bits.push('Showing copies at other libraries; “only my library” would hide every one of them.');
+-    setStatus(bits.concat(statusTail).join(' ')+diagLine());
+-  }
+-
+   function draw(){
+     if(!loaded.length){ out.innerHTML=''; return; }
+     const local=(parsed&&parsed.local)||{};
+@@ -2194,8 +2078,7 @@
+       out.innerHTML='<div class="cat-empty">All '+loaded.length+' ranked record'+(loaded.length===1?'':'s')+
+         ' were removed by the shelf-side filters (<code>'+esc(localSummary(local))+'</code>). '+
+         'Those are applied here, not by the catalog. Clear them, or load more of the '+total+
+-        ' matches and they will be filtered too.</div>'+footer(0,0);
+-      onPage=0; paintStatus();
++        ' matches and they will be filtered too.</div>'+footer(0);
+       wireCards();
+       return;
+     }
+@@ -2205,30 +2088,14 @@
+     if(grouping) clusters=clusterRecords(kept,rankQuery,ctx);
+     else clusters=kept.map((r,i)=>({key:'mms:'+r.mms, head:r, rest:[], members:[], i:i,
+                                     score:scoreRecord(r,rankQuery,ctx), year:recordYear(r)}));
+-    /* A cluster `clusterCard` refuses is always exactly one record: it only refuses when there
+-       is nothing left to fold, `c.rest` empty and no online copy. So counting the refusals
+-       counts the records, and the footer can say how many went and why. */
+-    let dropped=0;
+-    const cards=sortClusters(clusters,sortMode).map(c=>{
+-      const card=clusterCard(c);
+-      if(!card) dropped++;
+-      return card;
+-    }).filter(Boolean);
++    const cards=sortClusters(clusters,sortMode).map(clusterCard).filter(Boolean);
+     if(!cards.length){
+       out.innerHTML='<div class="cat-empty">None of the '+kept.length+' ranked records has a copy left to show. '+
+-        'Untick &ldquo;only my library&rdquo; to see where else at UCLA they are held.</div>'+footer(hidden,0);
+-      onPage=0; paintStatus();
++        'Untick &ldquo;only my library&rdquo; to see where else at UCLA they are held.</div>'+footer(hidden);
+       wireCards();
+       return;
+     }
+-    /* A list, and one heading per record inside it. Neither heading nor list navigation had
+-       anything to land on before, so the only route to record 2 was to arrow through the whole
+-       of record 1. The inline reset is here rather than in site.css because this file does not
+-       own that sheet; `role="list"` because `list-style:none` takes the list semantics away
+-       again in Safari, which is the one thing this change exists to provide. */
+-    out.innerHTML='<ul class="works" role="list" style="list-style:none; margin:0; padding:0">'+
+-      cards.map(c=>'<li>'+c+'</li>').join('')+'</ul>'+footer(hidden,dropped);
+-    onPage=kept.length-dropped; paintStatus();
++    out.innerHTML=cards.join('')+footer(hidden);
+     wireCards();
+   }
+   // A cover Open Library does not have 404s; drop the element rather than leave a gap.
+@@ -2295,18 +2162,7 @@
+     let s='';
+     try{
+       const r=await fetch('/api/suggest?q='+encodeURIComponent(t),{signal});
+-      if(r.ok){
+-        const j=await r.json();
+-        /* The response echoes the query it corrected. Check it, because nothing else does: the
+-           memo is keyed on what we asked and the render is keyed on what was typed, and neither
+-           re-reads the answer. A slow or crossed request would otherwise print another query's
+-           spelling correction under this one — "Try asthma instead" beneath a search for
+-           something else entirely, in the tool's own confident voice, with nothing on screen
+-           saying where it came from. Where the echo is absent the response is from an older
+-           shape of the endpoint and is taken at its word; where it is present it must agree. */
+-        const echoed=(j.q||'').trim();
+-        if(!echoed || echoed.toLowerCase()===t.toLowerCase()) s=((j.suggest||'').trim());
+-      }
++      if(r.ok) s=((await r.json()).suggest||'').trim();
+     }catch(e){
+       if(e.name==='AbortError') throw e;
+       s='';                              // Primo being unreachable is not the catalog failing
+@@ -2679,6 +2535,8 @@
+         return;
+       }
+       ctx=idfContext(loaded);
++      draw();
++      const shown=Math.min(loaded.length,total);
+       const bits=[];
+       /* A recovered search has to say what it actually searched for, and how sure it is.
+          A repaired spelling is a near-certainty; a dropped word is a guess, and when its best
+@@ -2694,11 +2552,12 @@
+       }
+       if(widenReason==='empty') bits.push('Nothing in '+esc(SCOPE(scopeNow()).short)+'. Widened to '+esc(SCOPE(usedScope).label)+'.');
+       if(widenReason==='weak')  bits.push('Nothing in '+esc(SCOPE(scopeNow()).short)+' matched the title. Widened to '+esc(SCOPE(usedScope).label)+'.');
+-      /* What only a new search can decide, kept. The count of what actually reached the page
+-         belongs to `draw`, which is also the thing that runs again when a tick changes it. */
+-      statusLead=bits;
+-      statusTail=budgetHit?['Stopped looking for a better spelling after '+REQ_BUDGET+' catalog requests.']:[];
+-      draw();
++      bits.push(total+' record'+(total===1?'':'s')+' in '+esc(SCOPE(usedScope).label)+
++                (shown<total?' \u00b7 newest '+shown+' ranked':''));
++      if(widenedAway && biomedOnly.checked)
++        bits.push('Showing copies at other libraries; “only my library” would hide every one of them.');
++      if(budgetHit) bits.push('Stopped looking for a better spelling after '+REQ_BUDGET+' catalog requests.');
++      setStatus(bits.join(' ')+diagLine());
+     }catch(e){
+       if(e.name==='AbortError') return;
+       if(mine!==seq) return;
+@@ -3424,10 +3283,7 @@
+     if(beyond) p.set('beyond','yes');
+     const res=await fetch('/api/articles?'+p.toString(),{signal});
+     const data=await res.json();
+-    /* Marked as the worker's own sentence. `look` prints a failure's message only when somebody
+-       wrote it, because a raw TypeError from a shape we did not expect is not an upstream
+-       speaking and should not be quoted as if it were. */
+-    if(!res.ok){ const err=new Error(data.error||('HTTP '+res.status)); err.upstream=true; throw err; }
++    if(!res.ok) throw new Error(data.error||('HTTP '+res.status));
+     return data;
+   }
+ 
+@@ -3472,20 +3328,16 @@
+     setBusy(true);
+     out.innerHTML='<div class="prov"><div class="skel" style="width:60%"></div>'+
+                   '<div class="skel" style="width:35%; margin-top:8px"></div></div>';
+-    // Which of the two upstreams the pending await is talking to. The catch at the bottom covers
+-    // both branches and has no other way to tell which door it is reporting on.
+-    let asking='index';
+     try{
+       /* An identifier is a question about *access* and goes to the resolver, which names the
+          providers and their coverage. Anything else is a question about *what exists*, and
+          only the article index can answer that. */
+       if(id && id.kind!=='title'){
+-        asking='resolver';
+         // Said out loud, because the filter box may be open and visibly doing nothing.
+         setStatus('Asking the resolver about this '+esc(id.label)+'…'+
+                   (activeCount()?' Filters do not apply to an identifier: it names one thing.':''));
+         const res=await fetch(buildURL(id),{signal:ctl.signal});
+-        if(!res.ok){ const err=new Error('HTTP '+res.status); err.upstream=true; throw err; }
++        if(!res.ok) throw new Error('the resolver returned HTTP '+res.status);
+         const svcs=parseServices(await res.text());
+         if(mine!==seq) return;
+         const n=render(svcs,id);
+@@ -3511,18 +3363,7 @@
+       if(e.name==='AbortError') return;
+       if(mine!==seq) return;
+       out.innerHTML='';
+-      /* Two upstreams behind one try. This used to name the article index for both, so a
+-         resolver failure was announced as an article-index failure one line after the page said
+-         it was asking the resolver, and a resolver HTTP 500 read as "Could not reach the article
+-         index: the resolver returned HTTP 500", which refutes itself twice over. The worker
+-         keeps three separate sentences and they are worth carrying; a TypeError is not one of
+-         them and is no longer printed as though an upstream had said it. */
+-      const said=(e&&e.upstream)?esc(e.message):'';
+-      setStatus(asking==='resolver'
+-        ? (said?'The link resolver answered with '+said+'. Try again.'
+-               :'Could not reach the link resolver. Try again.')
+-        : (said?'Could not reach the article index: '+said+'. Try again.'
+-               :'Could not reach the article index. Try again.'),true);
++      setStatus('Could not reach the article index: '+esc(e.message||'network error')+'. Try again.',true);
+     }finally{
+       /* The bar covers the search itself, not the per-row resolver calls that follow it. Those
+          run behind a list that is already on screen and each row says "checking who carries it"

@@ -38,6 +38,9 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const argv = process.argv.slice(2);
 const JSON_OUT = argv.includes('--json');
+/* --lost prints every line whose only copy is on the web. The summary shows three, which is enough
+   to recognise the work and not enough to recover it; recovery is the whole point of the alarm. */
+const LOST_OUT = argv.includes('--lost');
 const DIFF = (() => { const i = argv.indexOf('--diff'); return i >= 0 ? argv[i + 1] : null; })();
 const ORIGIN = (process.env.SHELFMARK_ORIGIN || 'https://shelfmark.phineasfritsch.com').replace(/\/$/, '');
 
@@ -64,6 +67,37 @@ function fetchBody(url) {
    CRLF. That is worth knowing and it is not lost work, so it must not read the same as a file
    carrying a feature nobody pushed. */
 const normalise = s => s.replace(/\r\n/g, '\n');
+
+/* Every line in the whole published tree, once, so a line can be asked "does this exist ANYWHERE
+   here" rather than only "is it in this file's history".
+
+   This is the mover-versus-loser distinction, and without it the check inflates the one alarm it
+   exists to raise. It reported this line as existing only on the web:
+
+     if(/[A-Za-z]{2,}:/.test(s)) return false;    // mesh:, title:, at: …
+
+   It is not on the web only. It is in shelf-core.js, where it moved when two copies of a
+   predicate were collapsed into one owner. Live has it inside index.html because live predates
+   the move. Per-file history cannot see that: the line is absent from both refs OF THAT FILE, so
+   it reads as never-committed work, which is the exact shape of the real alarm. A tool that cries
+   wolf about a refactor it should recognise is a tool people stop reading, and this one guards the
+   only irreversible step in the deploy. */
+const treeWide = (() => {
+  const all = new Set();
+  for (const [f] of PUBLISHED) {
+    try {
+      /* latin1, like the fetch and the local read below it. This is a byte-level tool: decoding
+         one side as utf8 and the other as latin1 makes every line containing a non-ASCII
+         character differ, and the comment on the very line that exposed this ends in an ellipsis.
+         It read as `at: â¦` from the web and `at: …` from disk, so a line that had merely moved
+         looked like work that existed nowhere but the web. */
+      for (const l of fs.readFileSync(path.join(ROOT, f), 'latin1').split('\n')) {
+        const t = l.trim(); if (t) all.add(t);
+      }
+    } catch (e) { /* a published file missing from the tree is the other tool's alarm, not this one */ }
+  }
+  return all;
+})();
 
 const rows = [];
 for (const [file, url] of PUBLISHED) {
@@ -117,22 +151,35 @@ for (const [file, url] of PUBLISHED) {
      erase the only copy". */
   let history = '';
   for (const ref of ['origin/main', 'HEAD']) {
-    const h = spawnSync('git', ['show', `${ref}:${file}`], { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+    /* latin1 for the same reason as everything else here: this comparison is between bytes. */
+    const h = spawnSync('git', ['show', `${ref}:${file}`], { cwd: ROOT, encoding: 'latin1', maxBuffer: 64 * 1024 * 1024 });
     if (h.status === 0) history += '\n' + h.stdout;
   }
   const known = new Set(history.split('\n').map(l => l.trim()).filter(Boolean));
-  const lost = nearMiss.filter(l => !known.has(l));
-  const rewritten = nearMiss.length - lost.length;
+  /* Three ways a live-only line is not lost work: this file's history has it (somebody rewrote it
+     here), or some OTHER published file has it now (it moved), or both. Only a line that is in
+     none of those is a line whose only copy is on the web. */
+  const moved = nearMiss.filter(l => !known.has(l) && treeWide.has(l));
+  const lost = nearMiss.filter(l => !known.has(l) && !treeWide.has(l));
+  const rewritten = nearMiss.length - lost.length - moved.length;
 
   rows.push({
     file, url,
     verdict: lost.length ? 'LIVE-AHEAD' : 'tree-ahead',
-    onlyLive: onlyLive.length, onlyTree: onlyTree.length, lost: lost.length, rewritten,
-    sample: lost.slice(0, 3),
+    onlyLive: onlyLive.length, onlyTree: onlyTree.length, lost: lost.length, rewritten, moved: moved.length,
+    sample: lost.slice(0, 3), lostLines: lost,
   });
 }
 
 const liveAhead = rows.filter(r => r.verdict === 'LIVE-AHEAD');
+
+if (LOST_OUT) {
+  for (const r of liveAhead) {
+    console.log(`\n=== ${r.url}  (${r.file})  ${r.lost} line(s) only on the web ===`);
+    for (const l of r.lostLines) console.log(l);
+  }
+  process.exit(liveAhead.length ? 1 : 0);
+}
 const treeAhead = rows.filter(r => r.verdict === 'tree-ahead');
 const unreachable = rows.filter(r => r.verdict === 'unreachable');
 const exit = liveAhead.length ? 1 : unreachable.length ? 1 : treeAhead.length ? 2 : 0;
@@ -160,7 +207,10 @@ for (const r of rows) {
   const mark = { same: '  ok  ', 'tree-ahead': ' tree ', 'LIVE-AHEAD': ' LIVE ', unreachable: ' ???  ' }[r.verdict];
   const extra = r.verdict === 'same' ? (r.note ? `  (${r.note}: ${r.detail})` : '')
     : r.verdict === 'unreachable' ? `  ${r.detail}`
-    : `  ${r.lost} line(s) exist ONLY on the web` + (r.rewritten ? `, ${r.rewritten} more rewritten here on purpose` : '') + ` (${r.onlyLive}/${r.onlyTree} differ)`;
+    : `  ${r.lost} line(s) exist ONLY on the web`
+      + (r.rewritten ? `, ${r.rewritten} more rewritten here on purpose` : '')
+      + (r.moved ? `, ${r.moved} moved to another file` : '')
+      + ` (${r.onlyLive}/${r.onlyTree} differ)`;
   console.log(`${mark} ${r.url.padEnd(16)} ${r.file.padEnd(18)}${extra}`);
 }
 

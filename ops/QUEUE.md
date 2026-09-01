@@ -323,9 +323,7 @@ who remembers it should find out where it went.
 
 ---
 
-## OPEN · README documents a build step that is not in the repository
-
-<!-- superseded -->
+## DONE · README documented a build step that is not in the repository
 
 **What.** `README.md` says `index.html` is generated, that `.build_locator.py` is the source of
 truth for the HTML, and that the two must stay in sync. There is no `.build_locator.py` in the
@@ -338,6 +336,18 @@ goes looking for a file that does not exist, or does not make an edit they shoul
 
 **Done when.** The README either describes how `index.html` is actually maintained now, or the
 build script is restored and `ops/test` proves the generated file matches the committed one.
+
+**Closed.** The README now says the script existed, was retired, and that this file described it
+for some time afterwards, naming why that is the expensive kind of staleness. `index.html` is
+maintained by hand; `biomed-shelf-ranges.json` remains the master survey and `ops/health` asserts
+`shelf-data.js` is byte-identical to it, so those two cannot drift.
+
+**It sat marked OPEN after it was fixed**, which is the second time that has happened in this
+file, and the first time is recorded a few items above with a note saying closing an item is part
+of doing it. Two occurrences is not carelessness twice, it is a missing step: nothing here checks
+that an item's "done when" is still unmet. The item is also load-bearing beyond the README, since
+`ops/briefs/` now rules that two design rulings may not demand a "build failure" in a product with
+no build step. That ruling is only true while this stays true.
 
 ---
 
