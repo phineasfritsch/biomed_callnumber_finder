@@ -2295,7 +2295,18 @@ document.getElementById('q').addEventListener('paste',e=>{
     let s='';
     try{
       const r=await fetch('/api/suggest?q='+encodeURIComponent(t),{signal});
-      if(r.ok) s=((await r.json()).suggest||'').trim();
+      if(r.ok){
+        const j=await r.json();
+        /* The response echoes the query it corrected. Check it, because nothing else does: the
+           memo is keyed on what we asked and the render is keyed on what was typed, and neither
+           re-reads the answer. A slow or crossed request would otherwise print another query's
+           spelling correction under this one — "Try asthma instead" beneath a search for
+           something else entirely, in the tool's own confident voice, with nothing on screen
+           saying where it came from. Where the echo is absent the response is from an older
+           shape of the endpoint and is taken at its word; where it is present it must agree. */
+        const echoed=(j.q||'').trim();
+        if(!echoed || echoed.toLowerCase()===t.toLowerCase()) s=((j.suggest||'').trim());
+      }
     }catch(e){
       if(e.name==='AbortError') throw e;
       s='';                              // Primo being unreachable is not the catalog failing

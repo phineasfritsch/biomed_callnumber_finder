@@ -197,3 +197,54 @@ mapped shelf contains ASTHMA" reads as though asthma were a call number the surv
 the missing route-position announcement for a screen-reader user. Also noted: the `/map` detail
 panel does not clear under a refusal, so a stale shelf face stays on screen labelled with the
 previous call number.
+
+---
+
+### Round 2 - 1 September, 20 days out, commit c1cef82
+
+    desk worker            SHIP
+    reference librarian    SHIP
+    distrusting patron     SHIP
+    first-year on a phone  SHIP
+    screen-reader user     SHIP
+    cohesion reviewer      SHIP
+    ----
+    verdict: SHIP (six of six)
+
+**Unanimity, on the third asking.** Every reader drove the pickup walk with a deliberately dirty
+paste of their own composing, and every one confirmed the round-1 defect is gone: junk lines are
+quarantined without a shelf face, the summary counts only lines that resolved, the cutter repair is
+announced rather than done silently, and the same string yields the same shelf in the walk as in
+the box above it.
+
+**What makes this verdict worth trusting more than round 0's four-of-six.** Round 0 passed four
+readers who had never opened the surface that was broken. This round each reader was told to drive
+a surface they had not driven in any previous round, and they did: /databases, the article path,
+the phone-width title journey, the keyboard walk through the planner. The verdict is over more of
+the product than any round before it.
+
+**Nobody was argued down.** There is no dissent to weigh, and the three items carried over from
+round 1 were re-judged rather than inherited: five of the six readers named a *different* "smallest
+thing to fix first", and not one of them named something that asserts a location the tool did not
+look up, which is the only failure this project treats as disqualifying.
+
+**The queue this round produced**, which the tally asks to land before 21 September even though the
+verdict is SHIP:
+
+- **1.** Clear the /map detail panel and drop the red shelf outline on a refusal. Four readers named
+  it as their one fix. It is the only place in the product where two contradictory things sit on
+  screen at once: a refusal at the top, a lit shelf face below it. Every one of the four said the
+  same thing about why it is not a blocker - the leftover panel still names the *previous* call
+  number, so it is stale rather than lying, and three of them said in their own words that if it
+  were relabelled with the refused string they would flip to NOT YET.
+- **2.** Announce the route result in the existing live region, or move focus to it. One reader, but
+  it is his whole note and it is reachability rather than preference: he presses BUILD ROUTE and
+  hears nothing.
+- **3.** Let the /map refusal borrow the walk's own wording for a string that is not a call number.
+  "No mapped shelf contains ASTHMA. It may be on a level not yet entered" is a true refusal with a
+  false account of why, and the route builder already has the right sentence.
+- **4.** Validate the echoed query on the zero-result suggestion line before rendering it.
+
+**The gate is not closed by this.** `ops/SHIP.md` requires the human gate as well, and it is not
+something the board can close on its own: the live site is still ahead of this repository in
+`index.html` and `site.css`, and only whoever ran wrangler can resolve that.

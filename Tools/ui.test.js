@@ -551,6 +551,63 @@ journey('map · a pull list does not walk you to a word', 'desk worker', async (
     !/AL157/.test(spaced), spaced.slice(0, 200));
 });
 
+journey('map · a refusal leaves nothing on screen that looks like an answer', 'librarian', async (page, base) => {
+  /* Ship round 2 passed six of six, and four of the six named this as the one thing they would
+     fix. Three said in advance they would flip to NOT YET if the leftover panel were ever
+     relabelled with the refused string. So the fix has to CLEAR it, not relabel it -- a panel
+     that reads as an answer to the query just refused is the wrong aisle this product exists to
+     refuse. */
+  await page.goto(base + '/map', { waitUntil: 'domcontentloaded' });
+
+  await page.fill('#q', 'W1 AM4990');
+  await page.press('#q', 'Enter');
+  await settled(page, '#result');
+  const answered = await page.textContent('#detail');
+  ok('a real call number fills the detail panel first', /is on this face|Index/i.test(answered), answered.slice(0, 120));
+
+  await page.fill('#q', 'asthma');
+  await page.press('#q', 'Enter');
+  const refusal = await settled(page, '#result');
+  const after = await page.textContent('#detail');
+
+  ok('the refusal says the string is not a call number, not that the survey missed it',
+    /is not a call number/i.test(refusal), refusal.slice(0, 200));
+  ok('and no shelf face is left on screen under it',
+    !/is on this face/i.test(after), after.slice(0, 200));
+  const lit = await page.locator('.plan .sel, .plan .flash, [class*="sel"]').count().catch(() => 0);
+  ok('and no shelf is left lit on the plan', lit === 0, `${lit} shelf/shelves still marked`);
+
+  /* A call number the survey genuinely has not reached keeps the old sentence, which is true
+     about it. The pinned signature lives here. */
+  await page.fill('#q', 'ZZ 999 Q999');
+  await page.press('#q', 'Enter');
+  const unmapped = await settled(page, '#result');
+  ok('a real call number outside the survey still says no mapped shelf contains it',
+    /No mapped shelf contains/i.test(unmapped), unmapped.slice(0, 200));
+});
+
+journey('map · pressing Build route says something out loud', 'screen-reader user', async (page, base) => {
+  /* The reader pressed the button and heard nothing: the walk was drawn into a region with no
+     live semantics, so the entire result was visible-only. A walk that quietly dropped two of
+     your five lines is the one result you must not have to look at to learn about. */
+  await page.goto(base + '/map', { waitUntil: 'domcontentloaded' });
+  await page.click('#routeToggle');
+  await page.waitForSelector('#cnList', { state: 'visible' });
+
+  const region = page.locator('#routeStatus');
+  ok('there is a polite live region for the route result', await region.count() === 1, 'no #routeStatus');
+  ok('and it is a status region', await region.getAttribute('aria-live') === 'polite', 'not polite');
+
+  await page.fill('#cnList', ['W1 AM4990', 'asthma', 'ZZ 999 Q999'].join('\n'));
+  await page.click('#buildRoute');
+  await page.waitForFunction(() => (document.getElementById('routeStatus') || {}).textContent, null, { timeout: 5000 });
+  const said = await region.textContent();
+
+  ok('it announces the walk it just built', /book/i.test(said), said);
+  ok('and it announces the lines it could not read, which are the ones you cannot see are missing',
+    /not read as call numbers/i.test(said) && /not located/i.test(said), said);
+});
+
 journey('404 · a wrong URL is a real 404, not the app', 'librarian', async (page, base) => {
   const res = await page.goto(base + '/aboutt', { waitUntil: 'domcontentloaded' });
   ok('the status really is 404', res.status() === 404, `got ${res.status()} — a soft 404 hides every broken link`);

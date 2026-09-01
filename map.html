@@ -138,6 +138,7 @@
         <button class="btn ghost" type="button" id="clearRoute">Clear</button>
       </div>
       <div class="itinerary" id="itinerary"></div>
+      <div class="sr-only" id="routeStatus" role="status" aria-live="polite"></div>
     </div>
   </div>
   </main>
@@ -336,11 +337,25 @@ function locate(){
     +`so the letters and their number are not separated.</div>`; q=fixed; inp.value=fixed; }
   const hits=findFaces(q, collection);
   if(!hits.length){
-    out.innerHTML = collection==='spec'
+    /* Two different refusals, because they have two different causes and the reader can act on
+       one of them. "No mapped shelf contains X. It may be on a level not yet entered" is true
+       about a call number this survey has not reached, and false about "asthma", which is not a
+       call number at all — it reads as though asthma were something the survey missed. The walk
+       already had the right sentence for this; the box borrows it rather than inventing a third. */
+    const isCN=readsAsCallNumber(q);
+    out.innerHTML = !isCN
+      ? `<div class="miss"><code>${escHtml(q.toUpperCase())}</code> is not a call number, so there is no shelf to show. `
+        +`Looking for a book by title? <a href="/?q=${encodeURIComponent(q)}">Search the catalog</a>.</div>`
+      : collection==='spec'
       ? `<div class="miss">No mapped Special Collections range contains <code>${escHtml(q.toUpperCase())}</code>.</div>`
       : `<div class="miss">No mapped shelf contains <code>${escHtml(q.toUpperCase())}</code>. It may be on a level not yet entered, or outside the mapped ranges.</div>`;
-    marked=null;
-    if(collection==='spec'){ level=9; renderLevels(); renderPlan(); renderDetail(); }
+    /* Four of the six readers in ship round 2 named this as their one fix, and three said they
+       would have voted NOT YET if the leftover panel had carried the refused string instead of
+       the previous call number. A refusal at the top of the page and a lit shelf face below it
+       are two contradictory things on one screen, and the reader has to know which to believe. */
+    marked=null; selected=null; flashId=null;
+    if(collection==='spec') level=9;
+    renderLevels(); renderPlan(); renderDetail();
     return;
   }
   out.innerHTML=hits.map(h=>{
@@ -650,7 +665,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
   }
   function buildRoute(){
     const want=[...new Set(lines())];
-    if(!want.length){ itin.innerHTML='<div class="itin-miss">Add call numbers first: upload an image or type them above.</div>'; return; }
+    if(!want.length){ itin.innerHTML='<div class="itin-miss">Add call numbers first: upload an image or type them above.</div>'; announce('Add call numbers first.'); return; }
     /* Three outcomes per line, not two. A line that is not a call number is a different fact
        from a call number this survey does not cover, and the reader can act on the first
        (retype it) but not the second. OCR of a handwritten slip is the likeliest source of
@@ -664,7 +679,11 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
       const h=routeLocate(cn);
       if(h.length) located.push({cn,hit:h[0]}); else missing.push(cn);
     });
-    if(!located.length){ itin.innerHTML=readNote(repaired)+unreadNote(unread)+miss(missing); return; }
+    if(!located.length){
+      itin.innerHTML=readNote(repaired)+unreadNote(unread)+miss(missing);
+      announce(`No walk built. ${unread.length} line${unread.length===1?'':'s'} not read as call numbers, ${missing.length} not located.`);
+      return;
+    }
     const byLvl={};
     located.forEach(it=>{ (byLvl[it.hit.lvl]=byLvl[it.hit.lvl]||[]).push(it); });
     const levels=Object.keys(byLvl).map(Number).sort((a,b)=>b-a);   // top floor first
@@ -727,6 +746,21 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
     if(unread.length) html+=unreadNote(unread);
     if(missing.length) html+=miss(missing);
     itin.innerHTML=html;
+    /* A reader on a screen reader presses BUILD ROUTE and, until now, heard nothing: the walk is
+       drawn into a region with no live semantics, so the whole result was visible-only. The
+       announcement carries the summary AND both warning buckets, because a walk that quietly
+       dropped two of your five lines is the one result you must not learn about by looking. */
+    announce(sum
+      + (unread.length ? ` ${unread.length} line${unread.length===1?'':'s'} not read as call numbers.` : '')
+      + (missing.length ? ` ${missing.length} not located.` : ''));
+  }
+  /* One string, both visible and announced — the same rule /hours holds itself to. The region is
+     polite so it waits for the reader to finish what they were reading, and it is emptied first
+     because two identical announcements in a row are otherwise dropped as a duplicate. */
+  function announce(msg){
+    const el=$('routeStatus'); if(!el) return;
+    el.textContent='';
+    setTimeout(()=>{ el.textContent=msg; }, 50);
   }
   function transit(kind,txt){ const cls=kind==='st'?'st':'el', ic=kind==='st'?'↓':'⇅'; return `<div class="itin-transit"><span class="ic ${cls}">${ic}</span><span>${txt}</span></div>`; }
   /* ── Order as colour ──────────────────────────────────────────────────────────────────
