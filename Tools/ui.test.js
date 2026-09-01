@@ -711,6 +711,28 @@ journey('locate · a gene is not a shelf', 'librarian', async (page, base) => {
       !/Level \d+ · (top|bottom) row · index/i.test(got), got.slice(0, 160));
   }
 
+  /* Third instance, found by five of six readers in round 5 after my own 139-string sweep missed
+     it -- I had tested "1000mcg" alone and "B12" alone and never the two together. Worse than what
+     it hid behind: bare "CD4" correctly reached the catalog while "CD4 350", the more specific and
+     more real thing for a clinician to type, got an aisle on a floor of psychology books. */
+  for (const dose of ['B12 1000mcg', 'D3 2000iu', 'K2 100mcg', 'T4 125', 'CD4 350', 'TP53 R175H', 'B6 50mg', 'IL6 2024']) {
+    await page.fill('#q', dose);
+    await page.press('#q', 'Enter');
+    const got = await settled(page, '#result');
+    ok(`"${dose}" is a dose or a lab value, not a shelf`,
+      !/Level \d+ · (top|bottom) row · index/i.test(got), got.slice(0, 160));
+  }
+
+  /* The other direction, which cost two attempts: the first version of this rule refused
+     "WB39 M294" and 363 other real endpoints typed with the class run into its number. */
+  for (const real of ['WB39 M294', 'WA900.1 M297', 'AS 36 N4']) {
+    await page.fill('#q', real);
+    await page.press('#q', 'Enter');
+    const got = await settled(page, '#result');
+    ok(`"${real}" is a real call number and still reaches a shelf`,
+      /Level \d+/.test(got), got.slice(0, 160));
+  }
+
   /* And the other side of the same rule: a class this building really has still works spaceless. */
   await page.fill('#q', 'WB115H322');
   await page.press('#q', 'Enter');

@@ -584,6 +584,37 @@ function meansACallNumber(t){
  * a phrase with a call-number-shaped opening, and it belongs in the catalog. */
 function everyTokenIsPartOfIt(s){
   const toks=String(s||'').trim().split(/\s+/);
+  /* Third instance of the same family, found by the board in round 5 after my own 139-string
+     sweep missed it: a dose, a lab value or a variant.
+         B12 1000mcg -> Level 11 · index 1        CD4 350 -> Level 11 · index 3
+         D3 2000iu   -> Level 11 · index 3        T4 125  -> Level 10 · index 4
+         Q10 100mg   -> Level 11 · index 4        TP53 R175H -> Level 10 · index 4
+     Bare "CD4" had been fixed and went to the catalog; "CD4 350", the more specific and more real
+     thing for a clinician to type, got an aisle. Worse than the thing it was hiding behind.
+
+     The discriminator, and it is a fact about how call numbers are written rather than a guess: a
+     call number typed WITH spaces separates its class from its number — "WB 115 H322", "AS 36 N4",
+     "W 84 AA1". A first token that runs letters into digits and is followed by more tokens is
+     therefore either a W-scheme stem, which carries its own digit by design (W1, W2, W4C), or it
+     is not a call number at all.
+
+     Deliberately NOT the stem test used for spaceless strings: "AS 36 N4" is a real LC number in a
+     class this survey never used as a range endpoint, and it genuinely sits on the shelf that runs
+     AG 5 -> BF 57. Rejecting it would be the same lie in the other direction. */
+  if(toks.length>1 && /[A-Za-z]/.test(toks[0]) && /[0-9]/.test(toks[0])){
+    /* Two conditions, because one was not enough in either direction. Requiring the whole first
+       token to be a known stem refused "WB39 M294" and "WA900.1 M297", which are real numbers
+       typed with the class run into its number — the same lie in the other direction, and 363 of
+       the survey's own endpoints failed it.
+
+       So: the LETTERS of the first token must be a class the survey recorded, and the token after
+       them must open with a letter, because every genuine Cutter does. "Q10 100mg" passes the
+       first test, since Q is a real class, and fails the second, since 100mg is a quantity and not
+       a Cutter. */
+    const letters=toks[0].toUpperCase().replace(/[^A-Z].*$/,'');
+    if(!classStems().has(letters)) return false;
+    if(!/^[A-Za-z]/.test(toks[1])) return false;
+  }
   /* Where the head ends: "WB 115 ..." spends two tokens on class and number, "B12 ..." and
      "W1 ..." spend one, because the number is already attached. */
   const head=/[0-9]/.test(toks[0]) ? 1 : 2;

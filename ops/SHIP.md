@@ -348,3 +348,58 @@ something real found it slightly outside what it was told to look at.
 
 The rule stands and I broke it: no shipped file changes while a round is in flight. The next round
 runs against a commit and the tree stays frozen until it returns.
+
+---
+
+### Round 5 - 1 September, 20 days out, commit 76c424c
+
+    desk worker            SHIP
+    reference librarian    NOT YET
+    distrusting patron     NOT YET
+    first-year on a phone  NOT YET
+    screen-reader user     NOT YET
+    cohesion reviewer      NOT YET
+    ----
+    verdict: NOT YET (five dissenting)
+
+**Five of six, all on the same defect, all found through the keyboard rather than the code.** The
+third instance of the family the brief asked them to hunt, and the brief was right to ask:
+
+    B12 1000mcg  -> Level 11 · top row · index 1 · Left
+    CD4 350      -> Level 11 · top row · index 3 · Left
+    D3 2000iu    -> Level 11 · top row · index 3 · Left
+    T4 125       -> Level 10 · top row · index 4 · Left
+    TP53 R175H   -> Level 10 · top row · index 4 · Left
+
+A dose, a lab value, a variant. Answered with a confident physical location on a floor of
+psychology and linguistics books.
+
+**The sharpest thing said about it came from the sceptical patron**, and it is why this reads worse
+than the two instances before it: bare `CD4` had been fixed and correctly reached the catalog,
+while `CD4 350` - the more specific and more clinically real thing to type - got an aisle. The fix
+for the previous instance made the failure harder to stumble into and no less wrong.
+
+**My own sweep had missed it, and the way it missed is the lesson.** `ops/PARSER-SWEEP.md` ran 139
+adversarial strings the day before and came back clean. It contained `1000mcg`. It contained `B12`.
+It never combined them, because I generated the corpus from the shapes I had already thought of.
+The board found it in four minutes of typing. A corpus tests the author's imagination; a person at
+a keyboard tests the product.
+
+**The counterweight is real and worth recording**, because it decides whether the next round is a
+narrowing or a rebuild: all six readers, dissenters included, confirmed the round-4 fix did not
+overshoot. Roughly sixty odd-but-real call numbers still reach their shelf - lowercase, spaceless,
+three-token, `v.`/`c.`/year suffixes, Hist Div, W4C, W2, `WA 900.1 M300`.
+
+**Fixed, in two conditions rather than one.** A call number typed with spaces separates its class
+from its number, so a first token that runs letters into digits and is followed by more tokens must
+have (1) letters that are a class the survey recorded, and (2) a next token opening with a letter,
+because every genuine Cutter does. `Q10 100mg` passes the first and fails the second.
+
+The first attempt used only condition (1) and refused 363 of the survey's own endpoints -
+`WB39 M294`, `WA900.1 M297` - which is the same lie in the other direction. Caught before it
+shipped by running the check that round 4's finding had already made routine.
+
+**Deliberately not fixed:** `AS 36 N4` still resolves, and should. It is a real LC number in a
+class this survey never used as a range endpoint, and it genuinely sits on the shelf that runs
+`AG 5` to `BF 57`. Refusing it to tidy the rule would be the failure this round is about, pointed
+the other way.
