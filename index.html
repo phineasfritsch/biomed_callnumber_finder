@@ -496,14 +496,18 @@ function shelfPreview(q){
     }
   }
   let term=typed;
-  /* Before the lookup, not after it. See w1RejoinCutter. */
-  const rejoined=w1RejoinCutter(term);
-  if(rejoined){
-    said.push(`Read as <code>${escHtml(rejoined)}</code>. In a W1 number the cutter is one word, `
-      +`so the letters and their number are not separated.`);
-    term=rejoined;
+  /* Before the lookup, not after it. See normalizeSpacing, which subsumes the cutter rejoin and
+     the two spacing failures ship round 3 found alongside it. */
+  const read=readQuery(term, coll);
+  if(read.readAs){
+    said.push(/^W[1-4]/i.test(read.q)
+      ? `Read as <code>${escHtml(read.readAs)}</code>. In a W1 number the cutter is one word, `
+        +`so the letters and their number are not separated.`
+      : `Read as <code>${escHtml(read.readAs)}</code>. Spaces are optional, so the parts were `
+        +`separated the way they are printed on the spine.`);
+    term=read.q;
   }
-  let hits=findFaces(term, coll);
+  let hits=read.hits;
   if(!hits.length){
     /* A split counts only if the face it lands on is labelled with the prefix it claims. Landing
        is not enough, and that is what was wrong with the first version of this: one face runs
@@ -2675,7 +2679,14 @@ document.getElementById('q').addEventListener('paste',e=>{
                     :'Check the spelling, or switch the search field above. Keyword is the loosest.')+'</div>';
         const sugBtn=out.querySelector('.cat-sug');
         if(sugBtn) sugBtn.addEventListener('click',()=>{ input.value=spelledAs; run(true); });
-        setStatus('');
+        /* The outcome, not silence. This cleared the live region, so the last thing a screen
+           reader announced was a mid-flight "Trying ..." and then nothing: the result and the one
+           actionable thing on screen -- the spelling Primo suggests -- were reachable only by
+           arrowing into the results to find out whether there were any. An empty answer is still
+           an answer and has to be spoken like one. */
+        setStatus(esc('No UCLA record matches ' + eq.full + '.')
+          + (offer ? ' ' + esc('Primo spells it ' + spelledAs + '. There is a button in the results to search that instead.') : '')
+          + (p.notes.length ? ' Filters are active; clearing them widens the search.' : ''));
         return;
       }
       ctx=idfContext(loaded);

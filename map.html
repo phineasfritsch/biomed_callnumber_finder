@@ -241,7 +241,21 @@ function renderLevels(){
    phone, in a building they have never been inside. A tap on the plan names a shelf and not a
    face, so it clears this rather than leaving the last search's mark on a different question. */
 let marked=null;
-function pick(id){ selected=id; flashId=null; marked=null; renderPlan(); renderDetail(); }
+/* Tapping a shelf answers a new question, so the answer to the old one goes.
+   The reference librarian and the seven-surface reviewer both found the same shape in round 3:
+   after a refusal, tapping a face filled the detail panel correctly and left "ASTHMA is not a
+   call number" sitting in the line above it; after a tap, the result line still named the call
+   number searched before. Neither misleads anyone about a location -- the panel below is right --
+   but in a tool whose whole credibility rests on saying only what it looked up, a sentence that
+   outlived its query is what costs trust on the second use rather than the first. */
+function pick(id){
+  selected=id; flashId=null; marked=null;
+  const out=document.getElementById('result');
+  if(out) out.innerHTML='';           /* the stale ANSWER goes; the typed query stays, because
+                                         that is the reader's record of what they asked, not a
+                                         claim the tool is still making */
+  renderPlan(); renderDetail();
+}
 window.pick=pick;
 function renderDetail(){
   const el=document.getElementById('detail');
@@ -332,10 +346,16 @@ function locate(){
   /* Same repair and the same sentence as the home box. A reader who types a stray space here and
      a stray space there must not get a shelf on one surface and a refusal on the other. */
   let note='';
-  const fixed=w1RejoinCutter(q);
-  if(fixed){ note=`<div class="miss">Read as <code>${escHtml(fixed)}</code>. In a W1 number the cutter is one word, `
-    +`so the letters and their number are not separated.</div>`; q=fixed; inp.value=fixed; }
-  const hits=findFaces(q, collection);
+  const read=readQuery(q, collection);
+  if(read.readAs){
+    note=`<div class="miss">Read as <code>${escHtml(read.readAs)}</code>. `
+      + (/^W[1-4]/i.test(read.q)
+          ? 'In a W1 number the cutter is one word, so the letters and their number are not separated.'
+          : 'Spaces are optional, so the parts were separated the way they are printed on the spine.')
+      + '</div>';
+    q=read.q; inp.value=read.q;
+  }
+  const hits=read.hits;
   if(!hits.length){
     /* Two different refusals, because they have two different causes and the reader can act on
        one of them. "No mapped shelf contains X. It may be on a level not yet entered" is true
@@ -672,12 +692,11 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
        both, which is why the walk is where this matters most. */
     const located=[], missing=[], unread=[], repaired=[];
     want.forEach(raw=>{
-      let cn=raw;
-      const fixed=w1RejoinCutter(cn);          /* before the lookup, and said out loud */
-      if(fixed){ repaired.push([raw,fixed]); cn=fixed; }
+      const read=readQuery(raw, 'stacks');     /* before the lookup, and said out loud */
+      if(read.readAs) repaired.push([raw, read.readAs]);
+      const cn=read.q;
       if(!readsAsCallNumber(cn)){ unread.push(raw); return; }
-      const h=routeLocate(cn);
-      if(h.length) located.push({cn,hit:h[0]}); else missing.push(cn);
+      if(read.hits.length) located.push({cn, hit:read.hits[0]}); else missing.push(cn);
     });
     if(!located.length){
       itin.innerHTML=readNote(repaired)+unreadNote(unread)+miss(missing);
@@ -930,7 +949,7 @@ document.querySelectorAll('#sect .pill').forEach(p=>{
      believes is in the bag. */
   function unreadNote(arr){ if(!arr.length) return ''; return `<div class="itin-miss">Not read as call numbers (${arr.length}): ${arr.map(escHtml).join(' · ')}<br>These are not on the walk. Retype them as they are printed on the slip and rebuild.</div>`; }
   /* The same repair and the same sentence as the home box and the map box. */
-  function readNote(pairs){ if(!pairs.length) return ''; return `<div class="itin-miss">Read as ${pairs.map(([a,b])=>`<code>${escHtml(b)}</code> (typed <code>${escHtml(a)}</code>)`).join(' · ')}. In a W1 number the cutter is one word, so the letters and their number are not separated.</div>`; }
+  function readNote(pairs){ if(!pairs.length) return ''; return `<div class="itin-miss">Read as ${pairs.map(([a,b])=>`<code>${escHtml(b)}</code> (typed <code>${escHtml(a)}</code>)`).join(' · ')}. Spaces are optional, so each was separated the way it is printed on the spine.</div>`; }
 
   window.routeShow=function(lvl,id){ level=lvl; selected=id; flashId=id; marked=null; if(typeof syncCollectionToLevel==='function') syncCollectionToLevel(); renderLevels(); renderPlan(); renderDetail(); setTimeout(()=>{ flashId=null; renderPlan(); },1600); const st=document.querySelector('.stage'); if(st) st.scrollIntoView({behavior:'smooth',block:'center'}); };
 })();

@@ -608,6 +608,77 @@ journey('map · pressing Build route says something out loud', 'screen-reader us
     /not read as call numbers/i.test(said) && /not located/i.test(said), said);
 });
 
+journey('locate · where the spacebar landed does not change the shelf', 'desk worker', async (page, base) => {
+  /* Ship round 3 passed six of six and still named this the one must-fix, because it is the
+     single place the tool asserted something untrue rather than admitting ignorance. Three
+     failures, one cause: spaces were treated as structure rather than punctuation.
+       wb115h322   told "is not a call number", while /about promises spaces are optional
+       W1AM4990    "No mapped shelf contains it" -- a miss dressed as a gap in the survey
+       W 1 AM4990  Level 10. A WRONG SHELF, seven levels from the book, silently. */
+  await page.goto(base, { waitUntil: 'domcontentloaded' });
+
+  await page.fill('#q', 'WB 115 H322');
+  await page.press('#q', 'Enter');
+  const spaced = await settled(page, '#result');
+  const level = (spaced.match(/Level (\d+)/) || [])[1];
+  ok('the well-formed number locates', !!level, spaced.slice(0, 140));
+
+  for (const variant of ['wb115h322', 'WB115H322']) {
+    await page.fill('#q', variant);
+    await page.press('#q', 'Enter');
+    const got = await settled(page, '#result');
+    ok(`${variant} is not told it is not a call number`,
+      !/is not a call number/i.test(got), got.slice(0, 160));
+    ok(`${variant} lands on the same level as the spaced form`,
+      (got.match(/Level (\d+)/) || [])[1] === level, got.slice(0, 160));
+  }
+
+  /* The wrong-shelf one. A split W-prefix is something the NLM comparator will happily sort,
+     and it sorts it onto a different floor. This must be repaired BEFORE the lookup, because
+     unlike the others it does not miss -- it answers, confidently, wrongly. */
+  await page.fill('#q', 'W1 AM4990');
+  await page.press('#q', 'Enter');
+  const w1 = await settled(page, '#result');
+  const w1level = (w1.match(/Level (\d+)/) || [])[1];
+
+  for (const variant of ['W1AM4990', 'W 1 AM4990', 'W1 AM 4990']) {
+    await page.fill('#q', variant);
+    await page.press('#q', 'Enter');
+    const got = await settled(page, '#result');
+    ok(`${variant} reaches the same shelf as W1 AM4990`,
+      (got.match(/Level (\d+)/) || [])[1] === w1level,
+      `expected level ${w1level}: ${got.slice(0, 160)}`);
+    ok(`${variant} says what it read instead of repairing silently`,
+      /Read as/i.test(got), got.slice(0, 160));
+  }
+
+  /* The other half of the rule, and the reason the repair is not applied to everything: a
+     one-letter class stem run together with digits is indistinguishable from an acronym.
+     "H 1 N1" really does sort inside a mapped range on level 11. */
+  await page.fill('#q', 'H1N1');
+  await page.press('#q', 'Enter');
+  const virus = await settled(page, '#result');
+  ok('a virus name is not repaired into a shelf',
+    !/Level \d+ · /.test(virus), virus.slice(0, 160));
+});
+
+journey('map · a status line does not outlive the question it answered', 'librarian', async (page, base) => {
+  await page.goto(base + '/map', { waitUntil: 'domcontentloaded' });
+  await page.fill('#q', 'asthma');
+  await page.press('#q', 'Enter');
+  const refused = await settled(page, '#result');
+  ok('the refusal is shown', /is not a call number/i.test(refused), refused.slice(0, 140));
+
+  const shelf = page.locator('#plan g.shelf').first();
+  if (await shelf.count()) {
+    await shelf.click({ force: true });
+    await page.waitForTimeout(200);
+    const line = await page.textContent('#result');
+    ok('tapping a shelf clears the refusal that was answering the old query',
+      !/is not a call number/i.test(line || ''), (line || '').slice(0, 160));
+  }
+});
+
 journey('404 · a wrong URL is a real 404, not the app', 'librarian', async (page, base) => {
   const res = await page.goto(base + '/aboutt', { waitUntil: 'domcontentloaded' });
   ok('the status really is 404', res.status() === 404, `got ${res.status()} — a soft 404 hides every broken link`);

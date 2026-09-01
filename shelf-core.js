@@ -414,6 +414,60 @@ function w1RejoinCutter(term){
   return j===t ? '' : j;
 }
 
+/* Spacing, normalised once, before anything looks the number up.
+ *
+ * Three failures found in ship round 3, all from one cause: the parser treated the spaces in a
+ * call number as structure rather than as punctuation, so a reader typing off a spine label got a
+ * different answer depending on where their spacebar landed.
+ *
+ *   WB115H322      told flatly "is not a call number" — while /about promises in as many words
+ *                  that "Spaces and the Cutter dot are optional". The tool contradicted its own
+ *                  documentation, and it did so by asserting something untrue rather than
+ *                  admitting ignorance, which is the one failure it holds itself above.
+ *   W1AM4990       "No mapped shelf contains W1AM4990. It may be on a level not yet entered" —
+ *                  a miss dressed as a gap in the survey. The book is on level 7.
+ *   W 1 AM4990     Level 10, index 4. A WRONG SHELF, silently: the split turns a W1 serial into
+ *                  something the NLM comparator is happy to sort, and it sorts it seven levels
+ *                  from the book.
+ *
+ * Why the old rule failed in a way nobody could have predicted from reading it: the class-number
+ * test ended in \b, so it depended on whether a punctuation mark happened to follow the digits.
+ * WA900.1M300 parsed, because the dot is a word boundary. WB115H322 did not, because H is not.
+ * Two inputs of the same shape, one accepted and one called nonsense.
+ *
+ * This runs BEFORE the lookup and always says what it read, for the reason w1RejoinCutter gives
+ * below: a wrong hit needs the announcement more than a miss does. It is safe to run before the
+ * lookup because it only ever INSERTS separators that a well-formed number already has, so it is
+ * a no-op on every one of the 651 range endpoints in the survey — asserted in Tools/locate.test.js
+ * rather than assumed. */
+function normalizeSpacing(term){
+  const before=String(term||'').trim().toUpperCase().replace(/\s+/g,' ');
+  if(!before) return '';
+  let t=before;
+  /* A W-scheme prefix is one token. Splitting it is the case that produced a wrong shelf. */
+  t=t.replace(/^W\s+([1-4][A-Z]{0,2})\b/,'W$1');
+  if(/^W[1-4]/.test(t)){
+    /* W1 then a cutter, which is letters followed by digits. Matching the prefix as
+       W[1-4][A-Z]{0,2} instead lets it eat the cutter's own letters: W1AM4990 came out as
+       "W1A M4990". The three-character prefixes that really exist (W4C, W2 AW4) are always typed
+       with their space, so normalising never sees them. */
+    t=t.replace(/^(W[1-4])([A-Z]+\d)/,'$1 $2');                  // W1AM4990  -> W1 AM4990
+  }else{
+    /* Two or three letters, never one. A one-letter class stem run together with digits is
+       indistinguishable from an acronym: "H1N1" has exactly the shape of "WB115H322" — class,
+       number, cutter — and normalising it produced "H 1 N1", which really does sort inside a
+       mapped range on level 11. A virus answered with a shelf face is the failure this whole file
+       exists to refuse, and it is worth more than the handful of readers who type a single-letter
+       class with no spaces at all. Single-letter classes typed the normal way, with their spaces,
+       are untouched: "H 62 B113s", "Q 41 R81R8", "Z 675 H7" all normalise to themselves. */
+    t=t.replace(/^([A-Z]{2,3})(\d)/,'$1 $2');                    // WB115H322 -> WB 115H322
+    t=t.replace(/^([A-Z]{2,3} \d{1,4}(?:\.\d+)?)([A-Z])/,'$1 $2'); //           -> WB 115 H322
+  }
+  const rejoined=w1RejoinCutter(t);
+  if(rejoined) t=rejoined;
+  return t===before ? '' : t;
+}
+
 /* Does this string read as a call number at all?
  *
  * One owner, because there were two and they disagreed. index.html had looksLikeCallNumber for
@@ -440,6 +494,18 @@ function w1RejoinCutter(term){
  * Special Collections sequence, and range endpoints are data rather than queries, so they are
  * never asked. */
 function meansACallNumber(t){
+  /* Routing asks whether the reader MEANT a call number, so it has to see the repaired form as
+     well as the typed one. Without this the strict shape test decides the routing: "wb115h322"
+     failed it, so the home box sent it to the catalog as a book title and it never reached the
+     shelf path at all -- which is why the reader was told it is not a call number instead of being
+     shown level 10. Repairing at the lookup does nothing if the routing already sent it elsewhere. */
+  const raw=(t||'').trim();
+  if(shapedLikeCallNumber(raw)) return true;
+  const fixed=normalizeSpacing(raw);
+  return fixed ? shapedLikeCallNumber(fixed) : false;
+}
+
+function shapedLikeCallNumber(t){
   const s=(t||'').trim();
   if(!s || s.length>48) return false;
   if(/\s/.test(s)===false && s.length<3) return false;
@@ -469,6 +535,39 @@ function readsAsCallNumber(t){
   if(!meansACallNumber(s)) return false;
   if(w1RejoinCutter(s)) return false;   // a cutter split by a space is a typo, not a location
   return true;
+}
+
+/* One entry point, so every surface reads a query the same way and says the same thing about it.
+ *
+ * A repair is ADOPTED only when it earns its place, which is the difference between repairing a
+ * typo and inventing a reading:
+ *
+ *   - the repaired form resolves to a shelf AND the raw form does not. The raw form was going
+ *     nowhere, so there is nothing to lose and a book to find.
+ *   - or the repair CHANGES THE SCHEME. This is the "W 1 AM4990" case, where the raw form
+ *     resolves perfectly well to the wrong shelf seven levels away, because a split W-prefix is
+ *     something the NLM comparator will happily sort. A repair that changes which comparator runs
+ *     must win even against a raw form that found something, because what it found is wrong.
+ *
+ * Everything else is left alone. "H1N1" normalises to "H 1 N1", which resolves to nothing, so it
+ * is not adopted and the reader is told it is not a call number rather than being shown a repair
+ * nobody asked for. */
+function readQuery(raw, coll){
+  const q=String(raw||'').trim();
+  const rawHits = readsAsCallNumber(q) ? findFaces(q, coll) : [];
+  const fixed = normalizeSpacing(q);
+  if(fixed && readsAsCallNumber(fixed)){
+    const fixHits = findFaces(fixed, coll);
+    const schemeChanged = scheme(q) !== scheme(fixed);
+    if(fixHits.length && (!rawHits.length || schemeChanged))
+      return { q: fixed, readAs: fixed, hits: fixHits };
+    /* A repair that reaches a well-formed number which this survey simply does not cover is still
+       the right thing to show: "no shelf holds WB 115 H999" is true and actionable, where "WB
+       115H999 is not a call number" is neither. */
+    if(!rawHits.length && !readsAsCallNumber(q))
+      return { q: fixed, readAs: fixed, hits: fixHits };
+  }
+  return { q, readAs: '', hits: rawHits };
 }
 
 function findFaces(q, coll){

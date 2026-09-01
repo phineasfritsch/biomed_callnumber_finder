@@ -248,3 +248,63 @@ verdict is SHIP:
 **The gate is not closed by this.** `ops/SHIP.md` requires the human gate as well, and it is not
 something the board can close on its own: the live site is still ahead of this repository in
 `index.html` and `site.css`, and only whoever ran wrangler can resolve that.
+
+---
+
+### Round 3 - 1 September, 20 days out, commit d6ed584
+
+    desk worker            SHIP
+    reference librarian    SHIP
+    distrusting patron     SHIP
+    first-year on a phone  SHIP
+    screen-reader user     SHIP
+    cohesion reviewer      SHIP
+    ----
+    verdict: SHIP (six of six)
+
+**Two unanimous rounds, and the second one is the one that counts.** Round 2 passed the tool as it
+stood; round 3 was run because four things changed after that verdict, and a round that only
+confirms an earlier round is worth nothing. Every reader was pointed at the four changes and told
+to judge them adversarially, as somebody else's work.
+
+All four held. Between them the six probed roughly forty call-number inputs - lowercase, missing
+spaces, split cutters, bare Dewey, LC classes, trailing whitespace - and found exactly one class of
+failure, which is recorded below and is now fixed.
+
+**What round 3 found, and it was the best finding of any round.** Three readers, independently,
+typed a call number without spaces. The parser treated spaces as structure rather than
+punctuation, and the results were inconsistent in a way nobody could have predicted from reading
+the code:
+
+    wb115h322     "is not a call number"      while /about promises spaces are optional
+    W1AM4990      "No mapped shelf contains"   a miss dressed as a gap in the survey
+    W 1 AM4990    Level 10, index 4            a WRONG SHELF, seven levels from the book
+
+The reason for the inconsistency: the class-number test ended in a word boundary, so it depended on
+whether punctuation happened to follow the digits. `WA900.1M300` parsed because a dot is a
+boundary. `WB115H322` did not, because `H` is not. Two inputs of identical shape, one accepted and
+one called nonsense.
+
+The first of those is the one that mattered most to the board, and rightly: it is the only place in
+the product where the tool asserted something untrue rather than admitting ignorance, and it
+contradicted the site's own documentation while doing it. The third is worse in effect and nobody
+had found it in three rounds of driving.
+
+**Fixed by normalising spacing once, before any lookup, and saying what was read.** A repair is
+adopted only when it earns its place: when the repaired form resolves and the raw one does not, or
+when the repair changes which comparator runs, which is the `W 1 AM4990` case where the raw form
+resolves confidently to the wrong floor. Verified as a no-op on all 651 range endpoints.
+
+**And the fix was itself wrong on the first attempt**, which is worth recording. Normalising every
+two-or-fewer-letter stem turned `H1N1` into `H 1 N1`, which really does sort inside a mapped range
+on level 11 - a virus name answered with a shelf face, the exact failure this product exists to
+refuse. A one-letter class stem run together with digits is indistinguishable from an acronym, so
+the repair now declines to guess at those. `H 62 B113s` and `Q 41 R81R8`, typed the normal way, are
+untouched.
+
+**Also landed from this round's queue:** the `/map` status line no longer outlives the question it
+answered; the catalog's zero-result outcome and its spelling suggestion are announced rather than
+only drawn, which closed a silent dead end for a screen-reader user at the desk; and the location
+count contradiction is gone. On that last one, both numbers were wrong to hardcode: LibCal returns
+32 today, `/about` claimed 27, and the count can change without anyone noticing. The prose no
+longer states a number, and the page keeps counting live.
