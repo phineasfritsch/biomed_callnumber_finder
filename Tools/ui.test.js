@@ -679,6 +679,41 @@ journey('map · a status line does not outlive the question it answered', 'libra
   }
 });
 
+journey('locate · a gene is not a shelf', 'librarian', async (page, base) => {
+  /* The worst defect found in the whole review, and no ship round found it: I did, attacking my
+     own spacing repair. On a BIOMEDICAL library's tool, eighteen of the commonest things a reader
+     types came back as shelf faces -- TP53 on level 10, CD4 and HER2 and JAK2 on level 11 -- each
+     with the confidence of a real answer. Sixteen predate the spacing work; it widened it by two.
+     A gene name and a call number typed without spaces are the same shape, so the shape test could
+     never have separated them. What separates them is a fact: whether this building has that class.
+     These belong in the catalog, which is what somebody typing HER2 actually wants. */
+  await page.goto(base, { waitUntil: 'domcontentloaded' });
+
+  for (const term of ['TP53', 'CD4', 'HER2', 'JAK2', 'IL6', 'H1N1', 'HbA1c', 'BRCA1']) {
+    await page.fill('#q', term);
+    await page.press('#q', 'Enter');
+    const got = await settled(page, '#result');
+    ok(`${term} is not answered with a shelf face`,
+      !/Level \d+ · (top|bottom) row · index/i.test(got), got.slice(0, 160));
+  }
+
+  /* And the other side of the same rule: a class this building really has still works spaceless. */
+  await page.fill('#q', 'WB115H322');
+  await page.press('#q', 'Enter');
+  const real = await settled(page, '#result');
+  ok('a real spaceless call number still reaches its shelf',
+    /Level \d+/.test(real), real.slice(0, 160));
+
+  /* W4CK79M reads as class W number 4, and as the W4C class. Those are different floors. The
+     first version of the repair picked one and was wrong; it now prefers the longer stem the
+     survey actually recorded. */
+  await page.fill('#q', 'W4CK79M');
+  await page.press('#q', 'Enter');
+  const w4c = await settled(page, '#result');
+  ok('W4CK79M reads as the W4C class, not as class W',
+    /Level 1\b/.test(w4c) && !/Level 10/.test(w4c), w4c.slice(0, 160));
+});
+
 journey('404 · a wrong URL is a real 404, not the app', 'librarian', async (page, base) => {
   const res = await page.goto(base + '/aboutt', { waitUntil: 'domcontentloaded' });
   ok('the status really is 404', res.status() === 404, `got ${res.status()} — a soft 404 hides every broken link`);

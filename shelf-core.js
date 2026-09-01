@@ -446,23 +446,10 @@ function normalizeSpacing(term){
   let t=before;
   /* A W-scheme prefix is one token. Splitting it is the case that produced a wrong shelf. */
   t=t.replace(/^W\s+([1-4][A-Z]{0,2})\b/,'W$1');
-  if(/^W[1-4]/.test(t)){
-    /* W1 then a cutter, which is letters followed by digits. Matching the prefix as
-       W[1-4][A-Z]{0,2} instead lets it eat the cutter's own letters: W1AM4990 came out as
-       "W1A M4990". The three-character prefixes that really exist (W4C, W2 AW4) are always typed
-       with their space, so normalising never sees them. */
-    t=t.replace(/^(W[1-4])([A-Z]+\d)/,'$1 $2');                  // W1AM4990  -> W1 AM4990
-  }else{
-    /* Two or three letters, never one. A one-letter class stem run together with digits is
-       indistinguishable from an acronym: "H1N1" has exactly the shape of "WB115H322" — class,
-       number, cutter — and normalising it produced "H 1 N1", which really does sort inside a
-       mapped range on level 11. A virus answered with a shelf face is the failure this whole file
-       exists to refuse, and it is worth more than the handful of readers who type a single-letter
-       class with no spaces at all. Single-letter classes typed the normal way, with their spaces,
-       are untouched: "H 62 B113s", "Q 41 R81R8", "Z 675 H7" all normalise to themselves. */
-    t=t.replace(/^([A-Z]{2,3})(\d)/,'$1 $2');                    // WB115H322 -> WB 115H322
-    t=t.replace(/^([A-Z]{2,3} \d{1,4}(?:\.\d+)?)([A-Z])/,'$1 $2'); //           -> WB 115 H322
-  }
+  /* Spacing INSIDE a number that already has spaces. The spaceless case is a different problem
+     and is handled by spacelessReadings, because guessing where the separators go with a regex
+     produced wrong shelves: "W4CK79M" split as "W4 CK79M" instead of "W4C K79M" and landed on the
+     wrong face, and three-token numbers like "BF 575 S37 G373t" landed on a different row. */
   const rejoined=w1RejoinCutter(t);
   if(rejoined) t=rejoined;
   return t===before ? '' : t;
@@ -493,7 +480,79 @@ function normalizeSpacing(term){
  * Checked against every endpoint in the survey: all 906 pass except the bare "A" that opens the
  * Special Collections sequence, and range endpoints are data rather than queries, so they are
  * never asked. */
+/* The class stems this building actually has, read off the survey rather than listed by hand.
+ *
+ * A biomedical library's readers type gene names, receptors and assays all day: TP53, CD4, HER2,
+ * JAK2, IL6, HbA1c, PI3K. Every one of them is letters followed by digits, which is also the shape
+ * of a call number typed without spaces, and the shape test could not tell them apart. Eighteen of
+ * them came back as shelf faces -- TP53 on level 10, CD4 and HER2 and JAK2 on level 11 -- each with
+ * the same confidence as a real answer. Sixteen of the eighteen predate the spacing repair; the
+ * repair widened it by two. On a tool whose argument is that it refuses to guess, and in the one
+ * building where these are the commonest words a reader types, this is the worst failure in the
+ * product.
+ *
+ * The discriminator has to be looked up, not guessed, which is the same rule the rest of this file
+ * follows. A string with no space in it is placed only when its class stem is a stem the survey
+ * actually recorded. WB, QW, W1 are stems. TP, CD, HER, JAK, IL are not.
+ *
+ * A reader who types a real call number WITH its spaces is untouched: "TP 248 S65" is read as a
+ * call number and refused honestly for being outside the mapped ranges. The test applies only to
+ * the spaceless form, where the string is genuinely ambiguous and the tool has no grounds to pick.
+ *
+ * And these go to the CATALOG, not to a refusal, because that is what somebody typing TP53 wants.
+ * The routing predicate answers false for them, so they take the search path like any other term. */
+let CLASS_STEMS=null;
+function classStems(){
+  if(CLASS_STEMS) return CLASS_STEMS;
+  CLASS_STEMS=new Set();
+  if(typeof DATA==='object' && DATA){
+    for(const k in DATA){
+      const d=DATA[k];
+      for(const cn of [d && d.start, d && d.end]){
+        if(!cn) continue;
+        CLASS_STEMS.add(String(cn).trim().toUpperCase().split(' ')[0]);
+      }
+    }
+  }
+  return CLASS_STEMS;
+}
+
+function stemOf(t){
+  const s=String(t||'').trim().toUpperCase();
+  /* The longest stem the survey knows that opens this string. Guessing the stem's shape with a
+     pattern got it wrong in the one direction that matters: "W[1-4][A-Z]?" read "W1AM4990" as the
+     stem "W1A", which the survey has never heard of, so a real W1 serial was classed as an
+     abbreviation and sent to the catalog. Asking the data which stems exist cannot make that
+     mistake. */
+  let best='';
+  for(const st of classStems()){
+    if(!s.startsWith(st) || st.length<=best.length) continue;
+    const next=s.charAt(st.length);
+    /* A stem only counts if what follows it could be the rest of a call number: a digit, or — for
+       a W-scheme stem, which carries its own digit — a cutter's letters. Without that test "HER2"
+       opens with the real stem "H" and reads as a call number, and HER2 is one of the commonest
+       things typed in this building. */
+    if(/[0-9]/.test(next) || (/[0-9]/.test(st) && /[A-Z]/.test(next))) best=st;
+  }
+  if(best) return best;
+  const first=(normalizeSpacing(s)||s).split(' ')[0];
+  return first.replace(/\d.*$/,'');
+}
+
+/* No space, has a digit, and a class stem this building never recorded. */
+function looksLikeAbbreviation(t){
+  const s=String(t||'').trim();
+  if(!s || /\s/.test(s)) return false;
+  if(!/\d/.test(s)) return false;
+  const stem=stemOf(s);
+  if(!stem) return false;
+  const stems=classStems();
+  if(!stems.size) return false;              // no survey loaded: no opinion, rather than a wrong one
+  return !stems.has(stem);
+}
+
 function meansACallNumber(t){
+  if(looksLikeAbbreviation(t)) return false;
   /* Routing asks whether the reader MEANT a call number, so it has to see the repaired form as
      well as the typed one. Without this the strict shape test decides the routing: "wb115h322"
      failed it, so the home box sent it to the catalog as a book title and it never reached the
@@ -502,7 +561,12 @@ function meansACallNumber(t){
   const raw=(t||'').trim();
   if(shapedLikeCallNumber(raw)) return true;
   const fixed=normalizeSpacing(raw);
-  return fixed ? shapedLikeCallNumber(fixed) : false;
+  if(fixed && shapedLikeCallNumber(fixed)) return true;
+  /* A spaceless number reaches the shelf path only if the survey recognises a reading of it. This
+     is lookup-backed on purpose: the shape test alone cannot tell "wb115h322" from "HbA1c", and
+     the difference between them is whether this building has a WB class, which is a fact and not
+     a guess. */
+  return spacelessReadings(raw).some(c => shapedLikeCallNumber(c));
 }
 
 function shapedLikeCallNumber(t){
@@ -537,6 +601,64 @@ function readsAsCallNumber(t){
   return true;
 }
 
+/* A call number typed with no spaces at all, read by trying every split and keeping only the
+ * readings the survey recognises.
+ *
+ * The first attempt at this guessed the separators with a regex, and the guess was wrong in the
+ * one way that matters. "W4CK79M" became "W4 CK79M" rather than "W4C K79M" and landed on a
+ * different face; three-token numbers such as "BF 575 S37 G373t" landed on a different row. Both
+ * were WRONG SHELVES produced by a repair meant to prevent wrong shelves.
+ *
+ * So: split the string at every letter/digit transition, try every way of regrouping those runs,
+ * keep the candidates whose first token is a class stem the survey actually recorded, and look up
+ * each one.
+ *
+ * The rule that makes this safe is the last one: a reading is adopted ONLY IF every candidate that
+ * resolves resolves to the same faces. "W4CK79M" reads as both "W4 CK79M" and "W4C K79M", they
+ * disagree, and disagreement means the reader gets a refusal instead of a coin flip. That is the
+ * product's own standard applied to its own repair: a wrong aisle is worse than none. */
+/* A cutter is letters, then digits, then at most a trailing letter or two: H322, S851B, AM4990.
+   Anything else in that position means the number carried a SECOND cutter or a year, and where
+   those separators fell cannot be recovered: "BF575S37G373T" is "BF 575 S37 G373t", and reading it
+   as one cutter puts the reader on a different row. "W4CZ89P2009" is the same shape with a year.
+   Those get a refusal, which is the honest answer to a string that lost the information. */
+const CUTTER=/^[A-Z]+[0-9]{1,4}[A-Z]{0,2}$/;
+
+function spacelessReadings(flat){
+  const str=String(flat||'').toUpperCase();
+  const stems=classStems();
+  const out=[];
+  /* One reading per class stem that could open the string, built deterministically rather than by
+     trying every way of inserting spaces. Generating all the splittings produced candidates that
+     disagreed with each other ("WB 115 H322" against "WB 115H 322"), and disagreement is read here
+     as ambiguity, so a number that had exactly one sensible reading was refused for having four
+     silly ones. */
+  for(const st of stems){
+    /* Never a one-letter stem here. Two things go wrong with them and one rule fixes both.
+       "H1N1" reads as "H 1 N1", which really does sort inside a mapped range on level 11 — a virus
+       answered with a shelf face. And "W1AM4990" reads BOTH as the W1 serial (level 7, correct)
+       and as class W number 1 (level 10, an artifact of where a range boundary happens to fall),
+       so the two disagreed and the number was refused for being ambiguous when it was not.
+       Dropping one-letter stems removes the spurious reading in both cases. The cost is that a
+       single-letter class typed with no spaces at all — "H62B113S" — is refused rather than
+       guessed at, which is the right answer to a string that is genuinely ambiguous. Typed the
+       normal way, with its spaces, it is untouched. */
+    if(st.length<2) continue;
+    if(!str.startsWith(st) || st.length===str.length) continue;
+    const rest=str.slice(st.length);
+    if(/^[0-9]/.test(rest)){
+      const m=rest.match(/^([0-9]+(?:\.[0-9]+)?)(.*)$/);
+      if(!m) continue;
+      if(!m[2]) out.push(st+' '+m[1]);
+      else if(CUTTER.test(m[2])) out.push(st+' '+m[1]+' '+m[2]);
+    }else if(/[0-9]/.test(st) && CUTTER.test(rest)){
+      /* A W-scheme stem carries its own digit, so what follows it is the cutter: W1 + AM4990. */
+      out.push(st+' '+rest);
+    }
+  }
+  return out;
+}
+
 /* One entry point, so every surface reads a query the same way and says the same thing about it.
  *
  * A repair is ADOPTED only when it earns its place, which is the difference between repairing a
@@ -555,6 +677,22 @@ function readsAsCallNumber(t){
 function readQuery(raw, coll){
   const q=String(raw||'').trim();
   const rawHits = readsAsCallNumber(q) ? findFaces(q, coll) : [];
+  if(!rawHits.length && q && !/\s/.test(q)){
+    const seen=new Map();
+    for(const cand of spacelessReadings(q)){
+      if(!readsAsCallNumber(cand)) continue;
+      const hits=findFaces(cand, coll);
+      if(!hits.length) continue;
+      seen.set(hits.map(h=>h.lvl+'|'+h.id+'|'+h.side).join(','), {cand, hits});
+    }
+    /* Exactly one reading, or none. Two readings that disagree are a coin flip, and this file
+       does not flip coins about where a book is. */
+    if(seen.size===1){
+      const only=[...seen.values()][0];
+      return { q: only.cand, readAs: only.cand, hits: only.hits };
+    }
+    if(seen.size>1) return { q, readAs: '', hits: [] };
+  }
   const fixed = normalizeSpacing(q);
   if(fixed && readsAsCallNumber(fixed)){
     const fixHits = findFaces(fixed, coll);
