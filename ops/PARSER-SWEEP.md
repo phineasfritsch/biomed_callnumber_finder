@@ -1,5 +1,13 @@
 # What the parser does with things that are not call numbers
 
+> **This sweep was refuted the next day, and the refutation is the most useful thing in the file.**
+> It ran 139 strings and came back clean. Ship round 5 then found the third instance in about four
+> minutes at a keyboard: `B12 1000mcg`, `CD4 350`, `D3 2000iu`, `T4 125`. The corpus below contains
+> `1000mcg`. It contains `B12`. It never combined them, because I generated it from the shapes I
+> had already thought of, and the combination was not one of them. A corpus tests the author's
+> imagination; a person typing tests the product. The corpus has since been extended to 481 strings
+> and the defect is fixed, but the conclusion to keep is the one about method, not the count.
+
 Run while ship round 5 was in flight, against the frozen commit, read-only. It exists because the
 same defect has now been found twice in this product and both times by accident: a string that is
 not a call number, answered with a confident shelf face. The board found it once (a phrase,
