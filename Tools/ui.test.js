@@ -452,6 +452,24 @@ journey('locate · a second call number does not answer for the first', 'desk wo
   ok('the second slip does not return the first book\'s shelf',
     !answeredFirstAgain,
     `box held ${JSON.stringify(box)} and the answer was ${JSON.stringify(second.slice(0, 100))}`);
+
+  /* Added when this journey's count silently fell from 4 to 3. settled() only asserts a region is
+     on screen when that region has text, so an answer area that goes EMPTY takes its assertion
+     with it and the suite still reports green. The grammar change had routed the concatenated
+     string to the catalog and left #result blank, and a blank at speed reads as a page that
+     failed to load -- which is the one thing the direction says a refusal must never look like.
+     Asserted unconditionally now, against either region, so it cannot vanish again. */
+  const visible = await page.evaluate(() => {
+    const shown = el => {
+      if (!el) return 0;
+      const r = el.getBoundingClientRect(), cs = getComputedStyle(el);
+      if (cs.visibility === 'hidden' || cs.display === 'none' || Number(cs.opacity) === 0) return 0;
+      return r.height * r.width > 0 ? (el.textContent || '').trim().length : 0;
+    };
+    return shown(document.querySelector('#result')) + shown(document.querySelector('#catResults'));
+  });
+  ok('and the reader is left looking at something, not at a blank',
+    visible > 0, 'both #result and #catResults are empty or invisible');
 });
 
 journey('locate · a space inside the cutter does not silently move the shelf', 'desk worker', async (page, base) => {
@@ -748,6 +766,40 @@ journey('locate · a gene is not a shelf', 'librarian', async (page, base) => {
   const w4c = await settled(page, '#result');
   ok('W4CK79M reads as the W4C class, not as class W',
     /Level 1\b/.test(w4c) && !/Level 10/.test(w4c), w4c.slice(0, 160));
+});
+
+journey('locate · a room number is not a shelf', 'desk worker', async (page, base) => {
+  await page.goto(base, { waitUntil: 'domcontentloaded' });
+
+  /* Fourth shape, found by the desk worker in round 6: the room number of the building this
+     library sits inside. Three letters and a number, interpolated alphabetically into a real
+     surveyed range and stated as fact. A patron asks where CHS 17-187 is and the tool walks them
+     to a shelf on level 11. */
+  for (const label of ['CHS 12-077', 'CHS 17-187', 'CHS 12', 'BOX 14', 'LOT 7']) {
+    await page.fill('#q', label);
+    await page.press('#q', 'Enter');
+    const got = await settled(page, '#result');
+    ok(`"${label}" is a room or a box, not a shelf`,
+      !/Level \d+ · (top|bottom) row · index/i.test(got), got.slice(0, 160));
+  }
+
+  /* The overshoot found in the same round, and the reason the rules were replaced by a grammar:
+     ordinary LC numbers a patron pastes out of the catalog were being refused. The tool's own
+     placeholder advertises QL737.C22, and that form broke the moment a year followed it. */
+  for (const lc of ['WB115.H322 2018', 'QL737.C22 2011', 'QP141.G73', 'RA971 .M34']) {
+    await page.fill('#q', lc);
+    await page.press('#q', 'Enter');
+    const got = await settled(page, '#result');
+    ok(`"${lc}" is a real call number and reaches a shelf`, /Level \d+/.test(got), got.slice(0, 160));
+  }
+
+  /* A parse failure and a survey fact are different claims. Saying the second when you mean the
+     first tells a librarian to stop looking on a floor that holds the book. */
+  await page.fill('#q', 'CHS 12-077');
+  await page.press('#q', 'Enter');
+  const parseFail = await settled(page, '#result');
+  ok('a string it could not read is not reported as absent from the survey',
+    !/No mapped shelf contains/i.test(parseFail), parseFail.slice(0, 200));
 });
 
 journey('404 · a wrong URL is a real 404, not the app', 'librarian', async (page, base) => {

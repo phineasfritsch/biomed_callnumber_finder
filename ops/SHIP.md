@@ -403,3 +403,55 @@ shipped by running the check that round 4's finding had already made routine.
 class this survey never used as a range endpoint, and it genuinely sits on the shelf that runs
 `AG 5` to `BF 57`. Refusing it to tidy the rule would be the failure this round is about, pointed
 the other way.
+
+---
+
+### Round 6 - 1 September, 20 days out, commit e23b6e7
+
+    verdict: NOT YET
+
+Briefed to assume a fourth shape existed and that nobody had written it down. It did, and they
+found it in both directions at once, which is what the accumulated rules had made inevitable.
+
+**The fourth shape: the building's own room numbers.**
+
+    CHS 12-077  -> Level 11 · top row · index 3 · Left
+    CHS 17-187  -> the same face
+    BOX 14      -> the same face
+    LOT 7       -> Level 11 · top row · index 3 · Right
+
+The Biomedical Library is inside the CHS building, so a room number is among the commonest things
+a desk worker is handed. Three letters and a number, interpolated alphabetically into a real
+surveyed range and stated as fact.
+
+**And the overshoot, in the same round.** Ordinary LC numbers a patron pastes out of the catalog
+were being refused: `QP141.G73`, `RA971 .M34`, and - worst - `WB115.H322 2018` and `QL737.C22 2011`,
+where a trailing year disqualified a number that worked without it. `QL737.C22` is the example
+printed on the home page and on the map page, so the product was teaching the exact form that
+broke.
+
+**Worse than either: the override reported a parse failure as a survey fact.** Clicking "Treat it
+as a call number instead" on a refused string answered *"No mapped shelf contains WB115.H322
+2018"* - for a number the map holds, on the row it had just drawn. As the librarian put it: a
+refusal makes somebody retype, a false survey fact makes them stop looking. That distinction now
+holds on both surfaces.
+
+**Why this round is the one that changed the design rather than adding a rule.** Four rules had
+accumulated, one per defect, each right about the case that produced it and wrong about the next.
+By this round they contradicted each other: a room number resolved while a real LC number did not.
+They are replaced by a grammar - CLASS, NUMBER, Cutters, then years and volume marks - with exactly
+two places that consult the survey rather than a pattern, and both are written down and justified
+where they sit.
+
+The grammar immediately caught three things the rules never had: `W1 A1Q2` and its siblings, whose
+Cutters alternate letters and digits more than once; `BF 789 D4 6456s`, whose second Cutter opens
+with digits; and `WC 160 G7.78T`, whose Cutter carries a decimal. All three are in the survey, and
+all three had been refused.
+
+**A silent assertion loss, caught by the count rather than by a failure.** `Tools/ui.test.js` fell
+from 150 assertions to 149 while still reporting green. `settled()` only asserts a region is on
+screen when that region has text, so an answer area that goes empty takes its assertion with it.
+The grammar had routed a concatenated string to the catalog and left `#result` blank - and a blank
+at speed reads as a page that failed to load, which is the one thing the direction says a refusal
+must never look like. Now asserted unconditionally against both regions, so it cannot vanish again.
+This is exactly what the falling-count rule exists for and the first time it has paid out.

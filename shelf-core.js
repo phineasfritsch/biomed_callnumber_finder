@@ -544,6 +544,12 @@ function looksLikeAbbreviation(t){
   const s=String(t||'').trim();
   if(!s || /\s/.test(s)) return false;
   if(!/\d/.test(s)) return false;
+  /* A dot before the Cutter is how LC writes a call number and is not how anyone writes an
+     acronym. "QP141.G73" was classed as an abbreviation because QP is not a stem this survey
+     recorded, but it is an ordinary number a patron pastes out of the catalog, and the dot says
+     so. Round 6 found it refused while "QP141.G73 2011" -- the same number with a year, so no
+     longer a single token -- resolved, which is the kind of inconsistency nobody can predict. */
+  if(/^[A-Za-z]{1,3}[0-9]+(?:\.[0-9]+)?\.[A-Za-z]/.test(s)) return false;
   const stem=stemOf(s);
   if(!stem) return false;
   const stems=classStems();
@@ -582,57 +588,77 @@ function meansACallNumber(t){
  * is not one purely alphabetic token after the class. Every cutter, volume and year carries a
  * digit — M616g, AA1, P6P, 2003. An English word does not. So a leftover word means the string is
  * a phrase with a call-number-shaped opening, and it belongs in the catalog. */
-function everyTokenIsPartOfIt(s){
-  const toks=String(s||'').trim().split(/\s+/);
-  /* Third instance of the same family, found by the board in round 5 after my own 139-string
-     sweep missed it: a dose, a lab value or a variant.
-         B12 1000mcg -> Level 11 · index 1        CD4 350 -> Level 11 · index 3
-         D3 2000iu   -> Level 11 · index 3        T4 125  -> Level 10 · index 4
-         Q10 100mg   -> Level 11 · index 4        TP53 R175H -> Level 10 · index 4
-     Bare "CD4" had been fixed and went to the catalog; "CD4 350", the more specific and more real
-     thing for a clinician to type, got an aisle. Worse than the thing it was hiding behind.
+/* The grammar of a call number, replacing four rules that had accumulated one defect at a time.
+ *
+ * Each of those rules was right about the case that produced it and wrong about the next one, and
+ * by round 6 they contradicted each other: "QP141.G73" and "RA971 .M34" — ordinary LC numbers a
+ * patron pastes from the catalog — were refused, while "CHS 12-077", the room number of the
+ * building this library sits inside, was answered with Level 11 · index 3. Both are the same
+ * mistake, which is deciding placement from a pattern rather than from a structure.
+ *
+ * A call number is: CLASS, NUMBER, then Cutters, then years and volume marks.
+ *   CLASS   one to three letters, or a W-scheme stem that carries its own digit (W1, W2, W4C)
+ *   NUMBER  digits, optionally decimal. Never "12-077", which is a room.
+ *   CUTTER  a letter, then digits, optionally trailing letters: H322, .M34, M616g, AA1, P6P.
+ *           Measured, not assumed: across all 651 range endpoints there is no purely alphabetic
+ *           token after the class and none beginning with a digit.
+ *   TAIL    a four-digit year, or v./c./pt./no./bk. and a number.
+ *
+ * Two places need a fact rather than a shape, and both are read off the survey:
+ *   - A class run together with its number ("TP53 R175H", "B12 1000mcg") is accepted only when the
+ *     class is one the survey recorded, or when a dot marks the Cutter the way LC writes it
+ *     ("QP141.G73"). Nobody writes a gene as QP141.G73, and a spaced "TP53 R175H" is genuinely
+ *     indistinguishable from a variant, so it is refused rather than guessed at.
+ *   - A class the survey never recorded must show a Cutter. "AS 36 N4" is a real LC number that
+ *     genuinely sits on the shelf running AG 5 -> BF 57 and must resolve; "BOX 14" and "LOT 7" are
+ *     labels and must not. */
+function callNumberGrammar(s){
+  const toks=String(s||'').trim().split(/\s+/).filter(Boolean);
+  if(!toks.length) return false;
+  const stems=classStems();
+  const T0=toks[0].toUpperCase();
+  const letters=T0.replace(/[^A-Z].*$/,'');
+  if(!letters || letters.length>3) return false;
 
-     The discriminator, and it is a fact about how call numbers are written rather than a guess: a
-     call number typed WITH spaces separates its class from its number — "WB 115 H322", "AS 36 N4",
-     "W 84 AA1". A first token that runs letters into digits and is followed by more tokens is
-     therefore either a W-scheme stem, which carries its own digit by design (W1, W2, W4C), or it
-     is not a call number at all.
-
-     Deliberately NOT the stem test used for spaceless strings: "AS 36 N4" is a real LC number in a
-     class this survey never used as a range endpoint, and it genuinely sits on the shelf that runs
-     AG 5 -> BF 57. Rejecting it would be the same lie in the other direction. */
-  if(toks.length>1 && /[A-Za-z]/.test(toks[0]) && /[0-9]/.test(toks[0])){
-    /* Two conditions, because one was not enough in either direction. Requiring the whole first
-       token to be a known stem refused "WB39 M294" and "WA900.1 M297", which are real numbers
-       typed with the class run into its number — the same lie in the other direction, and 363 of
-       the survey's own endpoints failed it.
-
-       So: the LETTERS of the first token must be a class the survey recorded, and the token after
-       them must open with a letter, because every genuine Cutter does. "Q10 100mg" passes the
-       first test, since Q is a real class, and fails the second, since 100mg is a quantity and not
-       a Cutter. */
-    const letters=toks[0].toUpperCase().replace(/[^A-Z].*$/,'');
-    if(!classStems().has(letters)) return false;
-    if(!/^[A-Za-z]/.test(toks[1])) return false;
+  /* A Cutter can alternate letters and digits more than once: the survey holds W1 A1Q2, W1 A1C7
+     and W1 A1C8, which a single letters-digits-letters shape refuses. */
+  const CUTTER_TOK=/^\.?[A-Za-z]+[0-9]+(?:\.[0-9]+)?(?:[A-Za-z]+[0-9]*)*$/;
+  let i;
+  if(/^[A-Z]{1,3}[0-9]/.test(T0)){
+    const dotCutter=/^[A-Z]{1,3}[0-9]+(?:\.[0-9]+)?\.[A-Z]/.test(T0)
+                 || (toks[1] && /^\.[A-Za-z]/.test(toks[1]));
+    /* One token and no dot: this is the spaceless case, and spacelessReadings decides it. Saying
+       yes here would put "H1N1" back on level 11, because H is a real class. */
+    if(toks.length===1 && !dotCutter) return false;
+    if(!dotCutter && !stems.has(T0) && !stems.has(letters)) return false;
+    i=1;
+  }else{
+    if(toks.length<2) return false;
+    if(!/^[0-9]+(?:\.[0-9]+)?$/.test(toks[1])) return false;    // "12-077" is a room, not a number
+    if(!stems.has(letters) && !/^\.?[A-Za-z]/.test(toks[2]||'')) return false;
+    i=2;
   }
-  /* Where the head ends: "WB 115 ..." spends two tokens on class and number, "B12 ..." and
-     "W1 ..." spend one, because the number is already attached. */
-  const head=/[0-9]/.test(toks[0]) ? 1 : 2;
-  for(let i=head;i<toks.length;i++) if(!/[0-9]/.test(toks[i])) return false;
+  for(; i<toks.length; i++){
+    const t=toks[i];
+    if(CUTTER_TOK.test(t)) continue;
+    if(/^[0-9]{4}$/.test(t)) continue;                            // a year on the spine
+    if(/^(?:v|c|pt|no|bk)\.?[0-9]+$/i.test(t)) continue;          // v.2, c.1
+    /* A second Cutter may open with digits -- "BF 789 D4 6456s" is in the survey. Only after a
+       real Cutter has already been seen, so that "Q10 100mg" cannot use this door. */
+    if(i>=3 && /^[0-9]+[A-Za-z]+$/.test(t)) continue;
+    return false;
+  }
   return true;
 }
 
 function shapedLikeCallNumber(t){
   const s=(t||'').trim();
-  if(!everyTokenIsPartOfIt(s)) return false;
   if(!s || s.length>48) return false;
   if(/\s/.test(s)===false && s.length<3) return false;
   if(/[A-Za-z]{2,}:/.test(s)) return false;                       // mesh:, title:, at: …
   const digits=s.replace(/[^0-9Xx]/g,'');
   if(/^[0-9][0-9Xx-]{8,}$/.test(s) && (digits.length===10||digits.length===13)) return false;  // ISBN
-  if(/^W[1-4][A-Z]{0,2}\s*[A-Z]/i.test(s)) return true;           // W1 AM477
-  if(/^[A-Z]{1,3}\s*\d{1,4}(?:\.\d+)?\b/i.test(s)) return true;   // WM 100, QL737.C22, BF 400
-  return false;
+  return callNumberGrammar(s);
 }
 
 /* Two different questions, and the difference is the whole of the fix above.

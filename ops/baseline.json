@@ -1,5 +1,5 @@
 {
-  "total": 2180,
+  "total": 2194,
   "suites": {
     "Tools/assets.test.js": 119,
     "Tools/catalog.test.js": 404,
@@ -7,7 +7,7 @@
     "Tools/pins.test.js": 36,
     "Tools/sru.test.js": 9,
     "Tools/style.test.js": 196,
-    "Tools/ui.test.js": 150,
+    "Tools/ui.test.js": 164,
     "Tools/walk.test.js": 52,
     "Tools/worker.test.js": 259,
     "Tools/xss.test.js": 44,

@@ -535,8 +535,18 @@ function shelfPreview(q){
   lastAnswered=term;
   const href='/map?q='+encodeURIComponent(term)+(spec?'&coll=spec':'');
   if(!hits.length){
-    out.innerHTML=note+`<div class="miss">No mapped shelf contains <code>${escHtml(term.toUpperCase())}</code>. `
-      +`It may be on a level not yet entered, or outside the mapped ranges.</div>`
+    /* Two different facts, and saying the wrong one costs the reader the search.
+       "No mapped shelf contains X" is a claim about the survey: we read the number, we looked, it
+       is not in the mapped ranges. "We could not read X as a call number" is a claim about the
+       string. Round 6 found the second being reported as the first: a librarian typed
+       "WB115.H322 2018", the parser declined it, and the override answered "No mapped shelf
+       contains WB115.H322 2018" -- for a number the map holds, on the row it had just drawn. A
+       refusal makes somebody retype; a false survey fact makes them stop looking. */
+    out.innerHTML=note+(readsAsCallNumber(term)
+      ? `<div class="miss">No mapped shelf contains <code>${escHtml(term.toUpperCase())}</code>. `
+        +`It may be on a level not yet entered, or outside the mapped ranges.</div>`
+      : `<div class="miss">That was not read as a call number, so nothing was looked up. `
+        +`Try it spaced as it is printed on the spine, for example <code>WB 115 H322</code>.</div>`)
       +`<div class="examples"><a class="tomap" href="/map">Open the shelf map</a></div>`;
     return;
   }

@@ -317,7 +317,9 @@ function locate(){
        floor 4", which is the same sentence about a book nobody had named yet. */
     let ans='';
     if(q && !cnShaped(q)){
-      ans=`<div class="miss">No mapped shelf contains <code>${escHtml(q.toUpperCase())}</code>. It may be on a level not yet entered, or outside the mapped ranges.</div>`;
+      /* Same distinction the home box now makes: this branch has read nothing and looked nothing
+         up, so it may not report a survey fact. See index.html's refusal. */
+      ans=`<div class="miss"><code>${escHtml(q.toUpperCase())}</code> was not read as a call number, so nothing was looked up. Try it spaced as it is printed on the spine.</div>`;
     } else if(q){
       const stacked=findFaces(q,'stacks');
       const lv=stacked.map(h=>h.lvl).filter((n,i,a)=>a.indexOf(n)===i);
