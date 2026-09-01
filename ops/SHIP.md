@@ -455,3 +455,68 @@ The grammar had routed a concatenated string to the catalog and left `#result` b
 at speed reads as a page that failed to load, which is the one thing the direction says a refusal
 must never look like. Now asserted unconditionally against both regions, so it cannot vanish again.
 This is exactly what the falling-count rule exists for and the first time it has paid out.
+
+---
+
+### Round 7 - 1 September, 20 days out, commit 825a96f
+
+    desk worker            SHIP
+    reference librarian    SHIP
+    distrusting patron     SHIP
+    first-year on a phone  SHIP
+    screen-reader user     SHIP
+    cohesion reviewer      NOT YET
+    ----
+    verdict: NOT YET (one dissenting)
+
+**Five to one, and the dissent was right.** The grammar held on the side that failed round 6:
+room numbers, Dewey, gene loci, IP addresses, court citations, version strings, measurements and
+coordinates were all refused on every surface. What it got wrong was the other direction, and it
+got it wrong in a way the product itself contradicted:
+
+    WB 115 H248p 1998        -> Level 10 · index 10 · Right
+    WB 115 H248p 1998 Supp.  -> "that was not read as a call number"
+
+Shelfmark's own catalog panel prints that second string with a shelf face beside it. Two of its
+surfaces disagreed about one book. Five of six readers named it; four called it a survivable dead
+end and one would not hand it to a patron, and his second finding - that the pickup walk dropped
+those lines and reported a count as if they had never been typed - is what makes the dissent a
+blocker rather than a preference.
+
+**Fixed, and the shape of the fix is a closed list.** A supplement or an index shelves with the
+book it belongs to, so a trailing `Supp.`, `Suppl.`, `Index`, a bracketed year or a `+` is stripped
+and named. The tempting version strips any trailing word that stops the parse, and that version
+hands back every defect of rounds 4 to 6: "B12 deficiency" becomes "B12" and a phrase is a shelf
+again.
+
+**And the list is narrower than the first draft, for a reason found while writing it.** That draft
+also stripped `Folio`, `Oversize`, `Microfilm`, `Thesis` and `Reserve`. Every one of those names a
+DIFFERENT PLACE - an oversize volume, a reel and a reserve copy are not on the shelf the stacks
+number points at - so stripping them would have answered with a face nobody looked up. It also
+stripped `atlas`, which is a word in book titles, and turned "WB115 atlas" into a shelf. The
+failure being fixed, reintroduced while fixing it, caught by the corpus rather than by a reader.
+
+**Three further things this round produced, none of them in its brief.**
+
+- **The false accept it did name:** `H.R. 3590` reached Level 11, because the letters were read off
+  the front and the dots ignored, leaving "H", which is a real class. A class is letters and
+  nothing else now.
+- **A fifth shape I found while the round was in flight**, by feeding the grammar notation from
+  other systems: `Q3 2025` reads as class Q, number 3, year 2025. So does every other fiscal
+  quarter. A year now qualifies a Cutter rather than standing in for one - 904 of the survey's 906
+  endpoint lookups carry a Cutter, and the two that do not are range boundaries.
+- **The routing gap, for the third time.** A repair landed at the lookup and the lookup was never
+  reached, because the routing predicate judged the string as typed. Three separate defects have
+  now had this same second half.
+
+**And one the tests found rather than a reader.** Handling markers after the raw lookup looked
+right and was quietly wrong: the comparator tolerates a trailing "Supp." and resolves the string
+as typed, so the marker branch never ran, the answer was correct, and the tool never said it had
+ignored a word. Silently dropping part of what somebody typed is where this whole review started.
+Markers are handled before the lookup now, and always named.
+
+**The harness died twice** as the suite passed twenty journeys - the browser process running out of
+room in this container, not a leak. It is relaunched every eight journeys now. Worth recording
+because a harness that dies is indistinguishable from a product that fails: both stop the suite
+without saying which assertions would have passed, and the second death was hiding four real
+failures underneath it.

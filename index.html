@@ -487,7 +487,12 @@ function shelfPreview(q){
   /* The appended slip. Take what follows the last answer, which is what the reader typed. */
   if(lastAnswered && typed.length>lastAnswered.length && typed.indexOf(lastAnswered)===0){
     const added=typed.slice(lastAnswered.length).trim();
-    if(added){
+    /* A second slip is a call number. Anything else appended to the last answer is part of the
+       same question: "WB 115 H322" then " Supp." is one book with a supplement, not two books,
+       and this rule used to answer "Read as Supp." and then refuse it. The prefix test cannot
+       tell those apart on its own, but the appended text can be asked whether it is a call
+       number, and only then is it a new slip. */
+    if(added && meansACallNumber(added)){
       said.push(`Read as <code>${escHtml(added)}</code>. <code>${escHtml(lastAnswered)}</code> was `
         +`still in the box from the last search and had no part in this answer.`);
       typed=added;
@@ -500,7 +505,10 @@ function shelfPreview(q){
      the two spacing failures ship round 3 found alongside it. */
   const read=readQuery(term, coll);
   if(read.readAs){
-    said.push(/^W[1-4]/i.test(read.q)
+    said.push(read.why==='marker'
+      ? `Read as <code>${escHtml(read.readAs)}</code>. A supplement or an index shelves with the `
+        +`book it belongs to, so the shelf is the same one.`
+      : /^W[1-4]/i.test(read.q)
       ? `Read as <code>${escHtml(read.readAs)}</code>. In a W1 number the cutter is one word, `
         +`so the letters and their number are not separated.`
       : `Read as <code>${escHtml(read.readAs)}</code>. Spaces are optional, so the parts were `
@@ -532,6 +540,8 @@ function shelfPreview(q){
     }
   }
   const note=said.length?`<div class="miss">${said.join(' ')}</div>`:'';
+  /* Correct the banner before the answer paints, so the two never disagree on screen. */
+  if(!hits.length && !readsAsCallNumber(term)) showRouted('unread');
   lastAnswered=term;
   const href='/map?q='+encodeURIComponent(term)+(spec?'&coll=spec':'');
   if(!hits.length){
@@ -546,7 +556,7 @@ function shelfPreview(q){
       ? `<div class="miss">No mapped shelf contains <code>${escHtml(term.toUpperCase())}</code>. `
         +`It may be on a level not yet entered, or outside the mapped ranges.</div>`
       : `<div class="miss">That was not read as a call number, so nothing was looked up. `
-        +`Try it spaced as it is printed on the spine, for example <code>WB 115 H322</code>.</div>`)
+        +`Type it as it is printed on the spine, for example <code>WB 115 H322</code>.</div>`)
       +`<div class="examples"><a class="tomap" href="/map">Open the shelf map</a></div>`;
     return;
   }
@@ -576,7 +586,13 @@ function showRouted(kind){
   const CAT='<button type="button" class="linky" id="routeToCat">Search the catalog for this instead</button>';
   const ART='<button type="button" class="linky" id="routeToArt">Search articles on this topic</button>';
   const SHELF='<button type="button" class="linky" id="routeToShelf">Treat it as a call number instead</button>';
-  el.innerHTML = kind==='shelf'
+  el.innerHTML = kind==='unread'
+    /* The banner used to say the lookup had happened before the lookup had been attempted, so on
+       a refusal a reader saw "Read as a call number and looked up on the shelf map" two lines
+       above "That was not read as a call number, so nothing was looked up." The first-year in
+       round 7 had both sentences on one phone screen. Of the two, only the box knows. */
+    ? 'That was not read as a call number, so nothing was looked up. '+CAT+' '+ART
+    : kind==='shelf'
     ? 'Read as a call number and looked up on the shelf map. '+CAT+' '+ART
     : kind==='article'
     ? 'Read as an article or journal identifier and sent to the link resolver. '+CAT

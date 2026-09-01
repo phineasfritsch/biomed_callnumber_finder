@@ -351,7 +351,9 @@ function locate(){
   const read=readQuery(q, collection);
   if(read.readAs){
     note=`<div class="miss">Read as <code>${escHtml(read.readAs)}</code>. `
-      + (/^W[1-4]/i.test(read.q)
+      + (read.why==='marker'
+          ? 'A supplement or an index shelves with the book it belongs to, so the shelf is the same one.'
+          : /^W[1-4]/i.test(read.q)
           ? 'In a W1 number the cutter is one word, so the letters and their number are not separated.'
           : 'Spaces are optional, so the parts were separated the way they are printed on the spine.')
       + '</div>';

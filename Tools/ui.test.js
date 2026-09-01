@@ -802,6 +802,76 @@ journey('locate · a room number is not a shelf', 'desk worker', async (page, ba
     !/No mapped shelf contains/i.test(parseFail), parseFail.slice(0, 200));
 });
 
+journey('locate · a supplement shelves with its parent', 'librarian', async (page, base) => {
+  /* Round 7's dissent, and the only finding it filed as failing the task: a trailing marker
+     disqualified a number whose head parsed fine, while Shelfmark's own catalog panel printed
+     that same string with a shelf face beside it. Two surfaces contradicting each other about
+     one book. */
+  await page.goto(base, { waitUntil: 'domcontentloaded' });
+
+  await page.fill('#q', 'WB 115 H322');
+  await page.press('#q', 'Enter');
+  const parent = await settled(page, '#result');
+  const level = (parent.match(/Level (\d+)/) || [])[1];
+  ok('the parent number resolves', !!level, parent.slice(0, 140));
+
+  for (const marked of ['WB 115 H322 Supp.', 'WB 115 H322 Index', 'WB 115 H322 +', 'WB 115 H322 [1998]']) {
+    await page.fill('#q', marked);
+    await page.press('#q', 'Enter');
+    const got = await settled(page, '#result');
+    ok(`"${marked}" reaches the same shelf as its parent`,
+      (got.match(/Level (\d+)/) || [])[1] === level, got.slice(0, 160));
+    ok(`and it says what it read`, /Read as/i.test(got), got.slice(0, 160));
+  }
+
+  /* The line the marker list must not cross. Folio, oversize, microfilm, thesis and reserve each
+     name a DIFFERENT PLACE, so stripping them would answer with a face nobody looked up -- the
+     failure this whole family is about, arrived at while fixing it. And "atlas" is a word in book
+     titles: an early draft of the list turned "WB115 atlas" into a shelf. */
+  for (const elsewhere of ['WB 115 H322 Folio', 'Microfilm WB 115 H322', 'WB115 atlas', 'WA 900.1 M300 (Oversize)']) {
+    await page.fill('#q', elsewhere);
+    await page.press('#q', 'Enter');
+    const got = await settled(page, '#result');
+    ok(`"${elsewhere}" is not given the stacks face`,
+      !/Level \d+ · (top|bottom) row · index/i.test(got), got.slice(0, 160));
+  }
+});
+
+journey('locate · a bill and a fiscal quarter are not shelves', 'desk worker', async (page, base) => {
+  /* H.R. 3590 was round 7's one false accept: the letters were read off the front and the dots
+     ignored, leaving "H", which is a real class. Q3 2025 I found myself, by feeding the grammar
+     notation from other systems -- it reads as class Q, number 3, year 2025, and nothing said a
+     year has to be a year OF something. */
+  await page.goto(base, { waitUntil: 'domcontentloaded' });
+  for (const s of ['H.R. 3590', 'H.R. 1', 'Q3 2025', 'Q1 2024', 'W2 2020', 'H1 2019']) {
+    await page.fill('#q', s);
+    await page.press('#q', 'Enter');
+    const got = await settled(page, '#result');
+    ok(`"${s}" is not a shelf`, !/Level \d+ · (top|bottom) row · index/i.test(got), got.slice(0, 160));
+  }
+  /* And the numbers that rule must not cost: a year is fine when a Cutter precedes it. */
+  for (const s of ['WB 115 H322 2018', 'WB115.H322 2018', 'QL737.C22 2011']) {
+    await page.fill('#q', s);
+    await page.press('#q', 'Enter');
+    const got = await settled(page, '#result');
+    ok(`"${s}" still reaches its shelf`, /Level \d+/.test(got), got.slice(0, 160));
+  }
+});
+
+journey('locate · the banner never claims a lookup that did not happen', 'first-year', async (page, base) => {
+  /* Both sentences were on one phone screen at once, saying opposite things. */
+  await page.goto(base, { waitUntil: 'domcontentloaded' });
+  await page.fill('#q', 'CHS 12-077');
+  await page.press('#q', 'Enter');
+  await settled(page, '#result');
+  const banner = (await page.textContent('#routed').catch(() => '')) || '';
+  const box = (await page.textContent('#result').catch(() => '')) || '';
+  const bannerClaims = /looked up on the shelf map/i.test(banner);
+  const boxDenies = /nothing was looked up/i.test(box);
+  ok('the banner and the answer do not contradict each other',
+    !(bannerClaims && boxDenies), `banner: ${banner.slice(0, 90)} | box: ${box.slice(0, 90)}`);
+});
+
 journey('404 · a wrong URL is a real 404, not the app', 'librarian', async (page, base) => {
   const res = await page.goto(base + '/aboutt', { waitUntil: 'domcontentloaded' });
   ok('the status really is 404', res.status() === 404, `got ${res.status()} — a soft 404 hides every broken link`);
@@ -890,8 +960,17 @@ function fetchDeployed() {
   }
   const local = ORIGIN ? null : await startServer(servedFrom);
   const base = ORIGIN ? ORIGIN.replace(/\/$/, '') : local.base;
-  const browser = await chromium.launch(ORIGIN && process.env.HTTPS_PROXY
-    ? { proxy: { server: process.env.HTTPS_PROXY } } : {});
+  const launchOpts = ORIGIN && process.env.HTTPS_PROXY
+    ? { proxy: { server: process.env.HTTPS_PROXY } } : {};
+  let browser = await chromium.launch(launchOpts);
+  /* Relaunched every few journeys. Contexts are already closed one by one, so this is not a leak
+     in the harness -- it is the browser process itself running out of room in this container. It
+     died twice while the suite grew past twenty journeys, once mid-run and once on close, and a
+     harness that dies is indistinguishable from a product that fails: both stop the suite without
+     saying which assertions would have passed. The count is the thing being protected, so the
+     process is treated as a consumable. */
+  const RELAUNCH_EVERY = 8;
+  let sinceLaunch = 0;
   if (SHOT) fs.mkdirSync(SHOTDIR, { recursive: true });
 
   console.log(ORIGIN ? `against ${base} — LIVE, no stubs\n`
@@ -903,6 +982,12 @@ function fetchDeployed() {
     current = j.name;
     const before = pass, beforeF = failures.length;
     const seen = new Set();
+    if (sinceLaunch >= RELAUNCH_EVERY) {
+      await browser.close().catch(() => {});
+      browser = await chromium.launch(launchOpts);
+      sinceLaunch = 0;
+    }
+    sinceLaunch++;
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     if (!ORIGIN) await installStubs(ctx, seen);
     const page = await ctx.newPage();
@@ -912,12 +997,12 @@ function fetchDeployed() {
     } catch (e) {
       failures.push(`${j.name} › THREW ${e.message.split('\n')[0]}`);
     }
-    await ctx.close();
+    await ctx.close().catch(() => {});
     const n = pass - before, f = failures.length - beforeF;
     console.log(`  ${f ? 'FAIL' : ' ok '}  ${String(n).padStart(3)}  ${j.name}   [${j.persona}]`);
   }
 
-  await browser.close();
+  await browser.close().catch(() => {});
   if (local) local.server.close();
 
   if (SHOT) console.log(`\nscreenshots in ops/shots/ — look at them. A layout that is ugly or off-brand passes every assertion above.`);

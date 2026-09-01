@@ -568,6 +568,13 @@ function meansACallNumber(t){
   if(shapedLikeCallNumber(raw)) return true;
   const fixed=normalizeSpacing(raw);
   if(fixed && shapedLikeCallNumber(fixed)) return true;
+  /* Routing has to know about shelving markers too, or the repair below never runs: the third
+     time this exact gap has appeared. A string is repaired at the lookup and the lookup is never
+     reached, because the routing predicate judged the string as typed and sent it to the catalog.
+     Every repair must be visible to BOTH, and the way to keep that true is that they share one
+     answer rather than two implementations of the same question. */
+  const core=stripShelvingMarkers(raw);
+  if(core && shapedLikeCallNumber(core)) return true;
   /* A spaceless number reaches the shelf path only if the survey recognises a reading of it. This
      is lookup-backed on purpose: the shape test alone cannot tell "wb115h322" from "HbA1c", and
      the difference between them is whether this building has a WB class, which is a fact and not
@@ -634,15 +641,31 @@ function callNumberGrammar(s){
     i=1;
   }else{
     if(toks.length<2) return false;
+    /* A class is letters and nothing else. "H.R. 3590" reached Level 11 because the letters were
+       read off the front and the dots ignored, leaving "H", which is a real class. A bill is not
+       a book. */
+    if(!/^[A-Za-z]{1,3}$/.test(toks[0])) return false;
     if(!/^[0-9]+(?:\.[0-9]+)?$/.test(toks[1])) return false;    // "12-077" is a room, not a number
     if(!stems.has(letters) && !/^\.?[A-Za-z]/.test(toks[2]||'')) return false;
     i=2;
   }
+  /* A year or a volume mark qualifies a Cutter; it cannot stand in for one. Without this,
+     "Q3 2025" reads as class Q, number 3, year 2025 and lands on level 11 -- and so does every
+     other fiscal quarter, "W2 2020" and "H1 2019" among them. Measured rather than assumed: of the
+     survey's 906 endpoint lookups, 904 carry a Cutter, and the two that do not are range
+     boundaries rather than book numbers. */
+  let sawCutter=false;
+  /* A run-together first token can carry its Cutter inside itself -- "WB115.H322", "QL737.C22",
+     and every W-scheme number, whose whole second half is the Cutter. The year rule below counts
+     Cutters seen in the loop, and the loop starts after that token, so without this "WB115.H322
+     2018" loses the shelf it had two commits ago. Caught by the reverse check rather than by the
+     board, which is the first time that has happened. */
+  if(i===1 && /^[A-Z]{1,3}[0-9]+(?:\.[0-9]+)?\.[A-Z]/.test(T0)) sawCutter=true;
   for(; i<toks.length; i++){
     const t=toks[i];
-    if(CUTTER_TOK.test(t)) continue;
-    if(/^[0-9]{4}$/.test(t)) continue;                            // a year on the spine
-    if(/^(?:v|c|pt|no|bk)\.?[0-9]+$/i.test(t)) continue;          // v.2, c.1
+    if(CUTTER_TOK.test(t)){ sawCutter=true; continue; }
+    if(/^[0-9]{4}$/.test(t) && sawCutter) continue;               // a year on the spine
+    if(/^(?:v|c|pt|no|bk)\.?[0-9]+$/i.test(t) && sawCutter) continue;   // v.2, c.1
     /* A second Cutter may open with digits -- "BF 789 D4 6456s" is in the survey. Only after a
        real Cutter has already been seen, so that "Q10 100mg" cannot use this door. */
     if(i>=3 && /^[0-9]+[A-Za-z]+$/.test(t)) continue;
@@ -739,6 +762,43 @@ function spacelessReadings(flat){
   return out;
 }
 
+/* Shelving markers, stripped before the lookup and named afterwards.
+ *
+ * Round 7's dissent, and the only finding it filed as failing the task rather than misleading: a
+ * trailing marker disqualified a number whose head parses perfectly.
+ *
+ *   WB 115 H248p 1998        -> Level 10 · index 10 · Right
+ *   WB 115 H248p 1998 Supp.  -> "that was not read as a call number"
+ *
+ * and Shelfmark's own catalog panel prints that second string with a shelf face beside it, so two
+ * of its surfaces flatly contradicted each other about the same book. A supplement shelves with
+ * its parent; an index, a folio, an oversize marker and a bracketed date do not move a book
+ * either. None of them changes the answer, so none of them should change whether there is one.
+ *
+ * A CLOSED LIST, deliberately. The tempting version of this strips any trailing word that stops
+ * the parse, and that version hands back every defect of the last four rounds: "B12 deficiency"
+ * becomes "B12", "CD4 count" becomes "CD4", and a phrase is a shelf again.
+ *
+ * And a narrow list, for a second reason found while writing it. The first draft included folio,
+ * oversize, microfilm, thesis and reserve. Every one of those names a DIFFERENT PLACE: an oversize
+ * volume, a reel and a reserve copy are not on the shelf the stacks number points at. Stripping
+ * them would have answered with a face nobody looked up, which is the failure this file exists to
+ * refuse, arrived at while fixing it. It also included "atlas", which is a word in book titles:
+ * "WB115 atlas" became a shelf. What is left names an EDITION OR A PART, never a location. */
+const SHELF_MARKERS=/^(?:supp|suppl|suppls|index|indexes)\.?$/i;
+
+function stripShelvingMarkers(term){
+  const toks=String(term||'').trim().split(/\s+/).filter(Boolean);
+  if(toks.length<2) return '';
+  const kept=[], dropped=[];
+  for(const t of toks){
+    if(SHELF_MARKERS.test(t) || /^\[[0-9]{4}\]$/.test(t) || /^\++$/.test(t)) dropped.push(t);
+    else kept.push(t);
+  }
+  if(!dropped.length || !kept.length) return '';
+  return kept.join(' ');
+}
+
 /* One entry point, so every surface reads a query the same way and says the same thing about it.
  *
  * A repair is ADOPTED only when it earns its place, which is the difference between repairing a
@@ -769,23 +829,34 @@ function readQuery(raw, coll){
        does not flip coins about where a book is. */
     if(seen.size===1){
       const only=[...seen.values()][0];
-      return { q: only.cand, readAs: only.cand, hits: only.hits };
+      return { q: only.cand, readAs: only.cand, why:'spacing', hits: only.hits };
     }
     if(seen.size>1) return { q, readAs: '', hits: [] };
+  }
+  /* Markers are handled BEFORE the raw lookup, not after it. Handling them afterwards looked
+     right and was quietly wrong: the comparator tolerates a trailing "Supp." and resolves the
+     string as typed, so the marker branch never ran, the answer was correct, and the tool never
+     said it had ignored a word. Silently dropping part of what somebody typed is the same
+     failure as silently dropping a token from a cutter, which is where this whole review
+     started. If a marker is present, it is named. */
+  const core=stripShelvingMarkers(q);
+  if(core && readsAsCallNumber(core)){
+    const coreHits=findFaces(core, coll);
+    if(coreHits.length) return { q: core, readAs: core, why:'marker', hits: coreHits };
   }
   const fixed = normalizeSpacing(q);
   if(fixed && readsAsCallNumber(fixed)){
     const fixHits = findFaces(fixed, coll);
     const schemeChanged = scheme(q) !== scheme(fixed);
     if(fixHits.length && (!rawHits.length || schemeChanged))
-      return { q: fixed, readAs: fixed, hits: fixHits };
+      return { q: fixed, readAs: fixed, why:'spacing', hits: fixHits };
     /* A repair that reaches a well-formed number which this survey simply does not cover is still
        the right thing to show: "no shelf holds WB 115 H999" is true and actionable, where "WB
        115H999 is not a call number" is neither. */
     if(!rawHits.length && !readsAsCallNumber(q))
-      return { q: fixed, readAs: fixed, hits: fixHits };
+      return { q: fixed, readAs: fixed, why:'spacing', hits: fixHits };
   }
-  return { q, readAs: '', hits: rawHits };
+  return { q, readAs: '', why:'', hits: rawHits };
 }
 
 function findFaces(q, coll){
