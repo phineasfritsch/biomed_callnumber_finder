@@ -245,6 +245,29 @@ and every way the shelf lookup refuses — is written up in [`CATALOG.md`](CATAL
 
 ---
 
+## Tests
+
+Fourteen suites, no framework, one command:
+
+```bash
+node Tools/all.test.js
+```
+
+It walks the repository for every `*.test.js` and `*.test.mjs` outside `node_modules`, runs each
+one with the node binary that is running it, and ends on a single line:
+
+```
+TESTS total=2064 passed=2064 failed=0 skipped=0
+```
+
+The count is the point. Three things it reports as a failure, by name, rather than absorbing:
+a suite that printed no count at all (a harness that throws before it asserts prints nothing, and
+nothing is not zero failures), a suite listed in its `EXPECTED` table and missing from disk, and a
+suite that reported no failures and then exited non-zero. So a total that got smaller cannot read
+as a total that stayed green. `verify/test.ps1` runs the same command and scrapes the same line.
+
+---
+
 ## The dataset
 
 One flat object in [`biomed-shelf-ranges.json`](biomed-shelf-ranges.json). Each **key** is a shelf
