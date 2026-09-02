@@ -99,6 +99,37 @@ a Worker proxy, which costs the "no server, nothing to run" property that makes 
 to defend. It is also an undocumented, unversioned internal UI endpoint, and traffic to
 `search.library.ucla.edu` is considerably more visible than traffic to the SRU host.
 
+### Primo record permalink — the one Primo URL Shelfmark actually ships
+
+```
+https://search.library.ucla.edu/discovery/fulldisplay?docid={id}&context={L|PC}&vid=01UCS_LAL:UCLA
+→ 200, the Primo UI
+```
+
+Not an API and not fetched. It is where a result card sends the reader for everything Shelfmark
+deliberately does not reimplement: full subject headings, requesting and recall, citation export,
+and a login that knows whether they already have the book out.
+
+`docid` is the Primo record id, and the `context` follows from it:
+
+| id shape | context | what it is |
+| --- | --- | --- |
+| `alma9974748673606533` | `L` | a bib this institution holds. The digits are the Alma MMS number, which is the MARC `001` already parsed out of every SRU record. |
+| `cdi_crossref_primary_10_1056_…` | `PC` | an article from the Central Discovery Index. |
+
+Verified against the live `pnxs` API, where `recordid` comes back in exactly these forms.
+
+Two files build this URL, because there is no build step to share one:
+
+- `index.html`, inside the `catalog-core` markers, for bib records. It takes an MMS number and
+  requires `/^\d+$/` before linking, so an `001` that is not one links nowhere rather than
+  offering a `docid` Primo cannot resolve.
+- `src/worker.js` (`primoPermalink`), for article records, where the id is not always digits.
+  It derives the context and encodes the id.
+
+`Tools/catalog.test.js` asserts the two still agree on a bib id. That test is the only thing
+stopping a `vid` change from being made in one file and missed in the other.
+
 ### Primo public configuration
 
 ```

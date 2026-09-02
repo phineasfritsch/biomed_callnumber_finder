@@ -1625,6 +1625,30 @@ document.getElementById('q').addEventListener('paste',e=>{
     }
     return null;
   }
+
+  /* A result here answers "which edition, and which shelf". Everything else about a record --
+     the full subject headings, request and recall, the citation exports, a login that knows
+     whether you already have it out -- lives in Primo, and there is no reason to reimplement any
+     of it. Primo addresses a bib by its Alma MMS id with an `alma` prefix, which is the 001
+     already parsed out of every record: docid=alma9974748673606533. Verified against the live
+     pnxs API, where `recordid` comes back in exactly that form.
+
+     `src/worker.js` builds the same URL for article records, from ids that are not always MMS
+     numbers, so it derives `context` and encodes what it is given. The two are documented
+     together in ENDPOINTS.md, and Tools/catalog.test.js asserts they still agree on a bib id --
+     which is the only thing that stops a change to one of them from being made to one of them.
+
+     Inside the markers so it is covered: this builds a URL out of a value read off the network,
+     and the assertion that an 001 which is not an MMS number links nowhere should be run rather
+     than believed. */
+  const PRIMO_VIEW='https://search.library.ucla.edu/discovery/fulldisplay',
+        PRIMO_VID='01UCS_LAL:UCLA';
+  function primoHref(mms){
+    const id=String(mms==null?'':mms).trim();
+    if(!/^\d+$/.test(id)) return '';     // an 001 that is not an MMS number links nowhere
+    // Digits only by the line above, so there is nothing here that needs escaping.
+    return PRIMO_VIEW+'?docid=alma'+id+'&context=L&vid='+PRIMO_VID;
+  }
 /* == catalog-core:end == */
 
   /* ---- MARCXML ---- */
@@ -1813,6 +1837,14 @@ document.getElementById('q').addEventListener('paste',e=>{
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const SIDE={left:'Left', right:'Right', single:'Single (R)'};
 
+  // Title, linked to the record it came from. Unlinkable records still get their title.
+  function recordLink(rec,cls,label){
+    const href=primoHref(rec.mms);
+    return href
+      ? '<a class="'+cls+'" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+esc(label)+'</a>'
+      : '<span class="'+cls+'">'+esc(label)+'</span>';
+  }
+
   // Counts are per holding, not per bib (verified on multi-AVA records). check_holdings
   // arrives with $f/$g absent, so no number is invented for it.
   function availChip(a){
@@ -1921,7 +1953,7 @@ document.getElementById('q').addEventListener('paste',e=>{
 
   function workHead(rec,extra){
     let h='<div class="work-h">'+coverTag(rec)+'<div class="work-t">';
-    h+='<div class="ti">'+esc(rec.title)+'</div>';
+    h+='<div class="ti">'+recordLink(rec,'ti-l',rec.title)+'</div>';
     const by=[rec.author, rec.pub].filter(Boolean).join(' \u00b7 ');
     if(by) h+='<div class="by">'+esc(by)+'</div>';
     let tags='';
@@ -1931,6 +1963,11 @@ document.getElementById('q').addEventListener('paste',e=>{
     if(cl) tags+='<span class="carr '+esc(rec.carrier)+'">'+esc(cl)+'</span>';
     if(rec.edition) tags+='<span class="ed">'+esc(rec.edition)+'</span>';
     if(extra) tags+=extra;
+    /* A linked title is easy to miss on a card that is mostly call numbers, so the way out to
+       Primo is named in the chip row too, where the reader is already looking. */
+    const href=primoHref(rec.mms);
+    if(href) tags+='<a class="catlink" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+
+                   'In the catalog</a>';
     if(tags) h+='<div class="tags">'+tags+'</div>';
     return h+'</div></div>';
   }
@@ -1951,7 +1988,7 @@ document.getElementById('q').addEventListener('paste',e=>{
       older.forEach(r=>{
         const sub=holdingsHtml(r), y=recordYear(r);
         h+='<div class="edrow"><div class="edrow-h"><span class="edy">'+(y==null?'no date':y)+'</span>'+
-           '<span class="edt">'+esc(r.edition||r.title)+'</span></div>'+sub.html+'</div>';
+           recordLink(r,'edt',r.edition||r.title)+'</div>'+sub.html+'</div>';
       });
       h+='</div></details>';
     }

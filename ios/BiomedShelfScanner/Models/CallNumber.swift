@@ -123,6 +123,48 @@ struct CallNumber: Equatable {
     private static let classAlphaOnly = try! NSRegularExpression(pattern: "^[A-Z]{1,3}$")
     private static let classJammed = try! NSRegularExpression(pattern: "^[A-Z]{1,3}\\d+(\\.\\d+)?$")
     private static let bareClassNum = try! NSRegularExpression(pattern: "^\\d+(\\.\\d+)?$")
+    private static let volumePrefix = try! NSRegularExpression(pattern: "^(NO|V|PT)\\.?$")
+    private static let volumeDigits = try! NSRegularExpression(pattern: "^\\d+[A-Z]?$")
+
+    /// Rejoin a volume token OCR handed over split: `["NO", "66"] -> ["NO66"]`.
+    ///
+    /// Not a hypothetical spelling. The extraction pattern allows the space, so
+    /// `W1 NA388 NO 66` really does arrive, and every spelling of a volume token has to reach the
+    /// comparator as one shape. `ShelfOrder.key` used to carry its own copy of this and
+    /// `isWellFormed` had none, so the split spelling was a shape the comparator normalized and
+    /// the grammar rejected — which made `ShelfOrder.judge` call an entire serials face unreadable.
+    static func joinVolumeTokens(_ toks: [String]) -> [String] {
+        var out: [String] = []
+        var i = 0
+        while i < toks.count {
+            if volumePrefix.firstMatch(in: toks[i], range: toks[i].nsRange) != nil,
+               i + 1 < toks.count,
+               volumeDigits.firstMatch(in: toks[i + 1], range: toks[i + 1].nsRange) != nil {
+                out.append(toks[i].replacingOccurrences(of: ".", with: "") + toks[i + 1])
+                i += 2
+            } else {
+                out.append(toks[i])
+                i += 1
+            }
+        }
+        return out
+    }
+
+    /// How many leading tokens the class number occupies: `W1` -> 1, `WM 13` -> 2, `QL737` -> 1,
+    /// and -1 when the head is not a class number at all.
+    ///
+    /// The three branches are `isWellFormed`'s own, so one place decides where the class ends and
+    /// the cutter begins. `ShelfOrder.key` needs the same answer: it may strip trailers but never
+    /// the cutter, and counting tokens could not tell the two apart.
+    static func classTokenCount(_ toks: [String]) -> Int {
+        guard let head = toks.first else { return -1 }
+        if w1PrefixWhole.firstMatch(in: head, range: head.nsRange) != nil { return 1 }
+        if classAlphaOnly.firstMatch(in: head, range: head.nsRange) != nil,
+           toks.count > 1,
+           bareClassNum.firstMatch(in: toks[1], range: toks[1].nsRange) != nil { return 2 }
+        if classJammed.firstMatch(in: head, range: head.nsRange) != nil { return 1 }
+        return -1
+    }
 
     /// Whether the raw text obeys real call-number notation.
     ///
@@ -145,8 +187,7 @@ struct CallNumber: Equatable {
         let s = raw.uppercased()
             .replacingOccurrences(of: "\\.(?=[A-Z])", with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespaces)
-        let toks = s.split(whereSeparator: \.isWhitespace).map(String.init)
-        guard let head = toks.first else { return false }
+        let toks = Self.joinVolumeTokens(s.split(whereSeparator: \.isWhitespace).map(String.init))
 
         func isCutter(_ t: String) -> Bool {
             Self.cutterForm.firstMatch(in: t, range: t.nsRange) != nil
@@ -156,18 +197,9 @@ struct CallNumber: Equatable {
             Self.trailForm.firstMatch(in: t, range: t.nsRange) != nil
         }
 
-        var rest: [String]
-        if Self.w1PrefixWhole.firstMatch(in: head, range: head.nsRange) != nil {
-            rest = Array(toks.dropFirst())                                  // "W1 NA388 …"
-        } else if Self.classAlphaOnly.firstMatch(in: head, range: head.nsRange) != nil,
-                  toks.count > 1,
-                  Self.bareClassNum.firstMatch(in: toks[1], range: toks[1].nsRange) != nil {
-            rest = Array(toks.dropFirst(2))                                 // "WM 13 D5537"
-        } else if Self.classJammed.firstMatch(in: head, range: head.nsRange) != nil {
-            rest = Array(toks.dropFirst())                                  // "QL737 C22"
-        } else {
-            return false                                                    // rejects "WI NA388"
-        }
+        let cls = Self.classTokenCount(toks)                                // -1 rejects "WI NA388"
+        guard cls >= 0 else { return false }
+        let rest = Array(toks.dropFirst(cls))
 
         guard let first = rest.first, isCutter(first) else { return false }
         return rest.dropFirst().allSatisfy { isCutter($0) || isTrailer($0) }
