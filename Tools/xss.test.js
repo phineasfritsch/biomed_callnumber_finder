@@ -120,20 +120,51 @@ for (const f of ['index.html', 'map.html', 'hours.html', 'databases.html']) {
 /* Every href built by string concatenation has to name a scheme check or a literal origin.
    `esc()` keeps a quote from breaking out of the attribute; it says nothing about what the URL
    then does when it is clicked. */
-const hrefs = HTML.match(/href="'\+[^)]{0,60}\)/g) || [];
+/* Matched with positions, not as strings. Three of these sinks print the identical text
+   `href="'+esc(href)`, so looking each one up by `indexOf` resolved all three to the first of them
+   and checked that one three times — an unguarded copy pasted below a guarded one inherited its
+   pass. Every sink is now judged where it actually sits. */
+const hrefs = [...HTML.matchAll(/href="'\+[^)]{0,60}\)/g)].map(m => ({ text: m[0], at: m.index }));
 ok('there are hrefs to check', hrefs.length > 0, 'found none — did the pattern change?');
-// A sink is satisfied either by calling the check on the spot, or by printing a name that was
-// assigned from the check — `const href = ... safeHref(...)` a few lines above.
-const guardedNames = new Set(
-  (HTML.match(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=[^;\n]*safeHref\s*\(/g) || [])
-    .map(d => /(?:const|let|var)\s+([A-Za-z_$][\w$]*)/.exec(d)[1]));
-for (const h of hrefs) {
-  const name = (/esc\(\s*([A-Za-z_$][\w$]*)\s*\)/.exec(h) || [])[1];
-  ok('a built href checks its scheme: ' + h.trim(),
-    /safeHref/.test(h) || (name && guardedNames.has(name)),
-    h.trim() + (name ? ' — `' + name + '` is never assigned from safeHref()' : ''));
+/* A sink is satisfied by calling the check on the spot, or by printing a name that was assigned
+   from a check — `const href = ... safeHref(...)` a few lines above.
+
+   That second rule used to be evaluated against a flat, file-global set of names, which made it
+   worth nothing: `href` is the obvious name for a URL and it is used a dozen times over, so ONE
+   `const href = safeHref(…)` anywhere in the file signed off every other `href` in it forever.
+   Two sinks passed that way while calling no check at all. The lookup is now positional — the
+   assignment has to be the nearest one above the sink — so a name proves only what it was last
+   assigned from.
+
+   A sink may also name its own guarantee. `primoHref` builds its URL from an MMS id it has just
+   matched against `/^\d+$/`, which is strictly stronger than a scheme check: digits cannot spell
+   `javascript:`. Listing it here is the claim that the guard exists, and the assertion below
+   holds it to that. */
+const SELF_GUARDED = { primoHref: /\/\^\\d\+\$\/\.test\(/ };
+for (const [fn, guard] of Object.entries(SELF_GUARDED)) {
+  const body = new RegExp('function\\s+' + fn + '\\s*\\([^)]*\\)\\s*\\{([\\s\\S]{0,400}?)\\n\\s*\\}')
+    .exec(HTML);
+  ok(fn + '() still validates its input before building a URL',
+    !!body && guard.test(body[1]),
+    body ? body[1].trim() : fn + '() not found — was it renamed?');
 }
-ok('the guarded names were actually found', guardedNames.size >= 2, [...guardedNames].join(', '));
+
+// Where each safeHref-assigned name was last bound, so a name is checked against the assignment
+// above it rather than against every assignment in the file.
+const bindings = [...HTML.matchAll(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=([^;\n]*)/g)]
+  .map(m => ({ at: m.index, name: m[1], guarded: /safeHref\s*\(|primoHref\s*\(/.test(m[2]) }));
+let guardedSinks = 0;
+for (const { text, at } of hrefs) {
+  const name = (/esc\(\s*([A-Za-z_$][\w$]*)\s*\)/.exec(text) || [])[1];
+  const nearest = bindings.filter(b => b.name === name && b.at < at).pop();
+  const guarded = /safeHref/.test(text) || (nearest && nearest.guarded);
+  if (guarded) guardedSinks++;
+  ok('a built href checks its scheme: ' + text.trim(), guarded,
+    `at ${at}` + (name
+      ? ` — the nearest \`${name}\` above it is not assigned from a checked builder`
+      : ''));
+}
+ok('some sink was satisfied by a name rather than an inline call', guardedSinks > 0);
 
 /* The two libraries loaded from a CDN at runtime are pinned and checked. A floating major tag is
    whatever the CDN decided it meant this morning, running with the run of the document. */

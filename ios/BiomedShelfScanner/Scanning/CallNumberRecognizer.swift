@@ -38,8 +38,14 @@ struct CallNumberRecognizer {
     // MARK: Extraction
 
     private static let callNumberPatterns: [NSRegularExpression] = {
-        // Optional volume ("no.66") and year, so stacked labels assemble fully.
-        let vol = "(?:\\s+NO\\.?\\s?\\d+[A-Z]?)?(?:\\s+(?:18|19|20)\\d{2}[A-Z]?)?"
+        // Optional volume ("no.66", "v.9", "pt.2") and year, so stacked labels assemble fully.
+        //
+        // `V.` and `PT.` were missing here while `CallNumber.trailForm` and `ShelfOrder` both
+        // accepted them, so `W1 NA388 V.9` extracted as `W1 NA388` and the volume never reached
+        // the comparator. Every spine on a v.-numbered run then keyed to the same base, the
+        // sequence was trivially in order, and no misfile on that shelf could be flagged — one of
+        // the three regressions `ShelfOrder` exists to fix, unreachable from the camera.
+        let vol = "(?:\\s+(?:NO|V|PT)\\.?\\s?\\d+[A-Z]?)?(?:\\s+(?:18|19|20)\\d{2}[A-Z]?)?"
 
         // `(?![A-Z0-9])` is load-bearing, not defensive tidiness.
         //

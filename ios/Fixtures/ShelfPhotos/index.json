@@ -1,0 +1,52 @@
+{
+  "_comment": "Ground truth for the shelf photo corpus. See README.md. A photo with groundTruth null is a snapshot, not a fixture — it cannot fail a test until someone transcribes what is actually in it.",
+  "_known": "At least one of IMG_3699..3702 contains a genuinely misfiled book — a real one, on a real shelf, not staged. That makes these the most valuable photos in the corpus and the only end-to-end positives we have, so identifying WHICH photo and WHICH book is the single highest-value transcription here: it is the difference between proving the detector fires and assuming it would.",
+  "_labelPlacement": ["spine", "frontCover", "flat", "box", "none"],
+  "_misfiled": [false, "outOfOrder", "wrongShelf", "volumeBreak"],
+  "photos": [
+    {
+      "file": "IMG_3699.HEIC",
+      "level": null,
+      "shelfID": null,
+      "side": null,
+      "distanceInches": null,
+      "spanInches": null,
+      "torch": null,
+      "notes": "4032x3024. Captured before the Shelf Read design existed, so nothing about it was recorded. Usable for measurement (step 1) today; needs transcription before it can back a test.",
+      "groundTruth": null
+    },
+    {
+      "file": "IMG_3700.HEIC",
+      "level": null,
+      "shelfID": null,
+      "side": null,
+      "distanceInches": null,
+      "spanInches": null,
+      "torch": null,
+      "notes": "4032x3024.",
+      "groundTruth": null
+    },
+    {
+      "file": "IMG_3701.HEIC",
+      "level": null,
+      "shelfID": null,
+      "side": null,
+      "distanceInches": null,
+      "spanInches": null,
+      "torch": null,
+      "notes": "4032x3024.",
+      "groundTruth": null
+    },
+    {
+      "file": "IMG_3702.HEIC",
+      "level": null,
+      "shelfID": null,
+      "side": null,
+      "distanceInches": null,
+      "spanInches": null,
+      "torch": null,
+      "notes": "4032x3024.",
+      "groundTruth": null
+    }
+  ]
+}

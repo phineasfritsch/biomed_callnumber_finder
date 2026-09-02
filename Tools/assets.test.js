@@ -90,6 +90,17 @@ ok('the published set is exactly sixteen files', published.length === 16,
 // The other PDF in this directory is a scan that has never been served and must stay that way.
 ok('the scan stays off the site', ignored('BookScanCenter.pdf'));
 
+/* A photo airdropped off a phone lands in the repo root, and the root is the document root, so it
+   ships. This has happened. Named here rather than left to the count above, because "the published
+   set is not sixteen files" does not tell you that four shelf photos are on the public web —
+   it just tells you to go looking. Shelf photos belong in ios/Fixtures/ShelfPhotos/, which is
+   already excluded because all of ios/ is. */
+const strayPhotos = fs.readdirSync(ROOT, { withFileTypes: true })
+  .filter(e => e.isFile() && /\.(heic|heif)$/i.test(e.name))
+  .map(e => e.name);
+ok('no phone photos are sitting in the repo root', strayPhotos.length === 0,
+  strayPhotos.join(', ') + '\n      → move them to ios/Fixtures/ShelfPhotos/');
+
 /* Every page has to reach the one stylesheet and, if it draws shelves, the two shared scripts.
    A page that links a file which is not published renders unstyled, which is the kind of break
    that only shows up in a browser. */

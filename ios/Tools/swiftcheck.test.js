@@ -290,6 +290,8 @@ for (const [fixture, decoder, keys] of [
    ['days', 'slots', 'named', 'payloads', 'validations', 'clamps', 'walk', 'ages', 'transitions', 'backoffs', 'csv']],
   ['CallNumberGolden.json', 'CallNumberTests.swift',
    ['sortedOrder', 'locates', 'searches', 'pairs']],
+  ['ShelfOrderGolden.json', 'ShelfOrderTests.swift',
+   ['trailers', 'sequences', 'faces']],
 ]) {
   const p = path.join(ROOT, 'Tests', fixture);
   if (!fs.existsSync(p)) { ok(false, `${fixture} exists`); continue; }

@@ -17,10 +17,18 @@ biomed-shelf-ranges.json
 # handed to them, not because it was left reachable.
 Instructions.txt
 *.md
+# docs/ is the operator doctrine this repo is worked by, not site copy. The wildcard above
+# already hides the only file in there today, but by luck rather than by decision: a diagram,
+# a .txt or a screenshot dropped in would ship. Named as a directory so the answer holds for
+# whatever lands in it next.
+docs/
 
 # Test corpus + harness (saved SRU responses; the app never reads these at runtime)
 fixtures/
 Tools/
+# The gate scripts (verify/test.ps1 and friends). Tooling that checks the site rather than any
+# part of it; left unlisted, the next deploy serves four PowerShell files at /verify/.
+verify/
 
 # Git internals (CF was choking on the 991 MB pack file)
 .git/

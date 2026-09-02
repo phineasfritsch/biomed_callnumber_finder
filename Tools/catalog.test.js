@@ -48,7 +48,7 @@ new Function('exports', `
     BIOMED_LOC, norm, normTitle, lev, wordIn, coverage, scoreRecord, relaxations,
     SCOPE, FIELD, TYPE, tokenize, yearClauses, parseQuery, buildCQL, orGroup,
     idfContext, runBonus, recordYear, passesLocal, shelfKey, cmpShelf,
-    clusterKey, clusterRecords, sortClusters, detectMode,
+    clusterKey, clusterRecords, sortClusters, detectMode, primoHref,
     carrierOf, carrierLabel, CARRIER, PHANTOM_LIB, wordRepairs, substituteWord,
     harvestVocab, nearestWord, prefixLadder, wordsMissing, repairBudget,
     LIBRARY, LIB_BY_CODE, SUBSCOPE, setHereLib, resolveScopeAlias });
@@ -58,7 +58,7 @@ const { splitCallNumber, yearOf, isLocatable, resolve, shelfHits, cmpCN, byYearD
         norm, normTitle, lev, coverage, scoreRecord, relaxations,
         SCOPE, tokenize, yearClauses, parseQuery, buildCQL, orGroup,
         idfContext, runBonus, recordYear, passesLocal, cmpShelf,
-        clusterKey, clusterRecords, sortClusters, detectMode,
+        clusterKey, clusterRecords, sortClusters, detectMode, primoHref,
         carrierOf, carrierLabel, wordRepairs, substituteWord,
         harvestVocab, nearestWord, prefixLadder, wordsMissing, repairBudget,
         LIBRARY, LIB_BY_CODE, setHereLib, resolveScopeAlias } = sandbox;
@@ -810,6 +810,44 @@ try {
 }
 eq('back at Biomed, a Biomed holding is here again',
    resolve({ b: 'BIOMED', j: 'bi', d: 'WB 115 H248p 1998' }).route.here, true);
+
+section('the link out to Primo');
+
+ok('an MMS number becomes a bib permalink',
+   primoHref('9974748673606533') ===
+   'https://search.library.ucla.edu/discovery/fulldisplay?docid=alma9974748673606533&context=L&vid=01UCS_LAL:UCLA',
+   primoHref('9974748673606533'));
+
+/* Every one of these is a value `readRecord` can really hand over: the 001 is whatever the record
+   carried, and Alma is not required to put an MMS number there. A link is offered only when the
+   id is one, because a `docid` Primo cannot resolve is a dead end presented as an answer. */
+for (const bad of ['', null, undefined, 'BIB-x123', 'oai:example.org:9974', '99747 48673606533',
+                   'javascript:alert(1)', '../../evil'])
+  ok('links nowhere for a non-MMS 001: ' + JSON.stringify(bad), primoHref(bad) === '',
+     JSON.stringify(primoHref(bad)));
+
+// Surrounding whitespace is trimmed rather than rejected: MARC pads control fields, and an 001
+// that is a number with a space on it is still that number.
+eq('an 001 padded with whitespace is still linked',
+   primoHref('  9974748673606533  '), primoHref('9974748673606533'));
+
+/* The Worker builds this URL too, for article records. Two hand-written copies of one external
+   URL shape is how a `vid` change gets made in one file and missed in the other, so they are held
+   to the same answer for the id they can both be given. The Worker's is the more general — it
+   derives `context` and encodes an id that is not always digits — and this asserts the page's
+   narrower one is a special case of it, not a second opinion. */
+{
+  const WSRC = fs.readFileSync(path.join(ROOT, 'src', 'worker.js'), 'utf8');
+  const W = {};
+  new Function('exports', WSRC.slice(0, WSRC.indexOf('export default')) +
+    '\nObject.assign(exports, { primoPermalink });')(W);
+  const mms = '9926758983606533';
+  eq('the page and the Worker build the same bib permalink',
+     primoHref(mms), W.primoPermalink('alma' + mms));
+  ok('and the Worker still sends CDI articles to the PC context',
+     /&context=PC&/.test(W.primoPermalink('cdi_crossref_primary_10_1056')),
+     W.primoPermalink('cdi_crossref_primary_10_1056'));
+}
 
 /* ---- report ---- */
 console.log(`\n${pass} passed, ${failures.length} failed`);

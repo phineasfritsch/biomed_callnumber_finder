@@ -184,8 +184,11 @@ final class FrameProcessor: @unchecked Sendable {
         // means the label's volume lines haven't assembled yet — 5 frames instead of 3 gives the
         // full text a half-second to out-vote the partial. Costs 0.2s on books that genuinely
         // have no volume; prevents most partial rows (the input to every merge hazard).
+        // `V.` and `PT.` belong here for the same reason `NO.` does: they are volume tokens, and a
+        // read that has one has assembled. Without them a v.-numbered spine took 5 frames to
+        // accept where an identically complete no.-numbered one took 3.
         let hasTrail = key.range(
-            of: #"(NO\.?\s?\d|(18|19|20)\d{2})"#, options: .regularExpression) != nil
+            of: #"((NO|V|PT)\.?\s?\d|(18|19|20)\d{2})"#, options: .regularExpression) != nil
         let accepted = voter.consider(key, required: hasTrail ? 3 : 5)
         diagnose(Array(candidates.prefix(10)), result: result, accepted: accepted, pixelBuffer: pixelBuffer)
         return accepted ? .accepted(result) : .seeing(result)
